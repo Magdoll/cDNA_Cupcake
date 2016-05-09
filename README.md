@@ -1,7 +1,31 @@
 # cDNA_Cupcake
 
-![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpssraserzh.png)
+![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpsonkeyb9w.png)
 
 Last Updated: 05/09/2016
 
+**cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
+
+## Python Requirements
+* Python >= 2.7
+* Biopython 
+
+## How to use this repository
+
+Since most of the scripts are independent (do not depend on each other), you can either clone the whole directory, or, if you are only interested in a specific script, just download that specific script to your local drive and start using it.
+
+For any issues or bugs, please report to [Issues](https://github.com/Magdoll/cDNA_Cupcake/issues).
+
+## Documentation
+
+Please see [[wiki]] for the latest maintained list of scripts.
+
+A brief list of currently listed scripts are:
+
+### Sequence Manipulation
+* `get_seq_stats.py`: Summarize length distribution of a FASTA/FASTQ file.
+* `rev_comp.py`: Reverse complement a sequence from command line.
+* `fa2fq.py` and `fq2fa.py`: Convert between FASTA and FASTQ format.
+* `sort_fasta_by_len.py`: sort fasta file by length (increasing or decreasing).
+* `get_seqs_from_list.py`: extract list of sequences given a fasta file and a list of IDs.
 
