@@ -38,3 +38,5 @@ A brief list of currently listed scripts are:
 * `sort_fasta_by_len.py`: sort fasta file by length (increasing or decreasing).
 * `get_seqs_from_list.py`: extract list of sequences given a fasta file and a list of IDs.
 
+### Sequence Simulation
+* `simulate.py`: Simulate error in sequences.
