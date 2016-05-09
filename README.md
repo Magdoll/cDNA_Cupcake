@@ -18,7 +18,7 @@ For any issues or bugs, please report to [Issues](https://github.com/Magdoll/cDN
 
 ## Documentation
 
-Please see [[wiki]] for the latest maintained list of scripts.
+Please see [wiki](https://github.com/Magdoll/cDNA_Cupcake/wiki) for the latest maintained list of scripts.
 
 A brief list of currently listed scripts are:
 
