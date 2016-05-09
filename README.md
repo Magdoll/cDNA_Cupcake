@@ -12,7 +12,16 @@ Last Updated: 05/09/2016
 
 ## How to use this repository
 
-Since most of the scripts are independent (do not depend on each other), you can either clone the whole directory, or, if you are only interested in a specific script, just download that specific script to your local drive and start using it.
+Since most of the scripts are independent (do not depend on each other), you can either clone the whole directory, or, if you are only interested in a specific script, just download that specific script to your local drive.
+
+You can clone the GitHub repository, then add the GitHub repo path to your `$PATH` variable. The scripts are organized into different sub-directories (ex: `sequence/`, `rarefaction/` etc) so you will have to add them individually.
+
+```
+git clone https://github.com/Magdoll/cDNA_Cupcake.git
+export PATH=$PATH:<path_to_Cupcake>/sequence/
+export PATH=$PATH:<path_to_Cupcake>/rarefaction/
+```
+
 
 For any issues or bugs, please report to [Issues](https://github.com/Magdoll/cDNA_Cupcake/issues).
 
