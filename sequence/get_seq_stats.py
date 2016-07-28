@@ -37,6 +37,8 @@ def get_seq_stats(file):
     for i in xrange(0, _max):
         print "{0}-{1} kb: {2}".format(i, i+1, bin[i])
 
+    print "5-95% percentile:", np.percentile(lens, 5), np.percentile(lens, 95)
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("Summarize sequence lengths in fasta/fastq")
