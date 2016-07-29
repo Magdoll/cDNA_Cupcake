@@ -53,7 +53,7 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
     f.close()
 
 
-def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv):
+def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count):
 
     cur_dir = os.getcwd()
     os.chdir(out_dir)
@@ -78,16 +78,17 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv):
     make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix)
 
 
-    cmd = "filter_by_count.py {0} {0}.min_fl_2 --min_count=2".format(collapse_prefix)
+
+    cmd = "filter_by_count.py {0} {0}.min_fl_{1} --min_count={1}".format(collapse_prefix, min_count)
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
-    cmd = "filter_away_subset_in_no5merge.py {0}.min_fl_2 {0}.min_fl_2.filtered".format(collapse_prefix)
+    cmd = "filter_away_subset_in_no5merge.py {0}.min_fl_{1} {0}.min_fl_{1}.filtered".format(collapse_prefix, min_count)
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
-    os.symlink(collapse_prefix+'.min_fl_2.filtered.abundance.txt', 'touse.count.txt')
-    os.symlink(collapse_prefix+'.min_fl_2.filtered.gff', 'touse.gff')
+    os.symlink(collapse_prefix+'.min_fl_'+str(min_count)+'.filtered.abundance.txt', 'touse.count.txt')
+    os.symlink(collapse_prefix+'.min_fl_'+str(min_count)+'.filtered.gff', 'touse.gff')
     os.symlink(collapse_prefix+'.group.txt', 'touse.group.txt')
 
     os.chdir(cur_dir)
@@ -117,7 +118,7 @@ def validate_with_SIRV(out_dir, eval_dir):
 
     os.chdir(cur_dir)
 
-def eval_result(eval_dir, src_dir):
+def eval_result(eval_dir, src_dir, min_count):
     tally = defaultdict(lambda: [])# SIRV --> list of test ids that hit it (can be redundant sometimes due to fuzzy)
 
     file = os.path.join(eval_dir, 'all_samples.chained_ids.txt')
@@ -136,6 +137,7 @@ def eval_result(eval_dir, src_dir):
     with open("SIRV_evaluation_summary.txt", 'w') as f:
         f.write("Source Directory: {0}\n".format(src_dir))
         f.write("Evaluation Directory: {0}\n".format(eval_dir))
+        f.write("Minimum FL Count cutoff: {0}\n".format(min_count))
         f.write("\n")
         f.write("====================================\n")
         f.write("TP: {0}\n".format(len(tally)))
@@ -148,11 +150,12 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("validate SMRTLink Iso-Seq output against Lexogen SIRV")
     parser.add_argument("smrtlink_dir")
-    parser.add_argument("--tmp_dir", default="tmp")
-    parser.add_argument("--eval_dir", default="eval")
+    parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
+    parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
+    parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
 
     args = parser.parse_args()
     o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_SIRV(o, a, b)
+    collapse_to_SIRV(o, a, b, args.min_count)
     validate_with_SIRV(args.tmp_dir, args.eval_dir)
-    eval_result(args.eval_dir, args.smrtlink_dir)
+    eval_result(args.eval_dir, args.smrtlink_dir, args.min_count)
