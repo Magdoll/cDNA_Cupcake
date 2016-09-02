@@ -1,0 +1,9 @@
+# IPython log file
+
+import tofu_wrap
+hq = tofu_wrap.run_collapse_sam('test.fq', '/home/UNIXHOME/etseng/share/gmap_db_new/', 'hg38', max_fuzzy_junction=5, dun_merge_5_shorter=True)
+from cPickle import *
+a=load(open('combined.hq_lq_pre_dict.pickle'))
+tofu_wrap.get_abundance(hq, a['HQ'], hq)
+tofu_wrap.run_filtering_by_count(hq, hq+'.min_fl_2', min_count=2)
+tofu_wrap.run_filtering_away_subsets(hq+'.min_fl_2', hq+'.min_fl_2.filtered', fuzzy_junction=5)

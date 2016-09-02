@@ -1,0 +1,30 @@
+i0HQ_Alz|c22274/f3p7/850	Unmapped.
+i0HQ_Alz|c284049/f3p23/881	Unmapped.
+i0HQ_Alz|c4614/f2p8/784	Unmapped.
+i0HQ_Alz|c7242/f3p55/997	Unmapped.
+i0HQ_Alz|c5554/f2p47/887	Coverage 0.988 too low.
+i0HQ_Alz|c1622/f3p46/931	Coverage 0.973 too low.
+i0HQ_Alz|c240793/f3p1433/991	Coverage 0.785 too low.
+i0HQ_Alz|c1654/f4p431/672	Coverage 0.946 too low.
+i0HQ_Alz|c1550/f2p73/762	Coverage 0.109 too low.
+i0HQ_Alz|c69001/f2p23/737	Coverage 0.986 too low.
+i0HQ_Alz|c5036/f2p0/909	Coverage 0.978 too low.
+i0HQ_Alz|c1598/f2p57/688	Coverage 0.923 too low.
+i0HQ_Alz|c241561/f5p3/687	Coverage 0.968 too low.
+i0HQ_Alz|c241167/f2p115/861	Identity 0.933 too low.
+i0HQ_Alz|c1552/f2p25/947	Coverage 0.989 too low.
+i0HQ_Alz|c1550/f2p73/762	Coverage 0.881 too low.
+i0HQ_Alz|c131827/f3p776/693	Identity 0.926 too low.
+i0HQ_Alz|c1969/f3p181/828	Identity 0.935 too low.
+i0HQ_Alz|c5563/f2p137/831	Coverage 0.989 too low.
+i0HQ_Alz|c268804/f2p7/788	Coverage 0.218 too low.
+i0HQ_Alz|c1287/f3p7/755	Coverage 0.966 too low.
+i0HQ_Alz|c4421/f2p21/744	Coverage 0.981 too low.
+i0HQ_Alz|c5230/f2p121/763	Coverage 0.979 too low.
+i0HQ_Alz|c240797/f23p59/868	Coverage 0.964 too low.
+i0HQ_Alz|c266535/f2p198/715	Coverage 0.978 too low.
+i0HQ_Alz|c265405/f3p21/848	Coverage 0.989 too low.
+i0HQ_Alz|c267330/f2p33/689	Coverage 0.939 too low.
+i0HQ_Alz|c5361/f2p141/650	Coverage 0.905 too low.
+i0HQ_Alz|c267330/f2p33/689	Coverage 0.061 too low.
+i0HQ_Alz|c268804/f2p7/788	Coverage 0.782 too low.

@@ -1,0 +1,23 @@
+GMAP version 2016-08-16 called with args: gmap.sse42 -D /home/UNIXHOME/etseng/share/gmap_db_new/ -d hg38 -n 0 -t 24 -z sense_force --cross-species -f samse test.fq
+Checking compiler assumptions for SSE2: 6B8B4567 327B23C6 xor=59F066A1
+Checking compiler assumptions for SSE4.1: -103 -58 max=198 => compiler zero extends
+Checking compiler options for SSE4.2: 6B8B4567 __builtin_clz=1 __builtin_ctz=0 _mm_popcnt_u32=17 __builtin_popcount=17 
+Finished checking compiler assumptions
+Pre-loading compressed genome (oligos)......done (1,162,470,960 bytes, 283807 pages, 0.07 sec)
+Pre-loading compressed genome (bits)......done (1,162,471,008 bytes, 283807 pages, 0.06 sec)
+Looking for index files in directory /home/UNIXHOME/etseng/share/gmap_db_new//hg38
+  Pointers file is hg38.ref153offsets64meta
+  Offsets file is hg38.ref153offsets64strm
+  Positions file is hg38.ref153positions
+Offsets compression type: bitpack64
+Allocating memory for ref offset pointers, kmer 15, interval 3...Attached new memory for /home/UNIXHOME/etseng/share/gmap_db_new//hg38/hg38.ref153offsets64meta...done (134,217,744 bytes, 0.07 sec)
+Allocating memory for ref offsets, kmer 15, interval 3...Attached new memory for /home/UNIXHOME/etseng/share/gmap_db_new//hg38/hg38.ref153offsets64strm...done (470,734,416 bytes, 0.23 sec)
+Pre-loading ref positions, kmer 15, interval 3......done (3,913,147,304 bytes, 0.21 sec)
+Starting alignment
+No paths found for i0HQ_Alz|c22274/f3p7/850
+No paths found for i0HQ_Alz|c284049/f3p23/881
+No paths found for i0HQ_Alz|c7242/f3p55/997
+No paths found for i0HQ_Alz|c4614/f2p8/784
+Processed 500 queries in 2.24 seconds (223.21 queries/sec)
+Removed existing memory for shmid 492634118
+Removed existing memory for shmid 492601349

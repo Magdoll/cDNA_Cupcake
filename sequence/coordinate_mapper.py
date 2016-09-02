@@ -1,7 +1,7 @@
 import os, sys
 import pdb
 import bisect
-#from bx.intervals import Interval
+from bx.intervals import Interval
 from Bio.Seq import Seq
 
 def iter_cigar_string(cigar_string):
