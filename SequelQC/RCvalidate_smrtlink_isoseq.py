@@ -165,6 +165,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_SIRV(o, a, b, args.min_count)
-    validate_with_SIRV(args.tmp_dir, args.eval_dir)
-    eval_result(args.eval_dir, args.smrtlink_dir, args.min_count)
+    collapse_to_hg38(o, a, b, args.min_count)
+    validate_with_Gencode(args.tmp_dir, args.eval_dir)

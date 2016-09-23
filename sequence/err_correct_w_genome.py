@@ -37,6 +37,9 @@ def err_correct(genome_file, sam_file, output_err_corrected_fasta):
 
     print >> sys.stderr, "output written to", output_err_corrected_fasta
 
+
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("Generate sequences using genome bases and SAM alignment file")
