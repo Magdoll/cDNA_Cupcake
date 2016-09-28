@@ -21,6 +21,7 @@ def summarize_GMAP_sam(input_fa_or_fq, input_sam):
     f = open(input_sam + '.summary.txt', 'w')
     f.write("id\tqLength\tqCoverage\tidentity\tunique\n")
     for r in BioReaders.GMAPSAMReader(input_sam, True, query_len_dict=d):
+        if r.sID == '*': continue
         if r.qID in multi: uni = 'N'
         else: uni = 'Y'
         f.write("{0}\t{1}\t{2:.4f}\t{3:.4f}\t{4}\n".format(r.qID, d[r.qID], r.qCoverage, r.identity, uni))
