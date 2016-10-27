@@ -5,6 +5,7 @@
 __author__ = "Elizabeth Tseng"
 __copyright__ = "Copyright 2016, cDNA_Cupcake"
 __email__ = "etseng@pacb.com"
+__version__ = "1.1"
 
 import os, sys
 import pdb
@@ -23,21 +24,21 @@ def calc_overlap(s1, e1, s2, e2):
 def calc_overlap_ratio1(s1, e1, s2, e2):
     return (min(e1, e2)-max(s1, s2))*1./(e1-s1)
 
-def check_multigene(overlaps, min_overlap_bp=200, min_query_overlap=.5, min_gene_overlap=.8):
+def check_multigene(overlaps, min_overlap_bp=0, min_query_overlap=0, min_gene_overlap=.5):
     """
     overlaps is a list of: (gene, overlap_bp, overlap_gene_ratio, overlap_query_ratio)
     """
-    if all(x[1]>=min_overlap_bp or x[2]>=min_gene_overlap for x in overlaps):
-        new_name = "poly-"+overlaps[0][0]+'-'+overlaps[1][0]
+    if all(x[1]>=min_overlap_bp and x[2]>=min_gene_overlap and x[3]>=min_query_overlap for x in overlaps):
+        new_name = "poly-"+"-".join(x[0] for x in overlaps)
         return new_name
-    elif overlaps[0][3] >= min_query_overlap: # first gene covers 50% of query
+    elif overlaps[0][2] >= min_gene_overlap: # first gene covers 50% of query
         return overlaps[0][0]
-    elif overlaps[1][3] >= min_query_overlap:
-        return overlaps[1][0]
+    elif overlaps[-1][2] >= min_gene_overlap:
+        return overlaps[-1][0]
     else:
         return "novel"
 
-def match_w_annotation(t, r, info, min_overlap_bp=200, min_query_overlap=.5, min_gene_overlap=.8):
+def match_w_annotation(t, r, info, min_overlap_bp=0, min_query_overlap=0, min_gene_overlap=.5):
     """
     Input:
        t -- dict of chr -> strand -> bx.intervals.IntervalTree
@@ -54,8 +55,8 @@ def match_w_annotation(t, r, info, min_overlap_bp=200, min_query_overlap=.5, min
     if len(matches) == 0: return AMatch("novel", r.flag.strand, s, e, r)
     elif len(matches) == 1: 
         s2, e2, gene2 = info[matches[0]]
-        # check that >= 50% of the query overlaps
-        if calc_overlap_ratio1(s, e, s2, e2) >= min_query_overlap:
+        # check that the query overlaps >= 50% (or min_gene_overlap) of the annotation
+        if calc_overlap_ratio1(s2, e2, s, e) >= min_gene_overlap:
             return AMatch(gene2, r.flag.strand, s, e, r)
         else:
             return AMatch("novel", r.flag.strand, s, e, r)
@@ -64,21 +65,21 @@ def match_w_annotation(t, r, info, min_overlap_bp=200, min_query_overlap=.5, min
         overlaps = [] # list of (gene, overlap_bp, overlap_gene_ratio, overlap_query_ratio)
         for gene2 in matches:
             s2, e2, gene2 = info[gene2]
-            o = calc_overlap(s, e, s2, e2)
+            o = calc_overlap(s2, e2, s, e)
             overlaps.append((gene2, o, o*1./(e2-s2), o*1./(e-s)))
         
-        if len(overlaps) == 2: # must cover both genes by 200
+        if len(overlaps) == 2: # must cover both genes by 50% (or min_gene_overlap)
             return AMatch(check_multigene(overlaps, min_overlap_bp, min_query_overlap, min_gene_overlap), r.flag.strand, s, e, r)
         else: # 3+ genes
             flag = check_multigene(overlaps, min_overlap_bp, min_query_overlap, min_gene_overlap)
-            if flag!="novel": return AMatch(flag, r.flag.strand, s, e, r)
+            if flag.startswith('poly'): return AMatch(flag, r.flag.strand, s, e, r)
             # start shaving off genes at ends to see if they now match
             for i in xrange(1, len(overlaps)-1):
                 flag = check_multigene(overlaps[i:], min_overlap_bp, min_query_overlap, min_gene_overlap)
-                if flag!="novel": return AMatch(flag, r.flag.strand, s, e, r)
+                if flag.startswith('poly'): return AMatch(flag, r.flag.strand, s, e, r)
             for i in xrange(len(overlaps)-1, 1, -1):
                 flag = check_multigene(overlaps[:i], min_overlap_bp, min_query_overlap, min_gene_overlap)
-                if flag!="novel": return AMatch(flag, r.flag.strand, s, e, r)
+                if flag.startswith('poly'): return AMatch(flag, r.flag.strand, s, e, r)
             return AMatch("novel", r.flag.strand, s, e, r)
 
 
@@ -102,6 +103,8 @@ def categorize_aln_by_annotation(gene_annotation_file, input_fasta, input_sam, o
 
     reader = BioReaders.GMAPSAMReader(input_sam, True, query_len_dict=d)
     for r in reader:
+        #if r.qID == 'm151125_055539_42275_c100921822550000001823204305121656_s1_p0/121461/30_2108_CCS':
+        #    pdb.set_trace()
         ans = match_w_annotation(t, r, info, min_overlap_bp, min_query_overlap, min_gene_overlap)
         # ans is AMatch(name, strand, start, end, record)
         result[ans.name].append(ans)
@@ -168,10 +171,10 @@ if __name__ == "__main__":
     parser.add_argument("input_fasta", help="Input Fasta")
     parser.add_argument("input_sam", help="Input SAM")
     parser.add_argument("output_prefix", help="Output Prefix")
-    parser.add_argument("--min_query_overlap", type=float, default=.5, help="Minimum query overlap (default: 0.5)")
-    parser.add_argument("--min_poly_overlap_bp", type=int, default=200, help="Minimum gene overlap, in bp (default: 200 bp)")
-    parser.add_argument("--min_poly_gene_overlap", type=float, default=.8, help="Minimum polycistronic gene overlap, in ratio (default: 0.8)")
+    parser.add_argument("--min_query_overlap", type=float, default=0, help="Minimum query overlap, in ratio (default: 0.0)")
+    parser.add_argument("--min_gene_overlap_bp", type=int, default=0, help="Minimum gene overlap, in bp (default: 0 bp)")
+    parser.add_argument("--min_gene_overlap", type=float, default=.5, help="Minimum gene overlap, in ratio (default: 0.5)")
 
     args = parser.parse_args()
     categorize_aln_by_annotation(args.gene_annotation_file, args.input_fasta, args.input_sam, args.output_prefix, \
-                                 args.min_poly_overlap_bp, args.min_query_overlap, args.min_poly_gene_overlap)
+                                 args.min_gene_overlap_bp, args.min_query_overlap, args.min_gene_overlap)
