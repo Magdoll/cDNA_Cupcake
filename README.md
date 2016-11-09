@@ -2,7 +2,7 @@
 
 ![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpsonkeyb9w.png)
 
-Last Updated: 05/09/2016
+Last Updated: 11/09/2016
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
@@ -31,12 +31,25 @@ Please see [wiki](https://github.com/Magdoll/cDNA_Cupcake/wiki) for the latest m
 
 A brief list of currently listed scripts are:
 
+### Annotation and Rarefaction
+* `parse_matchAnnot.py`: Parse matchAnnot results into summary format.
+* `make_file_for_subsampling_from_collapsed.py`: Prepare file for running subsampling (rarefaction curve).
+* `subsample.py`: Running subsamping. Results can be plotted with Excel graphics and R, etc.
+
 ### Sequence Manipulation
 * `get_seq_stats.py`: Summarize length distribution of a FASTA/FASTQ file.
 * `rev_comp.py`: Reverse complement a sequence from command line.
 * `fa2fq.py` and `fq2fa.py`: Convert between FASTA and FASTQ format.
 * `sort_fasta_by_len.py`: sort fasta file by length (increasing or decreasing).
 * `get_seqs_from_list.py`: extract list of sequences given a fasta file and a list of IDs.
+* `err_correct_w_genome.py`: generate fasta sequences given genom
 
 ### Sequence Simulation
 * `simulate.py`: Simulate error in sequences.
+
+### Cupcake ToFU: supporting scripts for Iso Seq after clustering step
+* `collapse_isoforms_by_sam.py`: Collapse HQ isoform results to unique isoforms (based on genome alignment).
+* `get_abundance_post_collapse.py`: Obtain count information post collapse to unique isoforms.
+* `filter_by_count.py`: Filter collapse result by FL count information.
+* `filter_away_subset.py`: Filter away 5' degraded isoforms.
+
