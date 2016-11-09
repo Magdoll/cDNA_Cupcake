@@ -6,6 +6,8 @@ Last Updated: 11/09/2016
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
+Current version: 2.0 
+
 ## Python Requirements
 * Python >= 2.7
 * Biopython 
