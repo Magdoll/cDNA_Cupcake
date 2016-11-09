@@ -38,10 +38,13 @@ def get_base_to_base_mapping_from_sam(exons, cigar_string, qStart, qEnd):
                 for i in xrange(num): mapping[i] = cur_genome_loc
                 start_soft_clip = False
             else:
+                # soft clipping at the end
+                # advance the mapping but not cur_nt_loc (otherwise will be diff from qEnd)
                 for i in xrange(num): 
-                    mapping[cur_nt_loc] = cur_genome_loc
-                    cur_nt_loc += 1
-                    print cur_nt_loc
+                    mapping[cur_nt_loc+i] = cur_genome_loc
+                    #cur_nt_loc += 1
+                    #print cur_nt_loc
+                cur_nt_loc -= 1
         elif s == 'N': # intron, move to next ref exon
             assert cur_genome_loc == exons[cur_exon_i].end
             cur_exon_i += 1

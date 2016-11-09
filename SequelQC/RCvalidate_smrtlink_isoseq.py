@@ -28,6 +28,7 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
     i0_ICE_samplee5686f|c1,m54011_160718_221804/53150541/967_60_CCS,FL
     """
     fl_ass = defaultdict(lambda: set()) # (i0,c13) -> # of FL associated
+    all_fl_read_ids = set()
     reader = DictReader(open(cluster_csv),delimiter=',')
     for r in reader:
         a,b=r['cluster_id'].split('|')
@@ -36,8 +37,11 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
         # current version of SMRTLink does not provide nFL information =____=
         if r['read_type']=='FL':
             fl_ass[(pre,cid)].add(r['read_id'])
+            all_fl_read_ids.add(r['read_id'])
 
 
+    f2 = open(collapse_prefix + '.read_stat.txt', 'w')
+    f2.write("id\tlength\tis_fl\tstat\tpbid\n")
     f = open(collapse_prefix + '.abundance.txt', 'w')
     for i in xrange(14): f.write("#\n")
     f.write("pbid\tcount_fl\n")
@@ -49,9 +53,21 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
             cid = raw[1].split('/')[0]
             pre = raw[0].split('_')[0]
             total += len(fl_ass[(pre,cid)])
+            # write to read_stat.txt
+            for fl_read_id in fl_ass[(pre,cid)]: 
+                raw = fl_read_id.split('/')[-1].split('_')
+                _len = abs(int(raw[0])-int(raw[1]))
+                f2.write("{0}\t{1}\tY\tunique\t{2}\n".format(fl_read_id, _len, pbid))
+                all_fl_read_ids.remove(fl_read_id)
         f.write("{0}\t{1}\n".format(pbid, total))
     f.close()
 
+    # write the unassigned FL to read_stat.txt
+    for fl_read_id in all_fl_read_ids:
+        raw = fl_read_id.split('/')[-1].split('_')
+        _len = abs(int(raw[0])-int(raw[1]))
+        f2.write("{0}\t{1}\tY\tNA\tNA\n".format(fl_read_id, _len))
+    f2.close()
 
 def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count):
 
