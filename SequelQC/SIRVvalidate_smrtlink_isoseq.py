@@ -53,6 +53,10 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
         f.write("{0}\t{1}\n".format(pbid, total))
     f.close()
 
+def sanity_check_script_dependencies():
+    if os.system("chain_samples.py -h > /dev/null")!=0:
+        print >> sys.stderr, "chain_samples.py required in PATH! Please install Cupcake ToFU!"
+        sys.exit(-1)
 
 def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count):
 
@@ -156,6 +160,8 @@ if __name__ == "__main__":
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
 
     args = parser.parse_args()
+    sanity_check_script_dependencies()
+
     o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
     collapse_to_SIRV(o, a, b, args.min_count)
     validate_with_SIRV(args.tmp_dir, args.eval_dir)
