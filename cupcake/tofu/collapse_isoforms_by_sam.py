@@ -1,6 +1,21 @@
 #!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
+"""
+Identical to the collapse script provided in cDNA_primer (ToFU) GitHub.
+
+Takes a SAM file and the input fasta/fastq used to produce the SAM file,
+filter out alignments based on low coverage/identity and collapse/merge
+any identical isoforms based on the aligned exonic structure.
+
+Example:
+collapse_isoforms_by_sam.py --input test.fq --fq -s test.fq.sorted.sam --dun-merge-5-shorter -o test
+
+Suggested scripts to follow up with:
+   get_abundance_post_collapse.py: create count (absolute and normalized) information post collapse
+   filter_by_count.py: filter away based on FL count support
+   filter_away_subset.py (if collapse is run with --dun-merge-5-shorter)
+"""
 
 import os, sys
 from collections import defaultdict

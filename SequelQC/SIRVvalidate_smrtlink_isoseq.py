@@ -1,4 +1,5 @@
 __author__ = 'etseng@pacb.com'
+__version__ = '1.2'
 
 import os, sys, subprocess
 from csv import DictReader
@@ -79,11 +80,11 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count):
 
 
 
-    cmd = "filter_by_count.py {0} {0}.min_fl_{1} --min_count={1}".format(collapse_prefix, min_count)
+    cmd = "filter_by_count.py {0} --min_count={1}".format(collapse_prefix, min_count)
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
-    cmd = "filter_away_subset_in_no5merge.py {0}.min_fl_{1} {0}.min_fl_{1}.filtered".format(collapse_prefix, min_count)
+    cmd = "filter_away_subset.py {0}.min_fl_{1}".format(collapse_prefix, min_count)
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 

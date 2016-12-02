@@ -29,6 +29,7 @@ setup(
         ],
     scripts = ['cupcake/tofu/collapse_isoforms_by_sam.py',
                'cupcake/tofu/get_abundance_post_collapse.py',
+               'cupcake/tofu/make_sam_by_isoforms.py',
                'cupcake/tofu/filter_by_count.py',
                'cupcake/tofu/filter_away_subset.py'
                ],
