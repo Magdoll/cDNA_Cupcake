@@ -11,6 +11,8 @@ ext_modules = [
                     ["cupcake/tofu/branch/intersection_unique.c"]),
                 Extension("cupcake.tofu.branch.c_branch",
                          ["cupcake/tofu/branch/c_branch.c"]),
+                Extension("cupcake.ice.find_ECE",
+                    ["cupcake/ice/find_ECE.c"]),
               ]
 
 
@@ -22,7 +24,7 @@ setup(
     ext_modules = ext_modules,
     include_dirs = [np.get_include()],
     zip_safe=False,
-    packages = ['cupcake', 'cupcake.io', 'cupcake.tofu', 'cupcake.tofu.branch', 'cupcake.tofu.counting'],
+    packages = ['cupcake', 'cupcake.io', 'cupcake.ice', 'cupcake.tofu', 'cupcake.tofu.branch'],
     install_requires=[
         'biopython',
         'bx-python'
@@ -32,6 +34,7 @@ setup(
                'cupcake/tofu/make_sam_by_isoforms.py',
                'cupcake/tofu/filter_by_count.py',
                'cupcake/tofu/filter_away_subset.py',
-               'cupcake/tofu/counting/chain_samples.py'
+               'cupcake/tofu/process_blasr_to_read_stat.py',
+               'cupcake/tofu/process_read_stats_to_count.py'
                ],
     )

@@ -60,6 +60,7 @@ class GTF:
                 self.transcript[tID].insert(start0, end1, {'ith':ith,'chr':chr})
                 self.exon[(start0,end1)].append((tID, ith, chr))
                 ith += 1
+
         
     def get_exons(self, tID):
         """
@@ -325,7 +326,7 @@ class gmapRecord:
         self.seqid = seqid
         self.ref_exons = []
         self.seq_exons = []
-        self.cds_exons = None
+        self.cds_exons = []
         self.scores = []
         
     def __str__(self):
@@ -352,7 +353,11 @@ class gmapRecord:
     
     def get_end(self): return self.ref_exons[-1].end
         
-        
+
+    def add_cds_exon(self, start, end):
+        self.cds_exons.append(Interval(start, end))
+
+
     def add_exon(self, rStart0, rEnd1, sStart0, sEnd1, rstrand, score):
         assert rStart0 < rEnd1 and sStart0 < sEnd1
         if rstrand == '-':
@@ -556,6 +561,9 @@ class collapseGFFReader(gmapGFFReader):
             if raw[2] == 'exon':
                 s, e = int(raw[3])-1, int(raw[4])
                 rec.add_exon(s, e, s, e, rstrand='+', score=None)
+            elif raw[2] == 'CDS':
+                s, e = int(raw[3])-1, int(raw[4])
+                rec.add_cds_exon(s, e)
             else: # another new record, wind back and return
                 self.f.seek(cur)
                 return rec
