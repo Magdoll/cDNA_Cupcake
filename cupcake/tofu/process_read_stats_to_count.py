@@ -22,6 +22,7 @@ FIELD_EXPLAIN=\
 import os, sys
 from collections import defaultdict
 from csv import DictReader
+from Bio import SeqIO
 
 import fire
 
@@ -60,40 +61,45 @@ def gather_read_stat(read_stat_filename):
     return o
 
 
-def tally_count_file(tally_obj, output_filename):
+def tally_count_file(fasta_filename, tally_obj, output_filename):
     # now properly form
     # nfl = fl_only + nfl_only
     # nfl_amb = fl_only + nfl_only + nfl_amb_only
+
+    allids = [r.id.split('|')[0] for r in SeqIO.parse(open(fasta_filename), 'fasta')]
 
     o = tally_obj
     total_fl = o.num_fl
     total_nfl = total_fl + o.num_nfl_unique
     total_nfl_amb = total_nfl + o.num_nfl_amb
     with open(output_filename, 'w') as f:
-        f.write(FIELD_EXPLAIN + '\n')
+        f.write(FIELD_EXPLAIN)
         f.write("# Total Number of FL reads: {0}\n".format(total_fl))
         f.write("# Total Number of FL + unique nFL reads: {0}\n".format(total_nfl))
         f.write("# Total Number of all reads: {0}\n".format(total_nfl_amb))
         f.write("#\n")
         f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl norm_nfl\tnorm_nfl_amb\n")
 
-        keys = o.tally.keys()
-        keys.sort(key=lambda x: map(int, x.split('.')[1:]))
-        for pbid in keys:
-            x = o.tally[pbid]
-            count_fl = x['fl_only']
-            count_nfl = x['fl_only'] + x['nfl_only']
-            count_nfl_amb = x['fl_only'] + x['nfl_only'] + x['nfl_amb_only']
-            f.write("{0}\t".format(pbid))
-            f.write("{0}\t{1}\t{2}\t".format(count_fl, count_nfl, count_nfl_amb))
-            f.write("{0}\t{1}\t{2}\n".format(count_fl*1./total_fl,\
+        allids.sort(key=lambda x: map(int, x.split('.')[1:]))
+        for pbid in allids:
+            print "processing", pbid
+            if pbid in o.tally:
+                f.write("{0}\t0\t0\t0\t0\t0\t0\n".format(pbid))
+            else:
+                x = o.tally[pbid]
+                count_fl = x['fl_only']
+                count_nfl = x['fl_only'] + x['nfl_only']
+                count_nfl_amb = x['fl_only'] + x['nfl_only'] + x['nfl_amb_only']
+                f.write("{0}\t".format(pbid))
+                f.write("{0}\t{1}\t{2}\t".format(count_fl, count_nfl, count_nfl_amb))
+                f.write("{0}\t{1}\t{2}\n".format(count_fl*1./total_fl,\
                                              count_nfl*1./total_nfl,\
                                              count_nfl_amb*1./total_nfl_amb))
 
-def main(read_stat_filename, output_filename):
+def main(fasta_filename, read_stat_filename, output_filename):
     print read_stat_filename, output_filename
     o = gather_read_stat(read_stat_filename)
-    tally_count_file(o, output_filename)
+    tally_count_file(fasta_filename, o, output_filename)
 
 if __name__ == "__main__":
     fire.Fire(main, name='process')
