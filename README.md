@@ -2,11 +2,11 @@
 
 ![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpsonkeyb9w.png)
 
-Last Updated: 11/09/2016
+Last Updated: 03/14/2017
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 2.0 
+Current version: 2.4
 
 ## Python Requirements
 * Python >= 2.7
@@ -54,4 +54,4 @@ A brief list of currently listed scripts are:
 * `get_abundance_post_collapse.py`: Obtain count information post collapse to unique isoforms.
 * `filter_by_count.py`: Filter collapse result by FL count information.
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
-
+* `chain_samples.py`: Chaining together multiple samples
