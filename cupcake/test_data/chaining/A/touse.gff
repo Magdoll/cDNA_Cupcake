@@ -1,0 +1,6 @@
+chr2	PacBio	transcript	1	100	.	+	.	gene_id "PB.1"; transcript_id "PB.1.1";
+chr2	PacBio	exon	1	100	.	+	.	gene_id "PB.1"; transcript_id "PB.1.1";
+chr2	PacBio	transcript	1	100	.	-	.	gene_id "PB.2"; transcript_id "PB.2.1";
+chr2	PacBio	exon	1	30	.	-	.	gene_id "PB.2"; transcript_id "PB.2.1";
+chr2	PacBio	exon	50	70	.	-	.	gene_id "PB.2"; transcript_id "PB.2.1";
+chr2	PacBio	exon	90	95	.	-	.	gene_id "PB.2"; transcript_id "PB.2.1";

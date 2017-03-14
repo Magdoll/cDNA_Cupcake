@@ -54,4 +54,4 @@ A brief list of currently listed scripts are:
 * `get_abundance_post_collapse.py`: Obtain count information post collapse to unique isoforms.
 * `filter_by_count.py`: Filter collapse result by FL count information.
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
-* `chain_samples.py`: Chaining together multiple samples
+* `chain_samples.py`: Chaining together multiple samples.
