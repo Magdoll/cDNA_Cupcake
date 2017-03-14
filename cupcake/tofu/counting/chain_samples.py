@@ -4,8 +4,32 @@ __author__ = 'etseng@pacb.com'
 import os, sys, glob, shutil
 from csv import DictReader
 from collections import defaultdict
+from Bio import SeqIO
 from cupcake.io import GFF
 from cupcake.tofu.counting import combine_abundance_across_samples as sp
+
+def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_filename=None):
+    """
+    Double check that the formats are expected and all PBIDs are concordant across the files
+    :return: raise Exception if sanity check failed
+    """
+    print >> sys.stderr, "Sanity checking. Retrieving PBIDs from {0},{1},{2}...".format(\
+        group_filename, gff_filename, count_filename)
+    ids1 = [line.strip().split()[0] for line in open(group_filename)]
+    ids2 = [r.seqid for r in GFF.collapseGFFReader(gff_filename)]
+    f = open(count_filename)
+    for i in xrange(14): f.readline() # just through the header
+    ids3 = [r['pbid'] for r in DictReader(f, delimiter='\t')]
+    if set(ids1)!=set(ids2) or set(ids2)!=set(ids3):
+        raise Exception, "Sanity check failed! Please make sure the PBIDs are consistent between: {0],{1},{2}".format(\
+            group_filename, gff_filename, count_filename)
+
+    if fastq_filename is not None:
+        ids4 = [r.id.split('|')[0] for r in SeqIO.parse(open(fastq_filename), 'fastq')]
+        if set(ids1)!=set(ids4):
+            raise Exception, "Sanity check failed! {0} IDs don't match with the group file {1}".format(\
+                fastq_filename, group_filename)
+
 
 def read_config(filename):
     """
@@ -15,10 +39,14 @@ def read_config(filename):
     GROUP_FILENAME=
     GFF_FILENAME=
     COUNT_FILENAME=
+
+    optional:
+    FASTQ_FILENAME=
     """
     sample_dirs = {}
     sample_names = []
     group_filename, gff_filename, count_filename = None, None, None
+    fastq_filename = None
 
     with open(filename) as f:
         for line in f:
@@ -32,6 +60,8 @@ def read_config(filename):
                 gff_filename = line.strip()[len('GFF_FILENAME='):]
             elif line.startswith('COUNT_FILENAME='):
                 count_filename = line.strip()[len('COUNT_FILENAME='):]
+            elif line.startswith('FASTQ_FILENAME='):
+                fastq_filename = line.strip()[len('FASTQ_FILENAME='):]
 
     if group_filename is None:
         raise Exception, "Expected GROUP_FILENAME= but not in config file {0}! Abort.".format(filename)
@@ -44,10 +74,17 @@ def read_config(filename):
         print >> sys.stderr, "No samples given. Exit."
         sys.exit(-1)
 
-    return sample_dirs, sample_names, group_filename, gff_filename, count_filename
+    return sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename
 
 
-def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0):
+def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
+
+    for d in dirs:
+        sample_sanity_check(os.path.join(d, group_filename),\
+                            os.path.join(d, gff_filename),\
+                            os.path.join(d, count_filename),\
+                            os.path.join(d, fastq_filename) if fastq_filename is not None else None)
+
     count_info = {} # key: (sample, PB.1.1) --> count
     for name, d in dirs.iteritems():
         f = open(os.path.join(d, count_filename))
@@ -62,11 +99,19 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
     d = dirs[name]
     chain = [name]
 
-    o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction)
+    o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
+                      self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction, \
+                      allow_5merge=allow_5merge, \
+                      fastq_filename=os.path.join(d, fastq_filename))
     for name in names[1:]:
         d = dirs[name]
-        o.add_sample(os.path.join(d, gff_filename), os.path.join(d, group_filename), sample_prefix=name, output_prefix='tmp_'+name)
-        o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, internal_fuzzy_max_dist=fuzzy_junction)
+        o.add_sample(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
+                     sample_prefix=name, output_prefix='tmp_'+name, \
+                     fastq_filename=os.path.join(d, fastq_filename))
+        o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, \
+                          internal_fuzzy_max_dist=fuzzy_junction, \
+                          allow_5merge=allow_5merge, \
+                          fastq_filename='tmp_'+name+'.rep.fq')
         chain.append(name)
 
     # now recursively chain back by looking at mega_info.txt!!!
@@ -119,11 +164,15 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
     f2.close()
 
     shutil.copyfile('tmp_' + chain[-1] + '.gff', 'all_samples.chained.gff')
+    if fastq_filename is not None:
+        shutil.copyfile('tmp_' + chain[-1] + '.rep.fq', 'all_samples.chained.rep.fq')
 
     print >> sys.stderr, "Chained output written to:"
     print >> sys.stderr, "all_samples.chained.gff"
     print >> sys.stderr, f1.name
     print >> sys.stderr, f2.name
+    if fastq_filename is not None:
+        print >> sys.stderr, "all_samples.chained.rep.fq"
 
 
 if __name__ == "__main__":
@@ -132,9 +181,9 @@ if __name__ == "__main__":
     parser.add_argument("config_file")
     parser.add_argument("field_to_use", choices=['norm_fl', 'norm_nfl', 'norm_nfl_amb', 'count_fl', 'count_nfl', 'count_nfl_amb'], default='norm_nfl', help="Which count field to use for chained sample (default: norm_nfl)")
     parser.add_argument("--fuzzy_junction", default=5, type=int, help="Max allowed distance in junction to be considered identical (default: 5 bp)")
-
+    parser.add_argument("--allow_5merge", action="store_true", default=False, help="Allow 5' truncated transcripts (default: off)" )
     args = parser.parse_args()
 
-    sample_dirs, sample_names, group_filename, gff_filename, count_filename = read_config(args.config_file)
-    chain_samples(sample_dirs, sample_names, group_filename, gff_filename, count_filename, args.field_to_use, args.fuzzy_junction)
+    sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename = read_config(args.config_file)
+    chain_samples(sample_dirs, sample_names, group_filename, gff_filename, count_filename, args.field_to_use, args.fuzzy_junction, args.allow_5merge, fastq_filename)
 

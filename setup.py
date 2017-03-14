@@ -4,7 +4,7 @@ import numpy as np
 
 
 __author__ = "etseng@pacb.com"
-version = "2.3"
+version = "2.4"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -24,7 +24,7 @@ setup(
     ext_modules = ext_modules,
     include_dirs = [np.get_include()],
     zip_safe=False,
-    packages = ['cupcake', 'cupcake.io', 'cupcake.ice', 'cupcake.tofu', 'cupcake.tofu.branch'],
+    packages = ['cupcake', 'cupcake.io', 'cupcake.ice', 'cupcake.tofu', 'cupcake.tofu.branch', 'cupcake.tofu.counting'],
     install_requires=[
         'biopython',
         'bx-python'
@@ -35,6 +35,7 @@ setup(
                'cupcake/tofu/filter_by_count.py',
                'cupcake/tofu/filter_away_subset.py',
                'cupcake/tofu/process_blasr_to_read_stat.py',
-               'cupcake/tofu/process_read_stats_to_count.py'
+               'cupcake/tofu/process_read_stats_to_count.py',
+               'cupcake/tofu/counting/chain_samples.py'
                ],
     )

@@ -2,6 +2,7 @@ __author__ = 'etseng@pacb.com'
 
 
 import os, sys
+from Bio import SeqIO
 from collections import defaultdict
 from cupcake.tofu import compare_junctions
 from cupcake.io import GFF
@@ -13,18 +14,23 @@ class MegaPBTree:
     Structure for maintaining a non-redundant set of gene annotations
     Used to combine with different collapsed GFFs from different samples
     """
-    def __init__(self, gff_filename, group_filename, internal_fuzzy_max_dist=0, self_prefix=None):
+    def __init__(self, gff_filename, group_filename, internal_fuzzy_max_dist=0, self_prefix=None, allow_5merge=False, fastq_filename=None):
         self.gff_filename = gff_filename
         self.group_filename = group_filename
         self.self_prefix = self_prefix
         self.internal_fuzzy_max_dist = internal_fuzzy_max_dist
+        self.allow_5merge = allow_5merge
         self.record_d = dict((r.seqid, r) for r in GFF.collapseGFFReader(gff_filename))
         self.tree = defaultdict(lambda: {'+':IntervalTree(), '-':IntervalTree()}) # chr --> strand --> tree
+        self.fastq_dict = None
+        if fastq_filename is not None:
+            self.fastq_dict = MegaPBTree.read_fastq_to_dict(fastq_filename)
 
         #print >> sys.stderr, "self.internal_fuzzy_max_dist is", internal_fuzzy_max_dist
         #raw_input()
         self.read_gff_as_interval_tree()
         self.group_info = MegaPBTree.read_group(self.group_filename, self.self_prefix) # ex: PB.1.1 --> [ RatHeart|i3_c123.... ]
+
 
     def read_gff_as_interval_tree(self):
         """
@@ -32,6 +38,13 @@ class MegaPBTree:
         """
         for r in GFF.collapseGFFReader(self.gff_filename):
             self.tree[r.chr][r.strand].insert(r.start, r.end, r)
+
+    @staticmethod
+    def read_fastq_to_dict(fastq_filename):
+        fastq_dict = {}
+        for r in SeqIO.parse(open(fastq_filename), 'fastq'):
+            fastq_dict[r.id.split('|')[0]] = r
+        return fastq_dict
 
     @staticmethod
     def read_group(group_filename, group_prefix):
@@ -50,7 +63,7 @@ class MegaPBTree:
         r --- GMAPRecord
         tree --- dict of chromosome --> strand --> IntervalTree
 
-        If exact match (every exon junction), return the matching GMAPRecord
+        If exact match (every exon junction) or 5' truncated (allow_5merge is True), return the matching GMAPRecord
         Otherwise return None
         *NOTE*: the tree should be non-redundant so can return as soon as exact match is found!
         """
@@ -60,9 +73,23 @@ class MegaPBTree:
             r2.segments = r2.ref_exons
             if compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'exact': # is a match!
                 return r2
+            elif self.allow_5merge: # check if the shorter one is a subset of the longer one
+                if len(r.segments) > len(r2.segments):
+                    a, b = r, r2
+                else:
+                    a, b = r2, r
+                # a is the longer one, b is the shorter one
+                if compare_junctions.compare_junctions(b, a, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'subset':
+                    # we only know that a is a subset of b, verify that it is actually 5' truncated (strand-sensitive!)
+                    # if + strand, last exon of a should match last exon of b
+                    # if - strand, first exon of a should match first exon of b
+                    if (r.strand == '+' and compare_junctions.overlaps(a.segments[-1], b.segments[-1])) or \
+                       (r.strand == '-' and compare_junctions.overlaps(a.segments[0], b.seq_exons[0])):
+                        return r2
+
         return None
 
-    def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix):
+    def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix, fastq_filename=None):
         combined = [] # list of (r1 if r2 is None | r2 if r1 is None | longer of r1 or r2 if both not None)
         unmatched_recs = self.record_d.keys()
 
@@ -88,14 +115,17 @@ class MegaPBTree:
             else:
                 final_tree[r2.chr][r2.strand].insert(r2.start, r2.end, i)
 
-        self.write_cluster_tree_as_gff(final_tree, combined, group_filename, sample_prefix, output_prefix)
+        self.write_cluster_tree_as_gff(final_tree, combined, group_filename, sample_prefix, output_prefix, fastq_filename2=fastq_filename)
 
 
-    def write_cluster_tree_as_gff(self, cluster_tree, rec_list, group_filename2, sample_prefix2, output_prefix):
+    def write_cluster_tree_as_gff(self, cluster_tree, rec_list, group_filename2, sample_prefix2, output_prefix, fastq_filename2=None):
         """
         Write ClusterTree (chr --> dict --> (start, end, rec_list_index)) as collapsedGFF format
         Returns --- a new group_info!!!
         """
+        if fastq_filename2 is not None:
+            fastq_dict2 = MegaPBTree.read_fastq_to_dict(fastq_filename2)
+            f_fastq = open(output_prefix+'.rep.fq', 'w')
         group_info2 = MegaPBTree.read_group(group_filename2, sample_prefix2)
         new_group_info = {}
         f_out = open(output_prefix+'.gff', 'w')
@@ -118,15 +148,30 @@ class MegaPBTree:
                             r = r2
                             new_group_info[tID] = group_info2[r2.seqid]
                             f_mgroup.write("{tID}\tNA\t{group}\n".format(tID=tID, group=r2.seqid))
+                            if fastq_filename2 is not None:
+                                seqrec = fastq_dict2[r2.seqid]
                         elif r2 is None: # r1 is not None
                             r = r1
                             new_group_info[tID] = self.group_info[r1.seqid]
                             f_mgroup.write("{tID}\t{group}\tNA\n".format(tID=tID, group=r1.seqid))
+                            if fastq_filename2 is not None:
+                                seqrec = self.fastq_dict[r1.seqid]
                         else: # both r1, r2 are not empty
-                            r = r1 if (r1.end-r1.start > r2.end-r2.start) else r2
+                            if (r1.end - r1.start > r2.end - r2.start):
+                                r = r1
+                                if fastq_filename2 is not None:
+                                    seqrec = self.fastq_dict[r1.seqid]
+                            else:
+                                r = r2
+                                if fastq_filename2 is not None:
+                                    seqrec = fastq_dict2[r2.seqid]
                             new_group_info[tID] = self.group_info[r1.seqid] + group_info2[r2.seqid]
                             f_mgroup.write("{tID}\t{group1}\t{group2}\n".format(tID=tID, group1=r1.seqid, group2=r2.seqid))
 
+
+                        if fastq_filename2 is not None:
+                            seqrec.id = tID
+                            SeqIO.write(seqrec, f_fastq, 'fastq')
                         f_group.write("{tID}\t{members}\n".format(tID=tID, members=",".join(new_group_info[tID])))
                         f_out.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"PB.{i}\"; transcript_id \"{tID}\";\n".format(\
                             chr=k, s=r.start+1, e=r.end, strand=strand, tID=tID, i=loci_index))
@@ -136,6 +181,8 @@ class MegaPBTree:
         f_out.close()
         f_group.close()
         f_mgroup.close()
+        if fastq_filename2 is not None:
+            f_fastq.close()
         return new_group_info
 
 
