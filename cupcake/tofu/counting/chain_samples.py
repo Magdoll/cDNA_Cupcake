@@ -20,15 +20,15 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
     f = open(count_filename)
     for i in xrange(14): f.readline() # just through the header
     ids3 = [r['pbid'] for r in DictReader(f, delimiter='\t')]
-    if set(ids1)!=set(ids2) or set(ids2)!=set(ids3):
-        raise Exception, "Sanity check failed! Please make sure the PBIDs are consistent between: {0],{1},{2}".format(\
+    if len(set(ids2).difference(ids1))>0 or len(set(ids2).difference(ids3))>0:
+        raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
             group_filename, gff_filename, count_filename)
 
     if fastq_filename is not None:
         ids4 = [r.id.split('|')[0] for r in SeqIO.parse(open(fastq_filename), 'fastq')]
-        if set(ids1)!=set(ids4):
-            raise Exception, "Sanity check failed! {0} IDs don't match with the group file {1}".format(\
-                fastq_filename, group_filename)
+        if len(set(ids2).difference(ids4))>0:
+            raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0}".format(\
+                fastq_filename, gff_filename)
 
 
 def read_config(filename):
@@ -102,16 +102,16 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
     o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
                       self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction, \
                       allow_5merge=allow_5merge, \
-                      fastq_filename=os.path.join(d, fastq_filename))
+                      fastq_filename=os.path.join(d, fastq_filename) if fastq_filename is not None else None)
     for name in names[1:]:
         d = dirs[name]
         o.add_sample(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
                      sample_prefix=name, output_prefix='tmp_'+name, \
-                     fastq_filename=os.path.join(d, fastq_filename))
+                     fastq_filename=os.path.join(d, fastq_filename) if fastq_filename is not None else None)
         o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, \
                           internal_fuzzy_max_dist=fuzzy_junction, \
                           allow_5merge=allow_5merge, \
-                          fastq_filename='tmp_'+name+'.rep.fq')
+                          fastq_filename='tmp_'+name+'.rep.fq' if fastq_filename is not None else None)
         chain.append(name)
 
     # now recursively chain back by looking at mega_info.txt!!!
