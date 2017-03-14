@@ -79,7 +79,7 @@ def read_config(filename):
 
 def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
 
-    for d in dirs:
+    for d in dirs.itervalues():
         sample_sanity_check(os.path.join(d, group_filename),\
                             os.path.join(d, gff_filename),\
                             os.path.join(d, count_filename),\
