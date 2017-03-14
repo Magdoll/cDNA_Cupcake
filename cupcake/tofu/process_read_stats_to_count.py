@@ -78,7 +78,7 @@ def tally_count_file(fasta_filename, tally_obj, output_filename):
         f.write("# Total Number of FL + unique nFL reads: {0}\n".format(total_nfl))
         f.write("# Total Number of all reads: {0}\n".format(total_nfl_amb))
         f.write("#\n")
-        f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl norm_nfl\tnorm_nfl_amb\n")
+        f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl\tnorm_nfl\tnorm_nfl_amb\n")
 
         allids.sort(key=lambda x: map(int, x.split('.')[1:]))
         for pbid in allids:
