@@ -10,4 +10,7 @@ d = defaultdict(lambda: 0)
 for r in SeqIO.parse(open(fasta_filename),'fasta'):
     d[r.id.split('/')[0]] += 1
 
-for k,v in d.iteritems(): print k,v
+keys = d.keys()
+keys.sort()
+for k in keys:
+    print k, d[k]

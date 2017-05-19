@@ -2,15 +2,17 @@
 
 ![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpsonkeyb9w.png)
 
-Last Updated: 03/14/2017
+Last Updated: 05/19/2017
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 2.4
+Current version: 2.5
 
 ## Python Requirements
 * Python >= 2.7
 * Biopython 
+
+Note: to use scripts in the ToFU suite you will need additional requirements. See [wiki](https://github.com/Magdoll/cDNA_Cupcake/wiki/Cupcake-ToFU%3A-supporting-scripts-for-Iso-Seq-after-clustering-step) for more details.
 
 ## How to use this repository
 
@@ -55,3 +57,4 @@ A brief list of currently listed scripts are:
 * `filter_by_count.py`: Filter collapse result by FL count information.
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
 * `chain_samples.py`: Chaining together multiple samples.
+* `fusion_finder.py`: Finding fusion genes.
