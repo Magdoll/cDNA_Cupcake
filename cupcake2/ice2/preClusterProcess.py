@@ -3,55 +3,148 @@ __author__ = 'etseng@pacb.com'
 
 import os, sys, pdb, subprocess
 from collections import defaultdict
+from functools import partial
 
 import networkx as nx
 from Bio import SeqIO
 
-from cupcake2.ice2.preCluster import preClusterSet
+from cupcake2.ice2.preCluster import preClusterSet, preClusterSet2
 from cupcake2.io.minimapIO import MiniReader
 
 
-def process_self_align_into_pCS(align_filename, seqids, reader_class=MiniReader):
-    """
-    Ignore hits that are - strand or qID >= sID (self hit or already reported)
 
-    Returns:
-    pCS -- preClusterSet
-    tucked --- dict of seqid --> what it is tucked under
-    orphans --- seqs that are neither in pCS nor tucked i.e. no align hits
-    """
-    pCS = preClusterSet()
-    tucked = defaultdict(lambda: []) # seqid --> what it is tucked under
-    orphans = set(seqids)
-    reader = reader_class(align_filename)
-    for r in reader:
-        if r.qID >= r.sID or r.strand == '-': continue
-        s = r.characterize(400, 0.1, 400, 0.1)
-        if s == 'partial': continue
-        if s == 'match': pCS.add_seqid_match(r.qID, r.sID)
-        elif s == 'q_contained': tucked[r.qID].append(r.sID)
-        elif s == 's_contained': tucked[r.sID].append(r.qID)
-
-    # use networkx to get the "tucked" map ones that have no outgoing nodes (but also mean they have no matches)
-    G = nx.DiGraph()
-    for k,v in tucked.iteritems():
-        for s in v:
-            G.add_edge(k, s)
-
-    cand = filter(lambda x: G.out_degree(x)==0 and x not in pCS.seq_map, G.nodes_iter())
-    # add candidates (from tucked, no outgoing, not in pCS already) to pCS.S
-    for x in cand: pCS.add_new_cluster([x])
-
-
+def sanity_checking(pCS, orphans):
     # do some sanity checking
     # 1. all members should be uniquely in one S
     for cid in pCS.S:
         for x in pCS.S[cid].members:
             assert pCS.seq_map[x]==cid
-    # 2. get the set of "orphans" (not in tucked, not in pCS.S)
-    for x in pCS.seq_map: orphans.remove(x)
-    for x in tucked:
-        try: orphans.remove(x)
-        except: pass # ignore, already removed
+            assert x not in orphans
+    # 2. anything in tucked must not be in seq_map
+    for x in pCS.tucked:
+        assert x not in pCS.seq_map
+        assert x not in orphans
 
-    return pCS, tucked, orphans
+def sanity_checking2(pCS, orphans):
+    for cid in pCS.S:
+        for x in pCS.S[cid].members:
+            assert pCS.seq_map[x]==cid
+            assert x not in orphans
+
+    for x in pCS.seq_map:
+        if pCS.seq_stat[x] == 'T':
+            assert x not in orphans
+            assert x not in pCS.seq_map
+        elif pCS.seq_stat[x] == 'M':
+            assert x not in orphans
+
+
+def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None):
+    """
+    Ignore hits that are - strand or qID >= sID (self hit or already reported)
+
+    Returns:
+    pCS -- preClusterSet
+    orphans --- seqs that are neither in pCS nor tucked i.e. no align hits
+    """
+    if pCS is None:
+        pCS = preClusterSet2()
+
+    orphans = set(seqids)
+    reader = reader_class(align_filename)
+    for r in reader:
+        if r.qID >= r.sID or r.strand == '-': continue
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+
+        #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
+        #    pdb.set_trace()
+        if s == 'match':
+            pCS.add_seqid_match(r.qID, r.sID)
+        elif s == 'q_contained':
+            pCS.add_seqid_contained(r.qID, r.sID)
+        elif s == 's_contained':
+            pCS.add_seqid_contained(r.sID, r.qID)
+        try:
+            orphans.remove(r.qID)
+        except:
+            pass
+        try:
+            orphans.remove(r.sID)
+        except:
+            pass
+        #sanity_checking(pCS, orphans)
+
+
+    #sanity_checking(pCS, orphans)
+
+    return pCS, orphans
+
+def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
+    """
+    Batch against {S}, so it is NOT self align! Only have to ignore - strand hits.
+
+    (a) if match against exactly one cluster c: add to c
+    (b) if match against multiple clusters: combine (add_seqid_match handles this)
+    (c) if match against none: save as "batch orphan" to be processed in step 2b
+
+    Return: pCS, remains
+    """
+    orphans = set(seqids)
+    # ex: process batch1 against seed1.S.fasta
+    reader = reader_class(align_filename)#'batch1.fasta.S.f00001.minimap')
+    for r in reader:
+        if r.strand == '-': continue
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+        if s == 'match':
+            pCS.add_seqid_match(r.qID, r.sID)
+        elif s == 'q_contained':
+            # sID must be in cluster, so just call pCS to handle the tucking
+            pCS.add_seqid_contained(r.qID, r.sID)
+        elif s == 's_contained':
+            # sID must be in cluster
+            pCS.add_seqid_contained(r.sID, r.qID)
+        try:
+            orphans.remove(r.qID)
+        except:
+            pass
+
+    return pCS, orphans
+
+
+
+def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_class):
+    """
+    remaining of "batch" against orphans
+
+    if partial: ignore
+    if match: add orphan+matched to {S} (remember orphan is not currently in S); also remove orphan from "orphan"; remove qID from tmp
+    if q_contained: add orphan to S, tuck qID; also remove orphan from the variable "orphan"; remove qID from tmp
+    if s_contained: add qID to S, tuck orphan; also remove orphan from the variable "orphan"; remove qID from tmp
+
+    Returns: pCS, orphans, remaining
+    """
+    reader = reader_class(align_filename)
+    for r in reader:
+        if r.strand == '-': continue
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+        if s == 'match':
+            pCS.add_seqid_match(r.qID, r.sID)
+        elif s == 'q_contained':
+            pCS.add_seqid_contained(r.qID, r.sID)
+        elif s == 's_contained':
+            pCS.add_seqid_contained(r.sID, r.qID)
+
+        try:
+            orphans.remove(r.sID)
+        except:
+            pass
+
+        try:
+            remaining.remove(r.qID)
+        except:
+            pass
+
+    return pCS, orphans, remaining

@@ -25,7 +25,7 @@ setup(
     include_dirs = [np.get_include()],
     zip_safe=False,
     packages = ['cupcake', 'cupcake.io', 'cupcake.ice', 'cupcake.tofu', 'cupcake.tofu.branch', \
-                'cupcake2', 'cupcake2.io', 'cupcake2.ice2'],
+                'cupcake2', 'cupcake2.io', 'cupcake2.ice2', 'cupcake2.tofu2'],
     install_requires=[
         'biopython',
         'bx-python'
