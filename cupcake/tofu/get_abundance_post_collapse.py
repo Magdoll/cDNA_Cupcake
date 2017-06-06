@@ -74,7 +74,8 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
     return cid_info
 
 cluster_rex_sa3 = re.compile('i\d+_ICE_\S+\|c(\d+)')
-cluster_rex_sa2 = re.compile('i\d+HQ_\S+|c(\d+)')
+cluster_rex_sa2 = re.compile('i\d+[HL]Q_\S+|c(\d+)')
+
 def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output_mode='w'):
     """
     Given an Iso-Seq csv output file w/ format:
