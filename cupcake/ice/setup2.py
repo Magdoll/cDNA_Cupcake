@@ -9,6 +9,9 @@ ext_modules = [
 setup(
 		name = 'c_ICE',
 		cmdclass = {'build_ext': build_ext},
-		ext_modules = ext_modules
+		ext_modules = ext_modules,
+        author_email='etseng@pacificbiosciences.com',
+        author='Elizabeth Tseng'
 )
+
 
