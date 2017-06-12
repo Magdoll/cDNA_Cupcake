@@ -275,7 +275,7 @@ class IcePartialOne2(object):
     def __init__(self, input_fasta, input_fastq, ref_fasta, out_pickle,
                  done_filename, ice_opts, cpus=4, tmp_dir=None):
         self.input_fasta = input_fasta
-        self.input_fastq = input_fastq
+        self.input_fastq = input_fastq # could be None
         self.ref_fasta = ref_fasta
         self.out_pickle = out_pickle
         self.done_filename = done_filename
@@ -285,7 +285,10 @@ class IcePartialOne2(object):
 
         # read QV from fastq
         start_t = time.time()
-        self.probqv, msg = set_probqv_from_fq(self.input_fastq)
+        if self.input_fastq is not None:
+            self.probqv, msg = set_probqv_from_fq(self.input_fastq)
+        else:
+            self.probqv, msg = set_probqv_from_model()
         logging.info("Reading probQV from {0} took {1:.1f} sec.".format(self.input_fastq, time.time()-start_t))
 
 
@@ -355,7 +358,7 @@ def add_ice_partial_one_arguments(parser):
     """Add arguments for assigning nfl reads of a given input fasta
     to unpolished isoforms."""
     parser.add_argument("input_fasta", help="Non full-length reads (fasta)")
-    parser.add_argument("input_fastq", help="Non full-length reads (fastq)")
+    parser.add_argument("--input_fastq", default=None, help="Non full-length reads (fastq). If not given, no QVs are used.")
     parser.add_argument("ref_fasta", help="Reference fasta, most likely ref.consensus.fasta")
     parser.add_argument("out_pickle", help="Output pickle file", default="ice_partial_one")
     parser.add_argument("--done", dest="done_filename", type=str,

@@ -39,10 +39,12 @@ setup(
                'cupcake/tofu/process_blasr_to_read_stat.py',
                'cupcake/tofu/fusion_finder.py',
                'cupcake/tofu/counting/chain_samples.py',
+               'cupcake2/tofu2/run_preCluster.py',
                'cupcake2/tofu2/run_IceInit2.py',
                'cupcake2/tofu2/run_IceIterative2.py',
                'cupcake2/tofu2/run_IcePartial2.py',
                'cupcake2/tofu2/run_IceArrow2.py',
-               'cupcake2/io/SeqSplitter.py'
+               'cupcake2/io/SeqSplitter.py',
+               'cupcake2/tofu2/generate_batch_cmd_for_preCluster_out.py'
                ],
     )

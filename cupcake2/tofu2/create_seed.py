@@ -31,7 +31,7 @@ def create_seed_n_batch_files(input='isoseq_flnc.fasta', fasta_d=None, seed_file
         batch_files.append("{0}{1}.fasta".format(batch_pre, batch_index))
 
     write_seqids_to_fasta([x[0] for x in lens[:starting_seed_index]], "{0}{1}.fasta".format(batch_pre, batch_index), fasta_d)
-    return batch_index
+    return batch_index+1
 
 if __name__ == "__main__":
     create_seed_n_batch_files()

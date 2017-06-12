@@ -109,7 +109,7 @@ class IceFiles2(IceFiles):
         """
         return self._arrowed_bin_prefix(first, last) + ".arrowed.fastq"
 
-    def list_of_expected_fq_files(self):
+    def list_of_expected_arrow_fq_files(self):
         """
         Used by IceArrowPostProcess2 to identify all the finished files.
         First looks at $root_dir/log/prepared_arrow_files.txt to identify all the c<i>to<j>.sh
@@ -118,17 +118,27 @@ class IceFiles2(IceFiles):
         Note: related methods include fq_of_arrowed_bin() and others,
               when changing one must remember to keep it consistent across.
         """
-        has_sge_jobs = False
-        expected_fqs = [] # (SGE jobid or "local", expected_fastq)
-        for line in open(self.prepare_arrow_files):
-            jobid, sh_file = line.strip().split('\t')
-            assert sh_file.endswith('.sh')
+        def iter_script_to_get_fq(script_filename):
+            for line in open(script_filename):
+                # line might be like:
+                # bash <arrow_dir>/c0to9.sh
+                sh_file = line.strip().split()[-1]
+                assert sh_file.endswith('.sh')
+                yield sh_file[:-3] + '.arrowed.fastq'
+
+
+        sge_ids = []
+        submitted = {} # expected fq --> ("local" or SGE jobid, script used to get this)
+        for line in open(self.arrow_submission_run_file):
+            jobid, script = line.strip().split('\t')
+            # read the script to see which c<i>to<j>.sh files are associated with this
+            for fq in iter_script_to_get_fq(script):
+                submitted[fq] = (jobid, script)
             if jobid!='local':
-                has_sge_jobs = True
-            else:
-                jobid = sh_file # just set the jobid to sh filename
-            expected_fqs[jobid] = sh_file[:-3] + '.arrowed.fastq'
-        return has_sge_jobs, expected_fqs
+                sge_ids.append(jobid)
+
+        return sge_ids, submitted
+
 
     @property
     def pattern_of_expected_fq_files(self):

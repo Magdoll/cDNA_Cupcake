@@ -3,7 +3,7 @@ __author__ = 'etseng@pacb.com'
 import random
 from collections import defaultdict
 
-class preCluster:
+class preCluster(object):
     def __init__(self, cid, members=[]):
         self.cid = cid
         self.size = len(members)
@@ -22,7 +22,8 @@ class preCluster:
     #    self.tucked += seqids
 
 
-class preClusterSet:
+# preClusterSet is currently NOT used. Testing preClusterSet2 isntead.
+class preClusterSet(object):
     def __init__(self):
         self.S = {}
         self.seq_map = {}
@@ -192,7 +193,6 @@ class preClusterSet:
             self.seq_map[seqid] = cid2
         # now can safely delete cid1
         del self.S[cid1]
-
 
 
 class preClusterSet2:

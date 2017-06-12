@@ -24,8 +24,7 @@ from cupcake2.tofu2.ToFuOptions2 import  \
 from pbtranscript.Utils import phred_to_qv, as_contigset, \
     get_all_files_in_dir, ln, nfs_exists
 
-from pbtranscript.ice.IceUtils import cid_with_annotation
-
+from cupcake2.ice2.IceUtils2 import cid_with_annotation2
 from cupcake2.ice2.IceFiles2 import IceFiles2
 from cupcake2.ice2.__init__ import ICE_ARROW_PY
 
@@ -47,7 +46,7 @@ class IceArrowPostProcess2(IceFiles2):
                  quit_if_not_done=True,
                  summary_fn=None, report_fn=None,
                  no_log_f=False, make_dirs=True):
-        super(IceArrowPostprocess, self).__init__(
+        super(IceArrowPostProcess2, self).__init__(
                 prog_name="ice_arrow_postprocess2",
                 root_dir=root_dir, no_log_f=no_log_f, make_dirs=make_dirs)
         self.quit_if_not_done = quit_if_not_done
@@ -67,7 +66,7 @@ class IceArrowPostProcess2(IceFiles2):
             self.lq_isoforms_fa = re.sub(".contigset.xml$", ".fasta",
                                          self.lq_isoforms_fa)
         self.lq_isoforms_fq = ipq_opts.lq_isoforms_fq
-        # Quiver usually can't call accurate QV on both ends
+        # Arrow usually can't call accurate QV on both ends
         # because of very well + less coverage
         # Ignore QV of the first <100 bp> on 5' end
         self.qv_trim_5 = ipq_opts.qv_trim_5
@@ -75,7 +74,7 @@ class IceArrowPostProcess2(IceFiles2):
         self.qv_trim_3 = ipq_opts.qv_trim_3
         # The max allowed average base error rate within
         # seq[qv_trim_5:-qv_trim_3]
-        self.hq_quiver_min_accuracy = ipq_opts.hq_quiver_min_accuracy
+        self.hq_arrow_min_accuracy = ipq_opts.hq_arrow_min_accuracy
         # The min number of supportive full-length reads for HQ
         self.hq_min_full_length_reads = ipq_opts.hq_min_full_length_reads
 
@@ -104,9 +103,9 @@ class IceArrowPostProcess2(IceFiles2):
             errMsg = "Pickle file {f} ".format(f=self.final_pickle_fn) + \
                      "which assigns full-length non-chimeric reads to " + \
                      "isoforms does not exist."
-        elif not nfs_exists(self.submitted_quiver_jobs_log):
-            errMsg = "Log file {f}".format(f=self.submitted_quiver_jobs_log) + \
-                     " of all submitted quiver jobs {f} does not exist."
+        elif not nfs_exists(self.arrow_submission_run_file):
+            errMsg = "Log file {f}".format(f=self.arrow_submission_run_file) + \
+                     " of all submitted arrow jobs does not exist."
 
         if errMsg != "":
             self.add_log(errMsg, level=logging.ERROR)
@@ -129,14 +128,14 @@ class IceArrowPostProcess2(IceFiles2):
         self.add_log("Submitted arrow jobs are at {f}:".
                      format(f=self.arrow_submission_run_file))
 
-        # submitted = list of (SGE jobid or local, expected output fastq filename)
-        has_sge_jobs, submitted = self.list_of_expected_fq_files()
+        # submitted = list of (SGE jobid or local, script file that is running)
+        sge_jobids, submitted = self.list_of_expected_arrow_fq_files()
 
         done_flag = True
         running_jids = []
         # if one or more jobs were submitted through SGE,
         # go through qstat to see if anything is still running
-        if has_sge_jobs:
+        if len(sge_jobids):  # at least one job was run through SGE
             stuff = os.popen("qstat").read().strip().split('\n')
             assert stuff[0].startswith('job-ID')
             assert stuff[1].startswith('-------')
@@ -144,12 +143,12 @@ class IceArrowPostProcess2(IceFiles2):
             for x in stuff[2:]:
                 job_id = x.split()[0]
                 running_jids.append(job_id)
-                if job_id in submitted:
+                if job_id in sge_jobids:
                     self.add_log("job {0} is still running.".format(job_id))
                     done_flag = False
 
         # now go through all the expected fastq files and check they exist
-        for job_id, fq_filename in submitted.iteritems():
+        for fq_filename,(job_id,sh_file) in submitted.iteritems():
             if not nfs_exists(fq_filename) or \
                     os.stat(fq_filename).st_size == 0:
                 if job_id in running_jids:  # still running, pass
@@ -157,7 +156,7 @@ class IceArrowPostProcess2(IceFiles2):
                 else:
                     self.add_log("job {0} is completed but {1} is still empty!".
                                  format(job_id, fq_filename))
-                    bad_sh.append(submitted[job_id])
+                    bad_sh.append(sh_file)
             else:
                 self.add_log("job {0} is done".format(job_id))
                 self.fq_filenames.append(fq_filename)
@@ -183,7 +182,7 @@ class IceArrowPostProcess2(IceFiles2):
                        "all_arrowed_hq.{a}_{b}_{c}.fasta".format(
                            a=self.qv_trim_5,
                            b=self.qv_trim_3,
-                           c=self.hq_quiver_min_accuracy))
+                           c=self.hq_arrow_min_accuracy))
 
     @property
     def arrowed_good_fq(self):
@@ -192,7 +191,7 @@ class IceArrowPostProcess2(IceFiles2):
                        "all_arrowed_hq.{a}_{b}_{c}.fastq".format(
                            a=self.qv_trim_5,
                            b=self.qv_trim_3,
-                           c=self.hq_quiver_min_accuracy))
+                           c=self.hq_arrow_min_accuracy))
 
     @property
     def arrowed_bad_fa(self):
@@ -226,6 +225,7 @@ class IceArrowPostProcess2(IceFiles2):
                 polished[cid] = r
 
 
+        expected_acc_dict = {} # cid --> expected accuracy (ex: 0.99)
         good = [] # contains all the cids that are HQ
 
         # calculate expected QV given 5'/3' trimming
@@ -234,7 +234,8 @@ class IceArrowPostProcess2(IceFiles2):
             qv_len = max(len(r.quality), len(r.quality) - self.qv_trim_5 - self.qv_trim_3)
             q = [phred_to_qv(x) for x in r.quality]
             err_sum = sum(q[self.qv_trim_5: -self.qv_trim_3])
-            if 1.0 - (err_sum / float(qv_len)) >= self.hq_quiver_min_accuracy and \
+            expected_acc_dict[cid] = 1.0 - (err_sum / float(qv_len))
+            if expected_acc_dict[cid] >= self.hq_arrow_min_accuracy and \
                 len(uc[cid]) >= self.hq_min_full_length_reads :
                 good.append(cid)
 
@@ -261,7 +262,7 @@ class IceArrowPostProcess2(IceFiles2):
                            flnc_num=len(uc[cid]),
                            nfl_num=len(partial_uc2[cid]),
                            read_len=len(r.sequence))
-                newname = cid_with_annotation(newname)
+                newname = cid_with_annotation2(newname, expected_acc=expected_acc_dict[cid])
 
                 if cid in good:
                     self.add_log("processing arrowed cluster {c} --> good.".
@@ -317,10 +318,12 @@ class IceArrowPostProcess2(IceFiles2):
         """
         self.validate_inputs()
 
-        job_stats = self.check_quiver_jobs_completion()
+        job_stats = self.check_arrow_jobs_completion()
         self.add_log("Arrow job status: {s}".format(s=job_stats))
 
-        if job_stats == 'FAILED':
+        if job_stats == 'DONE':
+            pass # continue on below to process data
+        elif job_stats == 'FAILED':
             self.add_log("Has incomplete jobs. Please re-run them.",
                          level=logging.ERROR)
             return -1
@@ -332,7 +335,7 @@ class IceArrowPostProcess2(IceFiles2):
                 while job_stats != "DONE":
                     self.add_log("Jobs are still running. Wait. Sleeping for 180 seconds.")
                     sleep(180)
-                    job_stats = self.check_quiver_jobs_completion()
+                    job_stats = self.check_arrow_jobs_completion()
                     if job_stats == "DONE":
                         break
                     elif job_stats == "FAILED":
@@ -343,7 +346,7 @@ class IceArrowPostProcess2(IceFiles2):
                         self.add_log("Jobs are still running. Wait. Sleeping for 180 seconds.",
                                      level=logging.INFO)
         else:
-            msg = "Unable to recognize job_stats {s}".format(job_stats)
+            msg = "Unable to recognize job_stats {s}".format(s=job_stats)
             self.add_log(msg, logging.ERROR)
             raise ValueError(msg)
 
@@ -375,9 +378,9 @@ class IceArrowPostProcess2(IceFiles2):
         self.close_log()
 
 
-def add_ice_quiver_postprocess_arguments(arg_parser):
+def add_ice_arrow_postprocess_arguments(arg_parser):
     """
-    Add arguments for IceArrowPostprocess ($ICE_ARROW_PY postprocess).
+    Add arguments for IceArrowPostProcess2 ($ICE_ARROW_PY postprocess).
     """
     arg_parser = add_cluster_root_dir_as_positional_argument(arg_parser)
     arg_parser = add_ice_post_arrow_hq_lq_arguments2(arg_parser)

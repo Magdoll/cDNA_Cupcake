@@ -257,10 +257,6 @@ def add_ice_all_partials_arguments(parser):
                         type=str,
                         help="comma delimited fasta files of " +
                              "splitted non-full-length reads")
-    parser.add_argument("fastq_filenames",
-                        type=str,
-                        help="comma delimited fastq files of " +
-                             "splitted non-full-length reads")
     parser.add_argument("ref_fasta",
                         type=str,
                         help="Reference fasta file, most likely " +
@@ -268,6 +264,11 @@ def add_ice_all_partials_arguments(parser):
     parser.add_argument("out_pickle",
                         type=str,
                         help="Output pickle file.")
+    parser.add_argument("--fastq_filenames",
+                        default='',
+                        type=str,
+                        help="comma delimited fastq files of " +
+                             "splitted non-full-length reads")
     parser.add_argument("--root_dir",
                         dest="root_dir",
                         default="",

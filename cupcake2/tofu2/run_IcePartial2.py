@@ -4,106 +4,6 @@ __author__ = 'etseng@pacb.com'
 Modified ice_partial.py for ToFU2
 """
 
-#!/usr/bin/env python
-###############################################################################
-# Copyright (c) 2011-2013, Pacific Biosciences of California, Inc.
-#
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# * Redistributions of source code must retain the above copyright
-#   notice, this list of conditions and the following disclaimer.
-# * Redistributions in binary form must reproduce the above copyright
-#   notice, this list of conditions and the following disclaimer in the
-#   documentation and/or other materials provided with the distribution.
-# * Neither the name of Pacific Biosciences nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-#
-# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY
-# THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY PACIFIC BIOSCIENCES AND ITS
-# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
-# NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PACIFIC BIOSCIENCES OR
-# ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-###############################################################################
-
-
-"""
-Overview:
-    pbtranscript cluster contains two main components:
-    * (1) ICE (iterative clustering and error correction) to predict
-      unpolished consensus isoforms.
-    * (2) Polish, to use nfl reads and quiver to polish those predicted
-      unpolished isoforms. Polish contains three steps:
-      + (2.1) IceAllPartials (ice_partial.py all)
-              Align and assign nfl reads to unpolished isoforms, and
-              save results to a pickle file.
-      + (2.2) IceQuiver (ice_quiver.py all)
-              Call quiver to polish each isoform based on alignments
-              created by mapping its associated fl and nfl reads to
-              this isoform.
-      + (2.3) IceQuiverPostprocess (ice_quiver.py postprocess)
-              Collect and post process quiver results, and classify
-              HQ/LQ isoforms.
-
-    In order to handle subtasks by SMRTPipe instead of pbtranscript
-    itself, we will refactor the polish phase including
-    (2.1) (2.2) and (2.3).
-
-    (2.1) IceAllPartials (ice_partial.py all) will be refactored to
-      + (2.1.1) ice_partial.py split
-                Split nfl reads into N chunks (N<=100).
-      + (2.1.2) ice_partial.py i
-                For each chunk i, align and assign its reads to unpolished
-                isoforms and create a pickle file.
-      + (2.1.3) ice_partial.py merge
-                Merge pickles for all splitted chunks together to a
-                big pickle.
-
-    Thus, the task of 2.1 can either be done by running:
-        ice_partial.py all ...
-    or by
-        first splitting the nfl reads into N chunks:
-            ice_partial.py split root_dir nfl_fa N
-        then assigning nfl reads in each chunk to isoforms independently:
-            ice_partial.py i root_dir {i} \
-                           --ccs_fofn=ccs_fofn --blasr_nproc=blasr_nproc
-            , for i = 0, ..., N-1
-        and finally mergeing all results to a big one:
-            ice_partial.py merge root_dir N
-
-    Hierarchy:
-        pbtranscript = iceiterative
-
-        pbtranscript --quiver = iceiterative + \
-                                ice_polish.py
-
-        ice_polish.py =  ice_make_fasta_fofn.py + \
-                         ice_partial.py all + \
-                         ice_quiver.py all
-
-        ice_partial.py all = ice_partial.py split + \
-                             ice_partial.py i + \
-                             ice_partial.py merge
-
-        (ice_partial.py one --> only apply ice_partial on a given input fasta)
-
-        ice_quiver.py all = ice_quiver.py i + \
-                            ice_quiver.py merge + \
-                            ice_quiver.py postprocess
-
-Alternative way to call this suite of scripts:
-    python -m pbtranscript.ice_partial
-"""
-
 import logging
 import sys
 import os.path as op
@@ -189,7 +89,7 @@ class IcePartialRunner(PBMultiToolRunner):
                                       qsub_extra=args.qsub_extra)
                 obj = IceAllPartials2(root_dir=args.root_dir,
                                      fasta_filenames=args.fasta_filenames.split(','),
-                                     fastq_filenames=args.fastq_filenames.split(','),
+                                     fastq_filenames=args.fastq_filenames.split(',') if args.fastq_filenames is not None else None,
                                      ref_fasta=args.ref_fasta,
                                      out_pickle=args.out_pickle,
                                      ice_opts=ice_opts,

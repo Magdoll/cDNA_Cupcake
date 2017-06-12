@@ -298,7 +298,7 @@ def add_ice_post_arrow_hq_lq_arguments2(parser):
     #     #parser = _wrap_parser(parser)
     #     arg_parser = parser.arg_parser.parser
     #     tcp = parser.tool_contract_parser
-    #     tcp.add_float(BaseConstants.HQ_ARROW_MIN_ACCURACY_ID, "hq_quiver_min_accuracy",
+    #     tcp.add_float(BaseConstants.HQ_ARROW_MIN_ACCURACY_ID, "hq_arrow_min_accuracy",
     #                   default=BaseConstants.HQ_ARROW_MIN_ACCURACY_DEFAULT,
     #                   name="Minimum Quiver|Arrow Accuracy", description=BaseConstants.HQ_ARROW_MIN_ACCURACY_DESC)
     #     tcp.add_int(BaseConstants.QV_TRIM_FIVEPRIME_ID, "qv_trim_5",

@@ -69,7 +69,13 @@ class IceAllPartials2(IceFiles):
         self.fasta_filenames, self.ref_fasta = \
             self._validate_inputs(fasta_filenames=fasta_filenames,
                                   ref_fasta=ref_fasta)
-        self.fastq_filenames = fastq_filenames
+
+        if fastq_filenames is not None:
+            for fq in fastq_filenames:
+                assert op.exists(fq)
+
+        self.fastq_filenames = fastq_filenames # note: could be None
+
 
         self.out_pickle = out_pickle
 
@@ -159,11 +165,16 @@ class IceAllPartials2(IceFiles):
             # ex:
             #      python run_IcePartial2.py one isoseq_nfl.fasta isoseq_nfl.fastq \
             #  output/final.consensus.fasta isoseq_nfl.fasta.pickle --aligner_choice=blasr  --cpus=12
-            fq = self.fastq_filenames[idx]
+            if self.fastq_filenames is not None:
+                fq = self.fastq_filenames[idx]
+            else:
+                fq = None
 
-            cmd = ICE_PARTIAL_PY + " " + \
-                  "one {fa} {fq} ".format(fa=real_upath(fa), fq=real_upath(fq)) + \
-                  "{r} ".format(r=real_upath(self.ref_fasta)) + \
+            cmd = ICE_PARTIAL_PY + " "
+            cmd += "one {fa} ".format(fa=real_upath(fa))
+            if fq is not None:
+                cmd += "--fq {fq} ".format(fq=real_upath(fq))
+            cmd += "{r} ".format(r=real_upath(self.ref_fasta)) + \
                   "{o} ".format(o=real_upath(self.pickle_filenames[idx])) + \
                   "--aligner_choice={c} ".format(c=self.ice_opts.aligner_choice) + \
                   "--cpus={n} ".format(n=self.sge_opts.blasr_nproc) + \
@@ -257,10 +268,6 @@ def add_ice_all_partials_arguments(parser):
                         type=str,
                         help="comma delimited fasta files of " +
                              "splitted non-full-length reads")
-    parser.add_argument("fastq_filenames",
-                        type=str,
-                        help="comma delimited fastq files of " +
-                             "splitted non-full-length reads")
     parser.add_argument("ref_fasta",
                         type=str,
                         help="Reference fasta file, most likely " +
@@ -268,6 +275,11 @@ def add_ice_all_partials_arguments(parser):
     parser.add_argument("out_pickle",
                         type=str,
                         help="Output pickle file.")
+    parser.add_argument("--fastq_filenames",
+                        default=None,
+                        type=str,
+                        help="(optional) comma delimited fastq files of " +
+                             "splitted non-full-length reads. If not given, no QVs are used.")
     parser.add_argument("--root_dir",
                         dest="root_dir",
                         default="",

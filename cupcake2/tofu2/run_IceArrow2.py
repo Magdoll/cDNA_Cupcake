@@ -13,6 +13,7 @@ from cupcake2.tofu2.ClusterOptions2 import SgeOptions2, IceArrowHQLQOptions2
 
 from cupcake2.ice2.IceArrowAll2 import IceArrowAll2, add_ice_arrow_all_arguments
 
+from cupcake2.ice2.IceArrowPostProcess2 import IceArrowPostProcess2, add_ice_arrow_postprocess_arguments
 
 # from pbtranscript.ice.IceQuiverI import IceQuiverI, \
 #     add_ice_quiver_i_arguments
@@ -94,23 +95,22 @@ class IceArrowRunner2(PBMultiToolRunner):
             #                      fasta_fofn=None,
             #                      sge_opts=sge_opts,
             #                      tmp_dir=args.tmp_dir)
-            # elif cmd == "merge":
-            #     obj = IceQuiverMerge(root_dir=args.root_dir, N=args.N)
-            # elif cmd == "postprocess":
-            #     ipq_opts = IceQuiverHQLQOptions(
-            #         hq_isoforms_fa=args.hq_isoforms_fa,
-            #         hq_isoforms_fq=args.hq_isoforms_fq,
-            #         lq_isoforms_fa=args.lq_isoforms_fa,
-            #         lq_isoforms_fq=args.lq_isoforms_fq,
-            #         qv_trim_5=args.qv_trim_5,
-            #         qv_trim_3=args.qv_trim_3,
-            #         hq_arrow_min_accuracy=args.hq_arrow_min_accuracy)
-            #     obj = IceQuiverPostprocess(root_dir=args.root_dir,
-            #                                ipq_opts=ipq_opts,
-            #                                use_sge=args.use_sge,
-            #                                quit_if_not_done=args.quit_if_not_done,
-            #                                summary_fn=args.summary_fn,
-            #                                report_fn=args.report_fn)
+            #elif cmd == "merge":
+            #    obj = IceQuiverMerge(root_dir=args.root_dir, N=args.N)
+            elif cmd == "postprocess":
+                ipq_opts = IceArrowHQLQOptions2(
+                    hq_isoforms_fa=args.hq_isoforms_fa,
+                    hq_isoforms_fq=args.hq_isoforms_fq,
+                    lq_isoforms_fa=args.lq_isoforms_fa,
+                    lq_isoforms_fq=args.lq_isoforms_fq,
+                    qv_trim_5=args.qv_trim_5,
+                    qv_trim_3=args.qv_trim_3,
+                    hq_arrow_min_accuracy=args.hq_arrow_min_accuracy)
+                obj = IceArrowPostProcess2(root_dir=args.root_dir,
+                                           ipq_opts=ipq_opts,
+                                           quit_if_not_done=args.quit_if_not_done,
+                                           summary_fn=args.summary_fn,
+                                           report_fn=args.report_fn)
             else:
                 raise ValueError("Unknown command passed to {f}: {cmd}.".
                                  format(f=op.basename(__file__), cmd=cmd))

@@ -207,3 +207,38 @@ def possible_merge2(r, ece_penalty, ece_min_len,
                                     min_len=ece_min_len):
         return False
     return True
+
+
+def cid_with_annotation2(cid, expected_acc=None):
+    """Given a cluster id, return cluster id with human readable annotation.
+    e.g., c0 --> c0 isoform=c0
+          c0/89/3888 -> c0/89/3888 isoform=c0;full_length_coverage=89;isoform_length=3888;expected_accuracy=0.99
+          c0/f89p190/3888 -> c0/f89p190/3888 isoform=c0;full_length_coverage=89;non_full_length_coverage=190;isoform_length=3888;expected_accuracy=0.99
+    """
+    fields = cid.split('/')
+    short_id, fl_coverage, nfl_coverage, seq_len = None, None, None, None
+    if len(fields) != 1 and len(fields) != 3:
+        raise ValueError("Not able to process isoform id: {cid}".format(cid=cid))
+    short_id = fields[0]
+    if len(fields) == 3:
+        seq_len = fields[2]
+        if "f" in fields[1]:
+            if "p" in fields[1]: # f89p190
+                fl_coverage = fields[1].split('p')[0][1:]
+                nfl_coverage = fields[1].split('p')[1]
+            else: # f89
+                fl_coverage = fields[1][1:]
+        else:
+            fl_coverage = fields[1]
+
+    annotations = ["isoform={short_id}".format(short_id=short_id)]
+    if fl_coverage is not None:
+        annotations.append("full_length_coverage={fl}".format(fl=fl_coverage))
+    if nfl_coverage is not None:
+        annotations.append("non_full_length_coverage={nfl}".format(nfl=nfl_coverage))
+    if seq_len is not None:
+        annotations.append("isoform_length={l}".format(l=seq_len))
+    if expected_acc is not None:
+        annotations.append("expected_accuracy={0:.3f}".format(expected_acc))
+
+    return "{cid} {annotation}".format(cid=cid, annotation=";".join(annotations))
