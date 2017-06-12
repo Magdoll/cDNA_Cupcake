@@ -18,34 +18,38 @@ from pbtranscript.Utils import mknewdir, real_upath
 from pbtranscript.io import FastaRandomReader, \
     BLASRM5Reader, LA4IceReader, DazzIDHandler
 from pbtranscript.io.ContigSetReaderWrapper import ContigSetReaderWrapper
-from pbtranscript.ice.IceFiles import IceFiles
+
 from pbtranscript.ice_daligner import DalignerRunner
 from pbtranscript.ice_pbdagcon import runConsensus
 from pbtranscript.ice.IceUtils import sanity_check_gcon, \
-    sanity_check_sge, possible_merge, blasr_against_ref, \
+    sanity_check_sge, \
     get_the_only_fasta_record, cid_with_annotation, \
-    daligner_against_ref, ice_fa2fq, fafn2fqfn, \
-    set_probqv_from_ccs, set_probqv_from_fq, set_probqv_from_model
+    set_probqv_from_fq, set_probqv_from_model
 
+from cupcake2.ice2.IceFiles2 import IceFiles2
 from cupcake2.ice2.IceInit2 import IceInit2
+
+from cupcake2.ice2.IceUtils2 import daligner_against_ref2, blasr_against_ref2, possible_merge2
 
 random.seed(0)
 
 
-class IceIterative(IceFiles):
+class IceIterative2(IceFiles2):
 
     """
     Expects that new fasta files will be gradually added
     """
 
     def __init__(self, fasta_filename,
+                 fastq_filename,
                  fasta_filenames_to_add,
+                 fastq_filenames_to_add,
                  all_fasta_filename,
-                 ccs_fofn, root_dir,
+                 root_dir,
                  ice_opts, sge_opts,
                  uc=None, probQV=None,
                  refs=None, d=None, is_FL=True, qv_prob_threshold=.03,
-                 fastq_filename=None, output_pickle_file=None,
+                 output_pickle_file=None,
                  tmp_dir=None):
         """
         fasta_filename --- the current fasta filename containing
@@ -54,9 +58,6 @@ class IceIterative(IceFiles):
             usually called 'in.fasta_split.0.fasta' in the first round
             and 'current.fasta' after 1 round
 
-        fastq_filename --- should be the FASTQ version of fasta_filename,
-            if is None, it will be converted using ice_fa2fq when needed
-
         fasta_filenames_to_add --- fasta files to be added
             to clusters. In the first round, the union of
             fasta_filename and fasta_filenames to add is
@@ -64,7 +65,6 @@ class IceIterative(IceFiles):
 
         all_fasta_filename --- this should be the *entire* fasta,
             not the one that we'll start with.
-        ccs_fofn --- should be ccs.fofn
 
         uc --- the initial or current cluster assignment,
             dict of cid --> list of members
@@ -86,13 +86,14 @@ class IceIterative(IceFiles):
 
         tmp_dir --- directory to save temporary files.
         """
-        super(IceIterative, self).__init__(prog_name="IceIterative",
+        super(IceIterative2, self).__init__(prog_name="IceIterative2",
                                            root_dir=root_dir,
-                                           ccs_fofn=ccs_fofn,
                                            tmp_dir=tmp_dir)
 
         self.fasta_filename = fasta_filename
+        self.fastq_filename = fastq_filename
         self.fasta_filenames_to_add = fasta_filenames_to_add
+        self.fastq_filenames_to_add = fastq_filenames_to_add
         self.all_fasta_filename = all_fasta_filename
         self.output_pickle_file = output_pickle_file
 
@@ -128,7 +129,7 @@ class IceIterative(IceFiles):
         # size below which gcon must be re-run if changes were made
         # Note: changed from 20 down to 10 after running some DAGCon
         # tests on 6-8 and 8-10k
-        self.rerun_gcon_size = 10
+        self.rerun_gcon_size = 30
 
         # Max size for in.fa to DAGCon, can overwrite with write_all=True
         # in write_in_fasta
@@ -148,52 +149,26 @@ class IceIterative(IceFiles):
         self.ice_opts.min_match_len = max(50, (x/100)*100)
 
         self.qv_prob_threshold = qv_prob_threshold
-        self.ece_penalty = ice_opts.ece_penalty
-        self.ece_min_len = ice_opts.ece_min_len
 
         self.unrun_cids = []
 
         # random prob of putting a singleton into another cluster
         self.random_prob = 0.3
 
-        self.ccs_fofn = ccs_fofn
-
         # Default: False, use a single Qv from FASTQ files.
         # If True, use multi-Qvs from ccs.h5 files.
         self.use_finer_qv = ice_opts.use_finer_qv
-
-        # unless fastq_filename is already given
-        # converting input fasta + ccs_fofn --> fastq
-        # so instead of using .ccs.h5 we can use just one QV from FASTQ
-        if fastq_filename is not None:
-            self.fastq_filename = fastq_filename
-        else:
-            if self.use_finer_qv: # use multi-QVs from ccs.h5
-                pass # no need to convert FASTA to FASTQ
-            elif ccs_fofn is None:
-                pass # get prob QVs from a fixed model
-            else: # use a single Qv from FASTQ, convert FASTA to FASTQ first
-                self.fastq_filename = fafn2fqfn(self.fasta_filename)
-                self.add_log("Converting input {fa} + {ccs} --> {fq}.",
-                             level=logging.INFO)
-                ice_fa2fq(in_fa=self.fasta_filename, ccs_fofn=ccs_fofn,
-                          out_fq=self.fastq_filename)
 
         if probQV is not None:
             self.add_log("Loading probabilities and QVs from given probQV.",
                          level=logging.INFO)
             self.probQV = probQV
         else:
-            if self.use_finer_qv:
-                self.probQV, msg = set_probqv_from_ccs(
-                    ccs_fofn=ccs_fofn,
-                    fasta_filename=self.fasta_filename)
-            else:
-                if self.ccs_fofn is not None:
-                    self.probQV, msg = set_probqv_from_fq(
+            if self.fastq_filename is not None:
+                self.probQV, msg = set_probqv_from_fq(
                         fastq_filename=self.fastq_filename)
-                else:
-                    self.probQV, msg = set_probqv_from_model()
+            else:
+                self.probQV, msg = set_probqv_from_model()
             self.add_log(msg, level=logging.INFO)
 
         if uc is not None:
@@ -201,7 +176,7 @@ class IceIterative(IceFiles):
                          level=logging.INFO)
             self.uc = uc
         else:
-            errMsg = "IceInit.init_cluster_by_clique() should have been called."
+            errMsg = "IceInit2.init_cluster_by_clique() should have been called."
             self.add_log(errMsg, level=logging.ERROR)
             raise RuntimeError(errMsg)
 
@@ -330,11 +305,10 @@ class IceIterative(IceFiles):
                     if rid in newids:
                         f.write(">{0}\n{1}\n".format(rid, r.sequence))
 
-        obj = IceIterative(
+        obj = IceIterative2(
             fasta_filename=a['fasta_filename'],
             fasta_filenames_to_add=a['fasta_filenames_to_add'],
             all_fasta_filename=all_fasta_filename,
-            ccs_fofn=a['ccs_fofn'],
             root_dir=a['root_dir'],
             ice_opts=a['ice_opts'],
             sge_opts=a['sge_opts'],
@@ -395,7 +369,6 @@ class IceIterative(IceFiles):
             d = {'uc': self.uc,
                  'd': self.d,
                  'refs': self.refs,
-                 'ccs_fofn': self.ccs_fofn,
                  'fasta_filename': self.fasta_filename,
                  'fasta_filenames_to_add': self.fasta_filenames_to_add,
                  'all_fasta_filename': self.all_fasta_filename,
@@ -920,22 +893,26 @@ class IceIterative(IceFiles):
         """
         # Liz: is_FL is set to False in "daligner_against_ref" until LA4Ice -E is fixed
         for la4ice_filename in runner.la4ice_filenames:
-            for hit in daligner_against_ref(query_dazz_handler=runner.query_dazz_handler,
+            for hit in daligner_against_ref2(query_dazz_handler=runner.query_dazz_handler,
                                             target_dazz_handler=runner.target_dazz_handler,
                                             la4ice_filename=la4ice_filename,
                                             is_FL=False, sID_starts_with_c=True,
                                             qver_get_func=self.probQV.get_smoothed,
                                             qvmean_get_func=self.probQV.get_mean,
                                             qv_prob_threshold=self.qv_prob_threshold,
-                                            ece_penalty=self.ece_penalty, ece_min_len=self.ece_min_len,
+                                            ece_penalty=self.ice_opts.ece_penalty, ece_min_len=self.ice_opts.ece_min_len,
                                             same_strand_only=True, no_qv_or_aln_checking=False,
                                             max_missed_start=self.ice_opts.max_missed_start,
-                                            max_missed_end=self.ice_opts.max_missed_end):
+                                            max_missed_end=self.ice_opts.max_missed_end,
+                                            full_missed_start=self.ice_opts.full_missed_start,
+                                            full_missed_end=self.ice_opts.full_missed_end):
                 if hit.qID not in self.d:
                     self.d[hit.qID] = {}
                 if hit.fakecigar is not None:
+                    self.add_log("[Liz] fakecigar string is {0}".format(hit.fakecigar))
                     self.d[hit.qID][hit.cID] = self.probQV.calc_prob_from_aln(
                         hit.qID, hit.qStart, hit.qEnd, hit.fakecigar)
+                    self.add_log("[Liz] {0}-{1}:{2}".format(hit.qID, hit.cID,self.d[hit.qID][hit.cID]))
 
 
     def g(self, output_filename):
@@ -948,16 +925,18 @@ class IceIterative(IceFiles):
         I'm still keeping this because may eventually use BLASR again
         """
         # for qID, cID, qStart, qEnd, _missed_q, _missed_t, fakecigar, _ece_arr
-        for hit in blasr_against_ref(
+        for hit in blasr_against_ref2(
                 output_filename=output_filename,
                 is_FL=self.is_FL, sID_starts_with_c=True,
                 qver_get_func=self.probQV.get_smoothed,
                 qvmean_get_func=self.probQV.get_mean,
                 qv_prob_threshold=self.qv_prob_threshold,
-                ece_penalty=self.ece_penalty,
-                ece_min_len=self.ece_min_len,
+                ece_penalty=self.ice_opts.ece_penalty,
+                ece_min_len=self.ice_opts.ece_min_len,
                 max_missed_start=self.ice_opts.max_missed_start,
-                max_missed_end=self.ice_opts.max_missed_end):
+                max_missed_end=self.ice_opts.max_missed_end,
+                full_missed_start=self.ice_opts.full_missed_start,
+                full_missed_end=self.ice_opts.full_missed_end):
 
             if hit.qID not in self.d:
                 self.d[hit.qID] = {}
@@ -1112,26 +1091,31 @@ class IceIterative(IceFiles):
                             self.remove_from_cluster(qID, old_i)
         return orphan
 
-    def add_new_batch(self, batch_filename):
+    def add_new_batch(self, batch_fasta, batch_fastq):
         """Add a new batch of sequences to clusters."""
         msg = "Adding a new batch of fasta reads {f} to clusters.".\
-              format(f=batch_filename)
+              format(f=batch_fasta)
         self.add_log(msg, level=logging.INFO)
 
         # sanity check
-        if not op.exists(batch_filename):
+        if not op.exists(batch_fasta):
             errMsg = "Adding a new batch file {b} which does not exist.".\
-                format(b=batch_filename)
+                format(b=batch_fasta)
+            self.add_log(errMsg, level=logging.ERROR)
+            raise ValueError(errMsg)
+        if not op.exists(batch_fastq):
+            errMsg = "Adding a new batch file {b} which does not exist.".\
+                format(b=batch_fastq)
             self.add_log(errMsg, level=logging.ERROR)
             raise ValueError(errMsg)
 
         # assert r.id not in self.d
-        with ContigSetReaderWrapper(batch_filename) as cs:
+        with ContigSetReaderWrapper(batch_fasta) as cs:
             for r in cs:
                 rid = r.name.split()[0]
                 if r.name.split()[0] in self.d:
                     errMsg = "new batch file {b} contains a read {r} ".\
-                        format(b=batch_filename, r=rid) + \
+                        format(b=batch_fasta, r=rid) + \
                         " of an existing cluster."
                     self.add_log(errMsg, level=logging.ERROR)
                     raise ValueError(errMsg)
@@ -1162,7 +1146,7 @@ class IceIterative(IceFiles):
         # latest fasta file is changed to
         # {new batch} + {any id that was removed from final round}
         self.fasta_filename = self.currentFa  # "current.fasta"
-        cmd = "cp {bat} {cur}".format(bat=real_upath(batch_filename),
+        cmd = "cp {bat} {cur}".format(bat=real_upath(batch_fasta),
                                       cur=real_upath(self.fasta_filename))
         self.run_cmd_and_log(cmd)
 
@@ -1184,17 +1168,7 @@ class IceIterative(IceFiles):
         # adding {new batch} to probQV
         # now probQV contains
         # {new batch} + {any id removed from final round} + {active ids}
-        if self.use_finer_qv or self.ccs_fofn is None:
-            # use multi-Qvs from ccs or use predefined Qvs.
-            self.probQV.add_seqs_from_fasta(fasta_filename=batch_filename,
-                                            smooth=True)
-        else: # use a single Qv from FASTQ
-            # convert fasta + ccs --> fastq
-            batch_fqfn = fafn2fqfn(batch_filename)
-            ice_fa2fq(in_fa=batch_filename, ccs_fofn=self.ccs_fofn,
-                      out_fq=batch_fqfn)
-            self.probQV.add_seqs_from_fastq(fastq_filename=batch_fqfn,
-                                            smooth=True)
+        self.probQV.add_seqs_from_fastq(batch_fastq, smooth=True)
         # only ids from new batch are not already in probQV
 
         self.calc_cluster_prob(force_calc=True, use_blasr=(self.ice_opts.aligner_choice=='blasr'))
@@ -1239,7 +1213,7 @@ class IceIterative(IceFiles):
         self.calc_cluster_prob(force_calc=False, use_blasr=(self.ice_opts.aligner_choice=='blasr'))
         # self.freeze_d()
         msg = "Finished to add a new batch of fasta reads {f} to clusters.".\
-              format(f=batch_filename)
+              format(f=batch_fasta)
         self.add_log(msg, level=logging.INFO)
 
     def ensure_probQV_newid_consistency(self):
@@ -1306,6 +1280,7 @@ class IceIterative(IceFiles):
         """
         while len(self.fasta_filenames_to_add) > 0:
             f = self.fasta_filenames_to_add.pop(0)
+            fq = self.fastq_filenames_to_add.pop(0)
             self.add_log("adding file {f}".format(f=f))
             self.run_post_ICE_merging(
                 consensusFa=self.tmpConsensusFa,
@@ -1319,7 +1294,7 @@ class IceIterative(IceFiles):
                     max_iter=6,
                     use_blasr=True)
             # out_prefix='output/tmp',
-            self.add_new_batch(f)
+            self.add_new_batch(f, fq)
             self.check_cluster_sanity()
             for dummy_i in xrange(1):
                 self.run_for_new_batch()
@@ -1341,13 +1316,12 @@ class IceIterative(IceFiles):
         self.add_log("run_post_ICE_merging called with max_iter={0}, using_blasr={1}".format(max_iter, use_blasr))
         for _i in xrange(max_iter):
             self.add_log("Before merging: {0} clusters".format(len(self.uc)))
-            self.add_log("Running post-iterative-merging iterate {n}".
+            self.add_log("Running post-iterative-merging iteration {n}".
                          format(n=_i), level=logging.INFO)
             self.changes = set()
-            self.add_log("Writing pickle file: " + pickle_filename)
+            #self.add_log("Writing pickle file: " + pickle_filename)
             self.write_pickle(pickle_filename)
-
-            self.add_log("Writing consensus file: " + consensus_filename)
+            #self.add_log("Writing consensus file: " + consensus_filename)
             self.write_consensus(consensus_filename)
 
             iters = self.find_mergeable_consensus(consensus_filename, use_blasr=use_blasr)
@@ -1388,7 +1362,12 @@ class IceIterative(IceFiles):
                 for r in LA4IceReader(la4ice_filename):
                     r.qID = runner.query_dazz_handler[r.qID]
                     r.sID = runner.query_dazz_handler[r.sID]
-                    if possible_merge(r=r, ece_penalty=self.ece_penalty, ece_min_len=self.ece_min_len):
+                    if possible_merge2(r=r, ece_penalty=self.ice_opts.ece_penalty,
+                                      ece_min_len=self.ice_opts.ece_min_len,
+                                      max_missed_start=self.ice_opts.max_missed_start,
+                                      max_missed_end=self.ice_opts.max_missed_end,
+                                      full_missed_start=self.ice_opts.full_missed_start,
+                                      full_missed_end=self.ice_opts.full_missed_end):
                         yield r
 
             runner.clean_run()
@@ -1397,9 +1376,9 @@ class IceIterative(IceFiles):
             out = self.selfBlasrFN(fasta_filename)
             if op.exists(out):  # clean out the blasr file from the last run
                 os.remove(out)
-            cmd = "blasr {i} {i} --sa {i}.sa ".format(i=real_upath(fasta_filename)) + \
+            cmd = "blasr {i} {i} ".format(i=real_upath(fasta_filename)) + \
                   "--bestn 20 --nCandidates 100 --minPctIdentity 95 --maxLCPLength 15 -m 5 " + \
-                  "--minAlnLength {m}".format(m=self.ice_opts.min_match_len) + \
+                  "--minAlnLength {m} ".format(m=self.ice_opts.min_match_len) + \
                   "--maxScore {s} ".format(s=self.ice_opts.maxScore) + \
                   "--nproc {cpu} ".format(cpu=self.blasr_nproc) + \
                   "--out {o} ".format(o=real_upath(out)) + \
@@ -1408,8 +1387,14 @@ class IceIterative(IceFiles):
             self.run_cmd_and_log(cmd)
 
             for r in BLASRM5Reader(out):
-                if possible_merge(r=r, ece_penalty=self.ece_penalty,
-                                  ece_min_len=self.ece_min_len):
+                # Liz note: don't use the more lenient max_missed_start/max_missed_end,
+                #            which can cause actual isoform diffs in the first/last huge chunks to be ignored
+                if possible_merge2(r=r, ece_penalty=self.ice_opts.ece_penalty,
+                    ece_min_len=self.ice_opts.ece_min_len,
+                    max_missed_start=self.ice_opts.max_missed_start,
+                    max_missed_end=self.ice_opts.max_missed_end,
+                    full_missed_start=self.ice_opts.full_missed_start,
+                    full_missed_end=self.ice_opts.full_missed_end):
                     yield r
 
     def do_icec_merge_nogcon(self, r):

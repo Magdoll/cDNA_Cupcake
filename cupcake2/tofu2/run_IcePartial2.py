@@ -115,16 +115,17 @@ from pbtranscript.__init__ import get_version
 from pbtranscript.ClusterOptions import SgeOptions
 from pbtranscript.PBTranscriptOptions import _wrap_parser
 
-from cupcake2.ice2.IceAllPartials2 import IceAllPartials2, add_ice_all_partials_arguments
+from cupcake2.ice2.IcePartialAll2 import IceAllPartials2, add_ice_all_partials_arguments
 
 from cupcake2.ice2.IcePartial2 import IcePartialOne2, add_ice_partial_one_arguments
 
+from cupcake2.ice2.IcePartialSplit2 import IcePartialSplit2, add_ice_partial_split_arguments
+
 ##from pbtranscript.ice.IcePartialI import IcePartialI, \
 #    add_ice_partial_i_arguments
-#from pbtranscript.ice.IcePartialSplit import IcePartialSplit, \
-#    add_ice_partial_split_arguments
-#from pbtranscript.ice.IcePartialMerge import IcePartialMerge, \
-#    add_ice_partial_merge_arguments
+
+from pbtranscript.ice.IcePartialMerge import IcePartialMerge, \
+    add_ice_partial_merge_arguments
 
 
 class IcePartialRunner(PBMultiToolRunner):
@@ -145,17 +146,17 @@ class IcePartialRunner(PBMultiToolRunner):
                                        description=IcePartialOne2.desc)
         add_ice_partial_one_arguments(parser)
 
-        # parser = subparsers.add_parser('split',
-        #                                description=IcePartialSplit.desc)
-        # add_ice_partial_split_arguments(parser)
+        parser = subparsers.add_parser('split',
+                                       description=IcePartialSplit2.desc)
+        add_ice_partial_split_arguments(parser)
         #
         # parser = subparsers.add_parser('i',
         #                                description=IcePartialI.desc)
         # add_ice_partial_i_arguments(parser)
         #
-        # parser = subparsers.add_parser('merge',
-        #                                description=IcePartialMerge.desc)
-        # add_ice_partial_merge_arguments(parser)
+        parser = subparsers.add_parser('merge',
+                                        description=IcePartialMerge.desc)
+        add_ice_partial_merge_arguments(parser)
 
     def getVersion(self):
         """Return version string."""
@@ -170,13 +171,14 @@ class IcePartialRunner(PBMultiToolRunner):
         try:
             args = self.args
             obj = None
+            if cmd in ('all', 'one'):
+                ice_opts = IceOptions2(ece_penalty=args.ece_penalty,
+                           ece_min_len=args.ece_min_len,
+                           max_missed_start=args.max_missed_start,
+                           max_missed_end=args.max_missed_end,
+                           min_match_len=50,
+                           aligner_choice=args.aligner_choice)
 
-            ice_opts = IceOptions2(ece_penalty=args.ece_penalty,
-                       ece_min_len=args.ece_min_len,
-                       max_missed_start=args.max_missed_start,
-                       max_missed_end=args.max_missed_end,
-                       min_match_len=50,
-                       aligner_choice=args.aligner_choice)
 
             if cmd == "all":
                 sge_opts = SgeOptions2(unique_id=args.unique_id,
@@ -205,18 +207,19 @@ class IcePartialRunner(PBMultiToolRunner):
                                      ice_opts=ice_opts,
                                      cpus=args.cpus,
                                      tmp_dir=args.tmp_dir)
-            # elif cmd == "split":
-            #     obj = IcePartialSplit(root_dir=args.root_dir,
-            #                           nfl_fa=args.nfl_fa,
-            #                           N=args.N)
+            elif cmd == "split":
+                obj = IcePartialSplit2(root_dir=args.root_dir,
+                                       nfl_fa=args.nfl_fa,
+                                       nfl_fq=args.nfl_fq,
+                                       N=args.N)
             # elif cmd == "i":
             #     obj = IcePartialI(root_dir=args.root_dir, i=args.i,
             #                       ccs_fofn=args.ccs_fofn,
             #                       blasr_nproc=args.blasr_nproc,
             #                       tmp_dir=args.tmp_dir)
-            # elif cmd == "merge":
-            #     obj = IcePartialMerge(root_dir=args.root_dir,
-            #                           N=args.N)
+            elif cmd == "merge":
+                 obj = IcePartialMerge(root_dir=args.root_dir,
+                                       N=args.N)
             else:
                 raise ValueError("Unknown command passed to {f}: {cmd}.".
                                  format(f=op.basename(__file__), cmd=cmd))

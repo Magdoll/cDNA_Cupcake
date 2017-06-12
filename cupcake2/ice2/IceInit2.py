@@ -26,11 +26,11 @@ import numpy as np
 from Bio import SeqIO
 
 import pbtranscript.ice.pClique as pClique
-from pbtranscript.ice.IceUtils import blasr_against_ref, daligner_against_ref
 from pbtranscript.ice.IceUtils import set_probqv_from_model
 from pbtranscript.Utils import real_upath, execute
 from pbtranscript.ice_daligner import DalignerRunner
 
+from cupcake2.ice2.IceUtils2 import blasr_against_ref2, daligner_against_ref2
 
 class IceInit2(object):
     """Iterative clustering and error correction."""
@@ -62,7 +62,7 @@ class IceInit2(object):
                   "--nproc {cpu} ".format(cpu=self.sge_opts.blasr_nproc) + \
                   "--minAlnLength {aln} ".format(aln=self.ice_opts.min_match_len) + \
                   "--maxScore {score} ".format(score=self.ice_opts.maxScore) + \
-                  "--bestn {n} --nCandidates {n} ".format(n=self.ice_opts.bestn) + \
+                  "--bestn {n} --nCandidates {n2} ".format(n=self.ice_opts.bestn, n2=self.ice_opts.bestn*2) + \
                   "--out {o} ".format(o=real_upath(outFN)) + \
                   "1>/dev/null 2>/dev/null"
             logging.info("Calling {cmd}".format(cmd=cmd))
@@ -91,7 +91,7 @@ class IceInit2(object):
         """Construct a graph from a BLASR M5 file."""
         alignGraph = nx.Graph()
 
-        for r in blasr_against_ref(output_filename=m5FN,
+        for r in blasr_against_ref2(output_filename=m5FN,
             is_FL=True,
             sID_starts_with_c=False,
             qver_get_func=self.qver_get_func,
@@ -99,7 +99,9 @@ class IceInit2(object):
             ece_penalty=self.ice_opts.ece_penalty,
             ece_min_len=self.ice_opts.ece_min_len,
             max_missed_start=self.ice_opts.max_missed_start,
-            max_missed_end=self.ice_opts.max_missed_end):
+            max_missed_end=self.ice_opts.max_missed_end,
+            full_missed_start=self.ice_opts.full_missed_start,
+            full_missed_end=self.ice_opts.full_missed_end):
             if r.qID == r.cID:
                 continue # self hit, ignore
             if r.ece_arr is not None:
@@ -115,7 +117,7 @@ class IceInit2(object):
         for la4ice_filename in runner.la4ice_filenames:
             count = 0
             start_t = time.time()
-            for r in daligner_against_ref(
+            for r in daligner_against_ref2(
                     query_dazz_handler=runner.query_dazz_handler,
                     target_dazz_handler=runner.target_dazz_handler,
                     la4ice_filename=la4ice_filename,
@@ -125,7 +127,9 @@ class IceInit2(object):
                     ece_penalty=self.ice_opts.ece_penalty,
                     same_strand_only=True, no_qv_or_aln_checking=False,
                     max_missed_start=self.ice_opts.max_missed_start,
-                    max_missed_end=self.ice_opts.max_missed_end):
+                    max_missed_end=self.ice_opts.max_missed_end,
+                    full_missed_start=self.ice_opts.full_missed_start,
+                    full_missed_end=self.ice_opts.full_missed_end):
                 if r.qID == r.cID:
                     continue # self hit, ignore
                 if r.ece_arr is not None:

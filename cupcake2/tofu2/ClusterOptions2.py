@@ -10,14 +10,14 @@ class SgeOptions2(object):
     """Define options to configure SGE."""
 
     def __init__(self, unique_id, use_sge=False, max_sge_jobs=40,
-                 blasr_nproc=24, gcon_nproc=8, quiver_nproc=8,
+                 blasr_nproc=24, gcon_nproc=8, arrow_nproc=8,
                  sge_queue=None, sge_env_name="smp", qsub_extra=''):
         self.unique_id = unique_id
         self.use_sge = use_sge
         self.max_sge_jobs = max_sge_jobs
         self.blasr_nproc = blasr_nproc
         self.gcon_nproc = gcon_nproc
-        self.quiver_nproc = quiver_nproc
+        self.arrow_nproc = arrow_nproc
         self.sge_queue = sge_queue
         self.sge_env_name = sge_env_name
         self.qsub_extra = qsub_extra  # whatever extra command customers want via qsub
@@ -31,7 +31,7 @@ class SgeOptions2(object):
                "qsub_extra={e}\n".format(e=self.qsub_extra) + \
                "blasr_nproc={n}\n".format(n=self.blasr_nproc) + \
                "gcon_nproc={n}\n".format(n=self.gcon_nproc) + \
-               "quiver_nproc={t}\n".format(t=self.quiver_nproc)
+               "arrow_nproc={t}\n".format(t=self.arrow_nproc)
 
     def qsub_cmd(self, script, num_threads,
                  wait_before_exit=False, depend_on_jobs=None,
@@ -79,7 +79,7 @@ class SgeOptions2(object):
         return ret
 
     def cmd_str(self, show_blasr_nproc=False, show_gcon_nproc=False,
-                show_quiver_nproc=False, show_sge_queue=False,
+                show_arrow_nproc=False, show_sge_queue=False,
                 show_sge_env_name=False, show_qsub_extra=False):
         """Return a cmd string."""
         cmd = ""
@@ -91,8 +91,8 @@ class SgeOptions2(object):
             cmd += "--blasr_nproc={n} ".format(n=self.blasr_nproc)
         if show_gcon_nproc is True and self.gcon_nproc is not None:
             cmd += "--gcon_nproc={n} ".format(n=self.gcon_nproc)
-        if show_quiver_nproc is True and self.quiver_nproc is not None:
-            cmd += "--quiver_nproc={n} ".format(n=self.quiver_nproc)
+        if show_arrow_nproc is True and self.arrow_nproc is not None:
+            cmd += "--arrow_nproc={n} ".format(n=self.arrow_nproc)
         if show_sge_env_name is True:
             cmd += "--sge_env_name={0}".format(self.sge_env_name)
         if show_sge_queue is True and self.sge_queue is not None:
@@ -126,8 +126,18 @@ class IceOptions2(object):
 
         self.aligner_choice = aligner_choice
 
+        # (user-set) maximum allowed missed/start to be considered an "isoform"
+        # setting this allows for 5' degradation and some slight 3' differences
+        # recommended: 400 bp for 5', 50 bp for 3'
         self.max_missed_start = int(max_missed_start)
         self.max_missed_end = int(max_missed_end)
+
+        # maximum allowed missed start/end to be considered "fully" aligned by an aligner
+        # must be smaller than max_missed_start/end, recommend to keep it tight
+        # setting it too high (like 200 bp) may mean accidentally clustering diff isoforms
+        # that have different exonic structure in the first 200 bp
+        self.full_missed_start = 50
+        self.full_missed_end = 30
 
         self.ece_penalty = int(ece_penalty)
         self.ece_min_len = int(ece_min_len)
@@ -263,3 +273,59 @@ class IceOptions2(object):
                "nfl_reads_per_split={n}\n".format(n=self.nfl_reads_per_split) + \
                "num_clusters_per_bin={n}\n".format(n=self.num_clusters_per_bin)
 
+
+class IceArrowHQLQOptions2(object):
+
+    """
+    Define HQ/LQ isoforms related options
+
+    Liz Note: we are changing `hq_min_full_length_reads` potentially back to min_FL>=1 again!
+              evaluating how we can increase observed isoform # while still removing artifacts
+    """
+
+    def __init__(self, qv_trim_5=100, qv_trim_3=30, hq_arrow_min_accuracy=0.99,
+                 hq_isoforms_fa=None, hq_isoforms_fq=None,
+                 lq_isoforms_fa=None, lq_isoforms_fq=None,
+                 hq_min_full_length_reads=1):
+        # Ignore QV of n bases in the 5' end
+        self.qv_trim_5 = int(qv_trim_5)
+        # Ignore QV of n bases in the 3' end
+        self.qv_trim_3 = int(qv_trim_3)
+        # Minimum allowed arrow accuracy to mark an isoform as HQ
+        self.hq_arrow_min_accuracy = float(hq_arrow_min_accuracy)
+
+        assert 0 < self.hq_arrow_min_accuracy <= 1
+
+        self.hq_isoforms_fa = hq_isoforms_fa
+        self.hq_isoforms_fq = hq_isoforms_fq
+        self.lq_isoforms_fa = lq_isoforms_fa
+        self.lq_isoforms_fq = lq_isoforms_fq
+        self.hq_min_full_length_reads = hq_min_full_length_reads
+
+    def __str__(self):
+        return "qv_trim_5={n}\n".format(n=self.qv_trim_5) + \
+               "qv_trim_3={n}\n".format(n=self.qv_trim_3) + \
+               "hq_arrow_min_accuracy={n}\n".\
+               format(n=self.hq_arrow_min_accuracy) + \
+               "hq_min_full_length_reads={n}\n".\
+               format(n=self.hq_min_full_length_reads) + \
+               "HQ isoforms fasta={fa}\n".format(fa=self.hq_isoforms_fa) + \
+               "HQ isoforms fastq={fq}\n".format(fq=self.hq_isoforms_fq) + \
+               "LQ isoforms fasta={fa}\n".format(fa=self.lq_isoforms_fa) + \
+               "LQ isoforms fastq={fq}\n".format(fq=self.lq_isoforms_fq)
+
+    def cmd_str(self):
+        """Return a cmd string."""
+        cmd = "--hq_arrow_min_accuracy={n} ".\
+                format(n=self.hq_arrow_min_accuracy) + \
+              "--qv_trim_5={n} ".format(n=self.qv_trim_5) + \
+              "--qv_trim_3={n} ".format(n=self.qv_trim_3)
+        if self.hq_isoforms_fa is not None:
+            cmd += "--hq_isoforms_fa={f} ".format(f=self.hq_isoforms_fa)
+        if self.hq_isoforms_fq is not None:
+            cmd += "--hq_isoforms_fq={f} ".format(f=self.hq_isoforms_fq)
+        if self.lq_isoforms_fa is not None:
+            cmd += "--lq_isoforms_fa={f} ".format(f=self.lq_isoforms_fa)
+        if self.lq_isoforms_fq is not None:
+            cmd += "--lq_isoforms_fq={f} ".format(f=self.lq_isoforms_fq)
+        return cmd

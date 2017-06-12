@@ -1,10 +1,10 @@
 __author__ = 'etseng@pacb.com'
 
 from cPickle import dump
-from pbtranscript.ClusterOptions import SgeOptions
+
 from pbtranscript.ice.IceUtils import set_probqv_from_model, set_probqv_from_fq
 from cupcake2.ice2.IceInit2 import IceInit2
-from cupcake2.tofu2.ClusterOptions2 import IceOptions2
+from cupcake2.tofu2.ClusterOptions2 import IceOptions2, SgeOptions2
 
 def run_IceInit2(readsFa, out_pickle, ice_opts, sge_opts, readsFq=None):
     if readsFq is None:
@@ -20,6 +20,8 @@ def run_IceInit2(readsFa, out_pickle, ice_opts, sge_opts, readsFq=None):
     with open(out_pickle, 'w') as f:
         dump(i.uc, f)
 
+    return i.uc
+
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -31,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--ece_penalty", default=1, type=int, help="ECE penalty (default: 1)")
     parser.add_argument("--ece_min_len", default=20, type=int, help="ECE min len (default: 20)")
     parser.add_argument("--max_missed_start", default=400, type=int, help="Max missed 5'(default: 400 bp)" )
-    parser.add_argument("--max_missed_end", default=100, type=int, help="Max missed 3' (default: 100 bp)")
+    parser.add_argument("--max_missed_end", default=50, type=int, help="Max missed 3' (default: 50 bp)")
     parser.add_argument("--aligner_choice", default='daligner', choices=['daligner', 'blasr'], help="Aligner (default: daligner)")
     parser.add_argument("--cpus", default=4, help="Number of CPUs aligner uses (default: 4)")
 
@@ -44,7 +46,7 @@ if __name__ == "__main__":
                            aligner_choice=args.aligner_choice,
                            )
 
-    sge_opts = SgeOptions(unique_id=123, blasr_nproc=args.cpus)
+    sge_opts = SgeOptions2(unique_id=123, blasr_nproc=args.cpus)
 
     # set min_match_len to (low_cDNA_size-max_missed_start-max_missed_end), rounded to lowest 100 bp
     ice_opts.detect_cDNA_size(args.flnc_fa)

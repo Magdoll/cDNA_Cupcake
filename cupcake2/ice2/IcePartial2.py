@@ -64,11 +64,10 @@ from pbtranscript.io.ContigSetReaderWrapper import ContigSetReaderWrapper
 from pbtranscript.ice_daligner import DalignerRunner
 
 from pbtranscript.ice.IceUtils import set_probqv_from_model, set_probqv_from_fq
-from pbtranscript.ice.IceUtils import blasr_against_ref, daligner_against_ref
 from pbtranscript.ice.__init__ import ICE_PARTIAL_PY
 
+from cupcake2.ice2.IceUtils2 import blasr_against_ref2, daligner_against_ref2
 from cupcake2.tofu2.ToFuOptions2 import add_partial_argument
-
 
 
 def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
@@ -117,7 +116,8 @@ def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
         start_t = time.time()
 
 
-        hitItems = daligner_against_ref(query_dazz_handler=runner.query_dazz_handler,
+        # not providing full_missed_start/end since aligning nFLs, ok to partially align only
+        hitItems = daligner_against_ref2(query_dazz_handler=runner.query_dazz_handler,
                                         target_dazz_handler=runner.target_dazz_handler,
                                         la4ice_filename=la4ice_filename,
                                         is_FL=False, sID_starts_with_c=True,
@@ -214,7 +214,8 @@ def build_uc_from_partial_blasr(input_fasta, ref_fasta, out_pickle,
 
     logging.info("Calling blasr_against_ref ...")
 
-    hitItems = blasr_against_ref(output_filename=m5_file,
+    # no need to provide full_missed_start/end for nFLs, since is_FL = False
+    hitItems = blasr_against_ref2(output_filename=m5_file,
                                  is_FL=False,
                                  sID_starts_with_c=True,
                                  qver_get_func=probqv.get_smoothed,
