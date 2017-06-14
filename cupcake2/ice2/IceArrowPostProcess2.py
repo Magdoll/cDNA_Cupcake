@@ -214,14 +214,15 @@ class IceArrowPostProcess2(IceFiles2):
         for fq in self.fq_filenames:
             self.add_log("Looking at arrowed fq {f}".format(f=fq))
             for r in FastqReader(fq):
-                # possible ID: c0|arrow
+                # possible ID #1: c0|arrow (a single Ice2 directory)
+                # possible ID #2: b112_c0|arrow (after collecting several Ice2 directory)
                 cid = r.name.split('|')[0]
                 if cid.endswith('_ref'):
                     cid = cid[:-4]
                 i = cid.find('/')
                 if i > 0:
                     cid = cid[:i]
-                cid = int(cid[1:])
+                #cid = int(cid[1:]) #becuz possible ID #2, dont convert to int
                 polished[cid] = r
 
 
@@ -290,19 +291,16 @@ class IceArrowPostProcess2(IceFiles2):
         """Return a cmd string ($ICE_ARROW_PY postprocess)."""
         return self._cmd_str(root_dir=self.root_dir,
                              ipq_opts=self.ipq_opts,
-                             use_sge=self.use_sge,
                              quit_if_not_done=self.quit_if_not_done,
                              summary_fn=self.summary_fn,
                              report_fn=self.report_fn)
 
-    def _cmd_str(self, root_dir, ipq_opts, use_sge, quit_if_not_done,
+    def _cmd_str(self, root_dir, ipq_opts, quit_if_not_done,
                  summary_fn, report_fn):
         """Return a cmd string ($ICE_ARROW_PY postprocess)."""
         cmd = self.prog + \
               "{d} ".format(d=root_dir) + \
               ipq_opts.cmd_str()
-        if use_sge is True:
-            cmd += "--use_sge "
         if quit_if_not_done is True:
             cmd += "--quit_if_not_done "
         if summary_fn is not None:

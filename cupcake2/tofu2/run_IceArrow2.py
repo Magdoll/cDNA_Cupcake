@@ -45,9 +45,9 @@ class IceArrowRunner2(PBMultiToolRunner):
         #                                description=IceQuiverMerge.desc)
         # add_ice_quiver_merge_arguments(parser)
         #
-        # parser = subparsers.add_parser('postprocess',
-        #                                description=IceQuiverPostprocess.desc)
-        # add_ice_quiver_postprocess_arguments(parser)
+        parser = subparsers.add_parser('postprocess',
+                                        description=IceArrowPostProcess2.desc)
+        add_ice_arrow_postprocess_arguments(parser)
 
     def getVersion(self):
         """Return version string."""

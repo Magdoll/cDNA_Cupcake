@@ -170,7 +170,7 @@ class IceArrow2(IceFiles2):
         self.add_log("Reconstruct of g consensus files completed.",
                      level=logging.INFO)
 
-    def create_raw_files_for_clusters_in_bin(self, cids, d, uc, partial_uc):
+    def create_raw_files_for_clusters_in_bin(self, cids, d, uc, partial_uc, refs):
         """
         Create raw subreads bam files for clusters in cids.
         For each cluster k in cids,
@@ -182,14 +182,14 @@ class IceArrow2(IceFiles2):
         uc --- uc[k] returns fl ccs reads associated with cluster k
         partial_uc --- partial_uc[k] returns nfl ccs reads associated with cluster k
         """
-        file_func = self.raw_bam_of_cluster
+        file_func = self.raw_bam_of_cluster2
 
         for k in cids:  # for each cluster k
             # write cluster k's associated raw subreads to raw_fa
             # Trim both ends of subreads (which contain primers and polyAs)
             trim_subreads_and_write(reader=d,
                                     in_seqids=uc[k] + partial_uc[k],
-                                    out_file=file_func(k),
+                                    out_file=file_func(refs[k]),
                                     trim_len=IceQuiverOptions.trim_subread_flank_len,
                                     min_len=IceQuiverOptions.min_trimmed_subread_len,
                                     ignore_keyerror=True,
@@ -209,13 +209,13 @@ class IceArrow2(IceFiles2):
         in cids are created.
 
         """
-        raw_file_func  = self.raw_bam_of_cluster
-        out_file_func = self.bam_of_cluster
+        raw_file_func  = self.raw_bam_of_cluster2
+        out_file_func = self.bam_of_cluster2
 
         for k in cids:  # for each cluster k
             # $root_dir/tmp/?/c{k}/in.raw_with_partial.fasta
-            raw_fn = raw_file_func(k)
-            out_fn = out_file_func(k)
+            raw_fn = raw_file_func(refs[k])
+            out_fn = out_file_func(refs[k])
 
             if not op.exists(raw_fn):
                 raise IOError("{f} does not exist. ".format(f=raw_fn) +
@@ -242,7 +242,7 @@ class IceArrow2(IceFiles2):
         first, last = cids[0], cids[-1]
         bin_ref_fa = self.ref_fa_of_arrowed_bin(first, last)
         bin_sam_file = self.bam_of_arrowed_bin(first, last)
-        file_func  = self.bam_of_cluster
+        file_func  = self.bam_of_cluster2
         is_blank_file = is_blank_bam
         concat_sambam = concat_bam
 
@@ -253,7 +253,7 @@ class IceArrow2(IceFiles2):
         seqs_seen = {}
         with open(bin_ref_fa, 'w') as bin_ref_fa_writer:
             for cid in cids:
-                fname = file_func(cid)
+                fname = file_func(refs[cid])
                 if not is_blank_file(fname):
                     ref_rec = get_the_only_fasta_record(refs[cid])
                     name = ref_rec.name.strip()
@@ -434,7 +434,7 @@ class IceArrow2(IceFiles2):
 
         # For each cluster in bin, create its raw subreads fasta file.
         self.create_raw_files_for_clusters_in_bin(cids=cids, d=d, uc=uc,
-                                                  partial_uc=partial_uc)
+                                                  partial_uc=partial_uc, refs=refs)
 
         # For each cluster in bin, align its raw subreads to ref to build a sam
         self.create_sams_for_clusters_in_bin(cids=cids, refs=refs)
@@ -459,13 +459,16 @@ class IceArrow2(IceFiles2):
         Create arrow bins for cids in <cids_todo>. Handle missing references, etc.
         Create/Write the jobs but DO NOT submit.
         """
+        # Liz: I'm commenting this out because the "refs" from the pickle should be accurate
+        # plus the new cids after ice2 collection is b<bin>_c<cid>
         # Update refs
-        new_refs = {cid: op.join(self.cluster_dir(cid), op.basename(refs[cid])) for cid in cids_todo}
-        refs = new_refs
+        #new_refs = {cid: op.join(self.cluster_dir(cid), op.basename(refs[cid])) for cid in cids_todo}
+        #refs = new_refs
 
         # Reconstruct refs if not exist.
-        if not nfs_exists(refs[cids_todo[0]]):
-            self.reconstruct_ref_fa_for_clusters_in_bin(cids=cids_todo, refs=refs)
+        cids_missing_refs = filter(lambda x: not nfs_exists(refs[x]), cids_todo)
+        if len(cids_missing_refs) > 0:
+            self.reconstruct_ref_fa_for_clusters_in_bin(cids=cids_missing_refs, refs=refs)
 
         return self.create_a_arrow_bin(cids_todo, d, uc, partial_uc, refs)
 

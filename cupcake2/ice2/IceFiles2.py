@@ -150,3 +150,19 @@ class IceFiles2(IceFiles):
         File that will contain the list of .sh files that were incomplete and need to re-run.
         """
         return op.join(self.log_dir, 'unfinished_arrow_files.txt')
+
+    def raw_fa_of_cluster2(self, ref_file):
+        """Return $cluster_dir/in.raw_with_partial.fasta, which
+        contains the unrolled sequence of zmws belonging to cluster
+        cid."""
+        return op.join(op.dirname(ref_file), "in.raw_with_partial.fasta")
+
+    def raw_bam_of_cluster2(self, ref_file):
+        """Return $cluster_dir/in.raw_with_partial.bam, which
+        contains the unrolled sequence of zmws belonging to cluster
+        cid."""
+        return op.join(op.dirname(ref_file), "in.raw_with_partial.bam")
+
+    def bam_of_cluster2(self, ref_file):
+        """Return $cluster_dir/out.bam, like sam_of_cluster(cid)."""
+        return op.join(op.dirname(ref_file), "out.bam")

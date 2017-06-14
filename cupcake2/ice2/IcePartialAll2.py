@@ -177,7 +177,7 @@ class IceAllPartials2(IceFiles):
             cmd += "{r} ".format(r=real_upath(self.ref_fasta)) + \
                   "{o} ".format(o=real_upath(self.pickle_filenames[idx])) + \
                   "--aligner_choice={c} ".format(c=self.ice_opts.aligner_choice) + \
-                  "--cpus={n} ".format(n=self.sge_opts.blasr_nproc) + \
+                  "--cpus={n} ".format(n=self.cpus) + \
                   "--max_missed_start={0} ".format(self.ice_opts.max_missed_start) + \
                   "--max_missed_end={0} ".format(self.ice_opts.max_missed_end) + \
                   "--ece_penalty={0} ".format(self.ice_opts.ece_penalty) + \
