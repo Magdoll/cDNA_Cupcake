@@ -13,6 +13,7 @@ Modify the cids from "c0" --> "pC<bin>_c0"
 import os, sys, glob
 from Bio import SeqIO
 from cPickle import *
+from cupcake.io.SeqReaders import LazyFastaReader
 
 def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_format="b{bin}_c{cid}"):
 
@@ -50,7 +51,8 @@ def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_form
 
 
 def chunk_collected_fasta_pickle(combined_fasta, combined_uc, combined_refs, num_chunks, chunk_prefix):
-    d = LazyFastaReader(combined_fasta)
+    d = LazyFastaReader(combined_fasta, seqid_extraction=lambda x: x.split('/')[0])
+    # the seqids in combined_fasta are b0_c0/2/1776, need to make b0_c0 also key
 
     uc = combined_uc
     refs = combined_refs
@@ -67,7 +69,7 @@ def chunk_collected_fasta_pickle(combined_fasta, combined_uc, combined_refs, num
                 f.write(">{0}\n{1}\n".format(r.id, r.seq))
         with open("{0}.chunk{1}.pickle".format(chunk_prefix, i), 'w') as f:
             dump({'uc': dict((k, uc[k]) for k in keys[_from:_to]),
-                  'refs': dict((k, refs[k]) for k in keys[_from:_to])})
+                  'refs': dict((k, refs[k]) for k in keys[_from:_to])}, f)
 
 
 if __name__ == "__main__":

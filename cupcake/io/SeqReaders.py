@@ -7,7 +7,7 @@ class LazyFastqReader:
     """
     Like LazyFastaReader except works with fastq!
     """
-    def __init__(self, fastq_filename):
+    def __init__(self, fastq_filename, seqid_extraction=lambda x: x):
         self.f = open(fastq_filename)
         self.d = {}
 
@@ -16,9 +16,10 @@ class LazyFastqReader:
             if len(line) == 0: break
             assert line.startswith('@')
             id = line.strip()[1:].split(None, 1)[0] # the header MUST be just 1 line
-            if id in self.d:
-                raise Exception, "Duplicate id {0}!!".format(id)
-            self.d[id] = self.f.tell()
+            id2 = seqid_extraction(id)
+            if id2 in self.d:
+                raise Exception, "Duplicate id {0} (or {1})!!".format(id, id2)
+            self.d[id2] = self.f.tell()
             self.f.readline() # seq
             self.f.readline() # +
             self.f.readline() # quality
@@ -33,6 +34,9 @@ class LazyFastqReader:
         qualstr = self.f.readline().strip()
         return SeqRecord(seq=Seq(sequence), id=k, \
                          letter_annotations={'phred_quality':[ord(x)-33 for x in qualstr]})
+
+    def __setitem__(self, key, value):
+        self.d[key] = value
 
     def keys(self):
         return self.d.keys()
@@ -51,7 +55,7 @@ class LazyFastaReader:
         r = FastaReader('output/test.fna')
         r['6C_49273_NC_008578/2259031-2259297'] ==> this shows the FastaRecord
     """
-    def __init__(self, fasta_filename):
+    def __init__(self, fasta_filename, seqid_extraction=lambda x: x):
         self.f = open(fasta_filename)
         self.d = {}
 
@@ -60,9 +64,10 @@ class LazyFastaReader:
             if len(line) == 0: break
             if line.startswith('>'):
                 id = line.strip()[1:].split(None, 1)[0] # the header MUST be just 1 line
-                if id in self.d:
-                    raise Exception, "Duplicate id {0}!!".format(id)
-                self.d[id] = self.f.tell()
+                id2 = seqid_extraction(id)
+                if id2 in self.d:
+                    raise Exception, "Duplicate id {0} (or {1})!!".format(id, id2)
+                self.d[id2] = self.f.tell()
 
     def __getitem__(self, k):
         if k not in self.d:
@@ -74,6 +79,9 @@ class LazyFastaReader:
                 break
             content += line.strip()
         return SeqRecord(seq=Seq(content), id=k)
+
+    def __setitem__(self, key, value):
+        self.d[key] = value
 
     def keys(self):
         return self.d.keys()
