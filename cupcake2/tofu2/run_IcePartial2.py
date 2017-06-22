@@ -72,10 +72,15 @@ class IcePartialRunner(PBMultiToolRunner):
             args = self.args
             obj = None
             if cmd in ('all', 'one'):
+                # currently user NOT allowed to set full missed start/end
+                # (we also set it to 30/10 bp which is more stringent than in IceIterative2,
+                # which is hard set to 50/30)
                 ice_opts = IceOptions2(ece_penalty=args.ece_penalty,
                            ece_min_len=args.ece_min_len,
                            max_missed_start=args.max_missed_start,
                            max_missed_end=args.max_missed_end,
+                           full_missed_start=30,
+                           full_missed_end=10,
                            min_match_len=50,
                            aligner_choice=args.aligner_choice)
 

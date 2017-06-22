@@ -112,6 +112,7 @@ class IceOptions2(object):
     def __init__(self, cDNA_size="under1k", flnc_reads_per_split=20000,
                  ece_penalty=1, ece_min_len=20, bestn=100,
                  max_missed_start=400, max_missed_end=100,
+                 full_missed_start=50, full_missed_end=30,
                  min_match_len=50,
                  quiver=False,
                  use_finer_qv=False, targeted_isoseq=False,
@@ -136,8 +137,8 @@ class IceOptions2(object):
         # must be smaller than max_missed_start/end, recommend to keep it tight
         # setting it too high (like 200 bp) may mean accidentally clustering diff isoforms
         # that have different exonic structure in the first 200 bp
-        self.full_missed_start = 50
-        self.full_missed_end = 30
+        self.full_missed_start = full_missed_start
+        self.full_missed_end = full_missed_end
 
         self.ece_penalty = int(ece_penalty)
         self.ece_min_len = int(ece_min_len)

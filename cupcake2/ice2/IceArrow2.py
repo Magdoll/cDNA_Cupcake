@@ -351,8 +351,8 @@ class IceArrow2(IceFiles2):
         ...
         """
         files = []
-        total_jobs = self.sge_opts.max_sge_jobs if self.sge_opts.use_sge else 1
-        script_per_job = len(arrow_sh_scripts) / total_jobs + 1
+        total_jobs = min(len(arrow_sh_scripts), self.sge_opts.max_sge_jobs if self.sge_opts.use_sge else 1)
+        script_per_job = len(arrow_sh_scripts) / total_jobs + (1 if len(arrow_sh_scripts)%total_jobs > 0 else 0)
 
         for i in xrange(total_jobs):
             with open(self.arrow_submission_file(i, total_jobs), 'w') as f:

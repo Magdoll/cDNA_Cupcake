@@ -81,6 +81,8 @@ def tally_count_file(fasta_filename, tally_obj, output_filename):
         f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl\tnorm_nfl\tnorm_nfl_amb\n")
 
         allids.sort(key=lambda x: map(int, x.split('.')[1:]))
+
+
         for pbid in allids:
             print "processing", pbid
             if pbid in o.tally:

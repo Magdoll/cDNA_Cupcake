@@ -31,7 +31,11 @@ def filter_by_count(input_prefix, output_prefix, min_count):
         group_max_count_p[pbid] = 0
         members = members.split(',')
         for m in members:
-            tmp = m.split('|')[1].split('/')[1] #ex: tmp = f30p16
+            i = m.find('|')
+            if i > 0:
+                tmp = m.split('|')[1].split('/')[1] #ex: tmp = f30p16
+            else:
+                tmp = m.split('/')[1]
             fl_count, p_count = tmp.split('p')
             fl_count = int(fl_count[1:])
             p_count = int(p_count)

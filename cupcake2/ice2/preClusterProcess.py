@@ -51,12 +51,12 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None)
     reader = reader_class(align_filename)
     for r in reader:
         if r.qID >= r.sID or r.strand == '-': continue
-        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
-        if s == 'partial': continue
+        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        #if s == 'partial': continue
 
         #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
         #    pdb.set_trace()
-        if s == 'match':
+        if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             pCS.add_seqid_contained(r.qID, r.sID)
@@ -92,9 +92,9 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
     reader = reader_class(align_filename)#'batch1.fasta.S.f00001.minimap')
     for r in reader:
         if r.strand == '-': continue
-        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
-        if s == 'partial': continue
-        if s == 'match':
+        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        #if s == 'partial': continue
+        if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             # sID must be in cluster, so just call pCS to handle the tucking
@@ -125,9 +125,9 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
     reader = reader_class(align_filename)
     for r in reader:
         if r.strand == '-': continue
-        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
-        if s == 'partial': continue
-        if s == 'match':
+        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        #if s == 'partial': continue
+        if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             pCS.add_seqid_contained(r.qID, r.sID)

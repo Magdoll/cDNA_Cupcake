@@ -66,10 +66,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # currently, the user is NOT allowed to set the definition for full missed start/end
+    # (i.e. how much of the query must be mapped to consider it a hit)
     ice_opts = IceOptions2(ece_penalty=args.ece_penalty,
                            ece_min_len=args.ece_min_len,
                            max_missed_start=args.max_missed_start,
                            max_missed_end=args.max_missed_end,
+                           full_missed_start=50,
+                           full_missed_end=30,
                            aligner_choice=args.aligner_choice,
                            )
 

@@ -46,6 +46,7 @@ setup(
                'cupcake2/tofu2/run_IceArrow2.py',
                'cupcake2/io/SeqSplitter.py',
                'cupcake2/tofu2/generate_batch_cmd_for_preCluster_out.py',
+               'cupcake2/tofu2/generate_batch_cmd_for_polishing.py',
                'cupcake2/tofu2/collect_IceIterative2_result.py'
                ],
     )

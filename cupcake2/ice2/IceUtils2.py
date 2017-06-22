@@ -71,6 +71,11 @@ def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
                 yield HitItem(qID=r.qID, cID=cID)
                 continue
 
+            # regardless if whether is full-length (is_FL)
+            # the query MUST be mapped fully (based on full_missed_start/end)
+            if r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end:
+                yield HitItem(qID=r.qID, cID=cID)
+
             # full-length case: allow up to max_missed_start bp of 5' not aligned
             # and max_missed_end bp of 3' not aligned
             # non-full-length case: not really tested...don't use
@@ -141,6 +146,14 @@ def daligner_against_ref2(query_dazz_handler, target_dazz_handler, la4ice_filena
         # self hit, useless!
         # opposite strand not allowed!
         if (cID == r.qID or (r.strand == '-' and same_strand_only)):
+            yield HitItem(qID=r.qID, cID=cID)
+            continue
+
+        # regardless if whether is full-length (is_FL)
+        # the query MUST be mapped fully (based on full_missed_start/end)
+        print "r.qStart:", r.qID, r.sID, r.qStart, full_missed_start, (r.qLength-r.qEnd), full_missed_end, r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end
+
+        if r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end:
             yield HitItem(qID=r.qID, cID=cID)
             continue
 

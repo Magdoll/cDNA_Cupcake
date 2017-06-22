@@ -48,6 +48,7 @@ to an output pickle file.
 
 import os
 import os.path as op
+import re
 import time
 import logging
 from cPickle import dump
@@ -66,8 +67,21 @@ from pbtranscript.ice_daligner import DalignerRunner
 from pbtranscript.ice.IceUtils import set_probqv_from_model, set_probqv_from_fq
 from pbtranscript.ice.__init__ import ICE_PARTIAL_PY
 
+from Bio import SeqIO
+
 from cupcake2.ice2.IceUtils2 import blasr_against_ref2, daligner_against_ref2
 from cupcake2.tofu2.ToFuOptions2 import add_partial_argument
+
+
+rex_local_cid = re.compile('c(\d+)')
+rex_collected_cid = re.compile('b(\d+)_c(\d+)')
+
+def automatic_determine_if_sID_starts_with_c(seqid_example):
+    m = rex_local_cid.match(seqid_example)
+    if m is not None:
+        return True
+    else:
+        return False
 
 
 def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
@@ -77,7 +91,8 @@ def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
                                    qv_prob_threshold=0.3,
                                    cpus=4,
                                    no_qv_or_aln_checking=False,
-                                   tmp_dir=None):
+                                   tmp_dir=None,
+                                   sID_starts_with_c=False):
     """
     Given an input_fasta file of non-full-length (partial) reads and
     (unpolished) consensus isoforms sequences in ref_fasta, align reads to
@@ -120,7 +135,7 @@ def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
         hitItems = daligner_against_ref2(query_dazz_handler=runner.query_dazz_handler,
                                         target_dazz_handler=runner.target_dazz_handler,
                                         la4ice_filename=la4ice_filename,
-                                        is_FL=False, sID_starts_with_c=False,
+                                        is_FL=False, sID_starts_with_c=sID_starts_with_c,
                                         qver_get_func=probqv.get_smoothed,
                                         qvmean_get_func=probqv.get_mean,
                                         qv_prob_threshold=qv_prob_threshold,
@@ -129,7 +144,9 @@ def build_uc_from_partial_daligner(input_fasta, ref_fasta, out_pickle,
                                         same_strand_only=True,
                                         no_qv_or_aln_checking=no_qv_or_aln_checking,
                                         max_missed_start=ice_opts.max_missed_start,
-                                        max_missed_end=ice_opts.max_missed_end)
+                                        max_missed_end=ice_opts.max_missed_end,
+                                        full_missed_start=ice_opts.full_missed_start,
+                                        full_missed_end=ice_opts.full_missed_end)
 
 
         for h in hitItems:
@@ -183,7 +200,8 @@ def build_uc_from_partial_blasr(input_fasta, ref_fasta, out_pickle,
                                 qv_prob_threshold=0.3,
                                 cpus=4,
                                 no_qv_or_aln_checking=False,
-                                tmp_dir=None):
+                                tmp_dir=None,
+                                sID_starts_with_c=False):
     """
     Given an input_fasta file of non-full-length (partial) reads and
     (unpolished) consensus isoforms sequences in ref_fasta, align reads to
@@ -217,7 +235,7 @@ def build_uc_from_partial_blasr(input_fasta, ref_fasta, out_pickle,
     # no need to provide full_missed_start/end for nFLs, since is_FL = False
     hitItems = blasr_against_ref2(output_filename=m5_file,
                                  is_FL=False,
-                                 sID_starts_with_c=False,
+                                 sID_starts_with_c=sID_starts_with_c,
                                  qver_get_func=probqv.get_smoothed,
                                  qvmean_get_func=probqv.get_mean,
                                  qv_prob_threshold=qv_prob_threshold,
@@ -225,6 +243,8 @@ def build_uc_from_partial_blasr(input_fasta, ref_fasta, out_pickle,
                                  ece_min_len=ice_opts.ece_min_len,
                                  max_missed_start=ice_opts.max_missed_start,
                                  max_missed_end=ice_opts.max_missed_end,
+                                 full_missed_start=ice_opts.full_missed_start,
+                                 full_missed_end=ice_opts.full_missed_end,
                                  same_strand_only=False)
 
 
@@ -321,7 +341,19 @@ class IcePartialOne2(object):
 
     def run(self):
         """Run"""
+        # automatically determine whether the sIDs are local
+        # ex: c0/123
+        # or after collection
+        # ex: b<bin>_c<cid>
+
+        r = SeqIO.parse(open(self.ref_fasta),'fasta').next()
+        sID_starts_with_c = automatic_determine_if_sID_starts_with_c(r.id)
+        logging.info("sID_starts_with_c: {0}.".format(sID_starts_with_c))
+
         logging.info("Building uc from non-full-length reads using {0}.".format(self.ice_opts.aligner_choice))
+
+
+
         if self.ice_opts.aligner_choice == 'daligner':
             try:
                 build_uc_from_partial_daligner(input_fasta=self.input_fasta,
@@ -333,7 +365,8 @@ class IcePartialOne2(object):
                                                qv_prob_threshold=0.3,
                                                cpus=self.cpus,
                                                no_qv_or_aln_checking=False,
-                                               tmp_dir=self.tmp_dir)
+                                               tmp_dir=self.tmp_dir,
+                                               sID_starts_with_c=sID_starts_with_c)
             except:
                 # fall back to blasr
                 self.ice_opts.aligner_choice = 'blasr'
@@ -348,7 +381,8 @@ class IcePartialOne2(object):
                                   qv_prob_threshold=0.3,
                                   cpus=self.cpus,
                                   no_qv_or_aln_checking=False,
-                                  tmp_dir=self.tmp_dir)
+                                  tmp_dir=self.tmp_dir,
+                                  sID_starts_with_c=sID_starts_with_c)
         else:
             raise Exception, "Aligner choice {0} not recognized!".format(self.ice_opts.aligner_choice)
         return 0

@@ -761,7 +761,10 @@ class IceIterative2(IceFiles2):
         Add new clusters (probably after running clique finder)
         i.e. add clusters in uc to self.uc
         """
-        i = max(self.uc) + 1
+        if len(self.uc) == 0:
+            i = 0
+        else:
+            i = max(self.uc) + 1
         for k, v in uc.iteritems():
             cid = k + i
             self.uc[cid] = v

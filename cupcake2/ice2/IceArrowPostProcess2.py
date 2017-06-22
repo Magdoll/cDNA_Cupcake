@@ -209,6 +209,9 @@ class IceArrowPostProcess2(IceFiles2):
                      format(fs=", ".join(self.fq_filenames)))
         a = load(open(self.final_pickle_fn))
         uc = a['uc']
+        # check if the uc cids are integers
+        uc_keys_are_int = type(uc.keys()[0]) is int
+
         polished = {} # cid --> FastqRecord
 
         for fq in self.fq_filenames:
@@ -222,7 +225,9 @@ class IceArrowPostProcess2(IceFiles2):
                 i = cid.find('/')
                 if i > 0:
                     cid = cid[:i]
-                #cid = int(cid[1:]) #becuz possible ID #2, dont convert to int
+                if uc_keys_are_int:
+                    # only convert in the case where uc keys are integers (ex: is c10, but 10)
+                    cid = int(cid[1:]) #becuz possible ID #2, dont convert to int
                 polished[cid] = r
 
 
