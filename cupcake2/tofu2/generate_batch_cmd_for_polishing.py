@@ -4,10 +4,15 @@ from csv import DictReader
 from pbtranscript.Utils import real_upath
 
 def generate_batch_cmds_for_polishing(chunk_prefix, nfl_filename, subread_xml, cpus, cmd_filename):
+
+    subread_xml = real_upath(subread_xml)
+    nfl_filename = real_upath(nfl_filename)
+
     fastas = glob.glob(chunk_prefix + '*.consensus.fasta')
     # verify that the pickles exists as well
     for fasta in fastas:
-        pickle = fasta[:-6] + '.pickle'
+        pickle = fasta[:-len('.consensus.fasta')] + '.pickle'
+        print "looking for", pickle
         assert os.path.exists(pickle)
         dirname = fasta[:-len('.consensus.fasta')]
         if os.path.exists(dirname):
@@ -17,7 +22,7 @@ def generate_batch_cmds_for_polishing(chunk_prefix, nfl_filename, subread_xml, c
     cmd_f = open(cmd_filename, 'w')
 
     for fasta in fastas:
-        pickle = fasta[:-6] + '.pickle'
+        pickle = fasta[:-len('.consensus.fasta')] + '.pickle'
         dirname = fasta[:-len('.consensus.fasta')]
         full_fasta = real_upath(fasta)
         full_pickle = real_upath(pickle)
@@ -28,15 +33,16 @@ def generate_batch_cmds_for_polishing(chunk_prefix, nfl_filename, subread_xml, c
         os.chdir('output')
         os.symlink(full_pickle, 'final.pickle')
         os.symlink(full_fasta, 'final.consensus.fasta')
-        os.chdir('../')
-        with open(dirname+'.sh', 'w') as f:
-            f.write("run_IcePartial2.py all {nfl} {p}.consensus.fasta {p}.nfl.pickle "\
+        os.chdir('../../')
+        f = open(os.path.join(dirname, dirname+'.sh'), 'w')
+        f.write("run_IcePartial2.py all {nfl} {p}.consensus.fasta {p}.nfl.pickle "\
                 "--root_dir {d} --aligner_choice=daligner --cpus={c}\n".format(\
                 p=dirname, nfl=nfl_filename, d=real_upath(dirname), c=cpus))
-            f.write("run_IceArrow2.py all {d} --subread_xml {s} --blasr_nproc {c} --arrow_nproc {c}\n".format(\
+        f.write("run_IceArrow2.py all {d} --subread_xml {s} --blasr_nproc {c} --arrow_nproc {c}\n".format(\
                 d=real_upath(dirname), s=subread_xml, c=cpus))
+        f.close()
         cmd_f.write("qsub -cwd -S /bin/bash -pe smp 12 -V {sh}\n".format(sh=real_upath(f.name)))
-        os.chdir('../')
+
 
 
 
