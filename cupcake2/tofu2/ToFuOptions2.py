@@ -328,6 +328,10 @@ def add_ice_post_arrow_hq_lq_arguments2(parser):
                         default=BaseConstants.QV_TRIM_THREEPRIME_DEFAULT,
                         dest="qv_trim_3",
                         help=BaseConstants.QV_TRIM_THREEPRIME_DESC)
+    icq_gp.add_argument("--hq_min_full_length_reads",
+                        type=int,
+                        default=2,
+                        help="Minimum number of FL support to be an HQ isoform (default: 2)")
 
 
     icq_gp = arg_parser.add_argument_group("IceArrow2 HQ/LQ IO arguments")

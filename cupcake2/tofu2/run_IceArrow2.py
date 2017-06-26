@@ -105,7 +105,8 @@ class IceArrowRunner2(PBMultiToolRunner):
                     lq_isoforms_fq=args.lq_isoforms_fq,
                     qv_trim_5=args.qv_trim_5,
                     qv_trim_3=args.qv_trim_3,
-                    hq_arrow_min_accuracy=args.hq_arrow_min_accuracy)
+                    hq_arrow_min_accuracy=args.hq_arrow_min_accuracy,
+                    hq_min_full_length_reads=args.hq_min_full_length_reads)
                 obj = IceArrowPostProcess2(root_dir=args.root_dir,
                                            ipq_opts=ipq_opts,
                                            quit_if_not_done=args.quit_if_not_done,

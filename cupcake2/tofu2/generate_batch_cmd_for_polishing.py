@@ -38,7 +38,7 @@ def generate_batch_cmds_for_polishing(chunk_prefix, nfl_filename, subread_xml, c
         f.write("run_IcePartial2.py all {nfl} {p}.consensus.fasta {p}.nfl.pickle "\
                 "--root_dir {d} --aligner_choice=daligner --cpus={c}\n".format(\
                 p=dirname, nfl=nfl_filename, d=real_upath(dirname), c=cpus))
-        f.write("run_IceArrow2.py all {d} --subread_xml {s} --blasr_nproc {c} --arrow_nproc {c}\n".format(\
+        f.write("run_IceArrow2.py all {d} --subread_xml {s} --blasr_nproc {c} --arrow_nproc {c} --hq_min_full_length_reads=1\n".format(\
                 d=real_upath(dirname), s=subread_xml, c=cpus))
         f.close()
         cmd_f.write("qsub -cwd -S /bin/bash -pe smp 12 -V {sh}\n".format(sh=real_upath(f.name)))
