@@ -134,8 +134,8 @@ def add_ice_arguments(arg_parser, tc_parser=None):
     ice_group.add_argument("--ece_penalty", dest="ece_penalty", type=int, default=1)
     ice_group.add_argument("--ece_min_len", dest="ece_min_len", type=int, default=20)
 
-    ice_group.add_argument("--max_missed_start", type=int, default=400, help="Max missed start (default: 400 bp)")
-    ice_group.add_argument("--max_missed_end", type=int, default=50, help="Max missed end (default: 50 bp)")
+    ice_group.add_argument("--max_missed_start", type=int, default=100, help="Max missed start (default: 100 bp)")
+    ice_group.add_argument("--max_missed_end", type=int, default=30, help="Max missed end (default: 30 bp)")
 
     # number of flnc reads per split
     ice_group.add_argument("--flnc_reads_per_split",

@@ -20,16 +20,16 @@ from pbtranscript.io import FastaRandomReader, \
 from pbtranscript.io.ContigSetReaderWrapper import ContigSetReaderWrapper
 
 from pbtranscript.ice_daligner import DalignerRunner
-from pbtranscript.ice_pbdagcon import runConsensus
-from pbtranscript.ice.IceUtils import sanity_check_gcon, \
-    sanity_check_sge, \
+from pbtranscript.ice.IceUtils import sanity_check_sge, \
     get_the_only_fasta_record, cid_with_annotation, \
     set_probqv_from_fq, set_probqv_from_model
 
+from cupcake2.tofu2.ice_pbdagcon2 import runConsensus
 from cupcake2.ice2.IceFiles2 import IceFiles2
 from cupcake2.ice2.IceInit2 import IceInit2
 
-from cupcake2.ice2.IceUtils2 import daligner_against_ref2, blasr_against_ref2, possible_merge2
+from cupcake2.ice2.IceUtils2 import daligner_against_ref2, blasr_against_ref2, possible_merge2, \
+    sanity_check_gcon2
 
 random.seed(0)
 
@@ -101,7 +101,7 @@ class IceIterative2(IceFiles2):
         self.iterNum = 0
 
         # Sanity check gcon and sge
-        self.gcon_py = sanity_check_gcon()
+        self.gcon_py = sanity_check_gcon2()
         self.use_sge = sge_opts.use_sge
         if self.use_sge:
             sanity_check_sge(sge_opts=sge_opts, scriptDir=self.script_dir)

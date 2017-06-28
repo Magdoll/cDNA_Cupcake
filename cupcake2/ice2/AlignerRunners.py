@@ -3,11 +3,11 @@ __author__ = 'etseng@pacb.com'
 import os, sys, subprocess
 
 """
-/usr/bin/time -v minimap -f 0.00001 -L 200 -t 30 seed0.fasta seed0.fasta > seed0.fasta.f00001.minimap 2> seed0.fasta.f00001.minimap.log
+/usr/bin/time -v minimap -f 0.00001 -L 100 -t 30 seed0.fasta seed0.fasta > seed0.fasta.f00001.minimap 2> seed0.fasta.f00001.minimap.log
 """
 
 CMD_MINIMAP = \
-"/usr/bin/time -v minimap -f 0.00001 -L 200 -t {c} {t} {q} > {o} 2> {o}.log"
+"/usr/bin/time -v minimap -f 0.00001 -L 100 -t {c} {t} {q} > {o} 2> {o}.log"
 OUTPUT_MINIMAP = "{q}.{t}.f00001.minimap"
 
 def run_minimap(query_filename, target_filename, cpus):

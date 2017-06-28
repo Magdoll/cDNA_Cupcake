@@ -44,6 +44,8 @@ def process_blasr_hits(blasr_filename, is_fl, max_missed_qstart=50, max_missed_q
         else: # nFL
             if is_a_hit(r, False, max_missed_qstart, max_missed_qend, max_missed_5, max_missed_3, ece_penalty, ece_min_len):
                 records_seen.append(r)
+    if len(records_seen) > 0:
+        yield records_seen
 
 def process_blasr_file(fasta_filename, blasr_filename, is_fl, output_filename, is_pbid=True, output_mode='w', max_missed_qstart=50, max_missed_qend=50, max_missed_5=400, max_missed_3=50, ece_penalty=1, ece_min_len=20):
     unaligned = dict((r.id,len(r.seq)) for r in SeqIO.parse(open(fasta_filename), 'fasta'))

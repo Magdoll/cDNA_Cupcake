@@ -1,7 +1,19 @@
 
 import numpy as np
+from pbtranscript.Utils import execute
 from pbtranscript.ice.IceUtils import alignment_has_large_nonmatch, HitItem, eval_blasr_alignment
 from pbtranscript.io import LA4IceReader, BLASRM5Reader
+
+gcon2_py = "ice_pbdagcon2.py"
+
+def sanity_check_gcon2():
+    """Sanity check gcon."""
+    cmd = gcon2_py + " --help"
+
+    errmsg = gcon2_py + " is not installed."
+    execute(cmd=cmd, errmsg=errmsg)
+    return gcon2_py
+
 
 def alignment_missed_start_end_less_than_threshold(r, max_missed_start, max_missed_end,
                    full_missed_start, full_missed_end):

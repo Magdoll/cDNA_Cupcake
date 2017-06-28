@@ -4,56 +4,71 @@ __version__ = '1.2'
 import os, sys, subprocess
 from csv import DictReader
 from collections import defaultdict
+
+import SIRVvalidate_smrtlink_isoseq as smrtlink_sirv
+
 """
-pbtranscript.tasks.combine_cluster_bins-0
+Files that should already be in the same directory:
+
+--- hq_isoforms.fasta
+--- lq_isoforms.fasta
+--- cluster_report.csv
+
+
 """
 
-GMAP_BIN = "/home/UNIXHOME/etseng/bin/gmap"
-GMAP_DB = "/home/UNIXHOME/etseng/share/gmap_db_new/"
-GMAP_CPUS = 12
-SIRV_DIR = "/home/UNIXHOME/etseng/projects2016/Lexogen_SIRV/ground_truth/"
+GMAP_BIN = smrtlink_sirv.GMAP_BIN
+GMAP_DB = smrtlink_sirv.GMAP_DB
+GMAP_CPUS = smrtlink_sirv.GMAP_CPUS
+SIRV_DIR = smrtlink_sirv.SIRV_DIR
 
-STAR_BIN = "python /home/UNIXHOME/etseng/GitHub/cDNA_Cupcake/sequence/STARwrapper.py"
-SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
+STAR_BIN = smrtlink_sirv.STAR_BIN
+SIRV_STAR_DB = smrtlink_sirv.SIRV_STAR_DB
+
 
 def link_files(src_dir, out_dir):
     os.makedirs(out_dir)
-    hq_fastq = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'hq_isoforms.fastq')
-    cluster_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'cluster_report.csv')
+    hq_fastq = os.path.join(src_dir, 'hq_isoforms.fastq')
+    cluster_csv = os.path.join(src_dir, 'cluster_report.csv')
 
     os.symlink(hq_fastq, os.path.join(out_dir, 'hq_isoforms.fastq'))
     os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
 
     return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv'
 
+
 def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
     """
     cluster_id,read_id,read_type
-    i0_ICE_samplee5686f|c1,m54011_160718_221804/53150541/967_60_CCS,FL
+    cb10265_c1,m54086_170204_081430/7143755/4015_60_CCS,FL
+    cb10265_c1,m54086_170204_081430/50069845/2446_53_CCS,NonFL
+    cb10265_c1,m54086_170204_081430/69862364/30_8329_CCS,NonFL
     """
-    fl_ass = defaultdict(lambda: set()) # (i0,c13) -> # of FL associated
+    fl_ass = defaultdict(lambda: set()) # cb10265_c1 -> # of FL associated
+    nfl_ass = defaultdict(lambda: set()) # cb10265_c1 -> # of nFL associated
+    nfl_hit_count = defaultdict(lambda: 0) # nFL seqid --> # of cids it belongs to
     reader = DictReader(open(cluster_csv),delimiter=',')
     for r in reader:
-        a,b=r['cluster_id'].split('|')
-        cid=b
-        pre=a.split('_')[0]
+        cid = r['cluster_id']
         # current version of SMRTLink does not provide nFL information =____=
         if r['read_type']=='FL':
-            fl_ass[(pre,cid)].add(r['read_id'])
-
+            fl_ass[cid].add(r['read_id'])
+        else:
+            nfl_ass[cid].add(r['read_id'])
+            nfl_hit_count[r['read_id']] += 1
 
     f = open(collapse_prefix + '.abundance.txt', 'w')
     for i in xrange(14): f.write("#\n")
-    f.write("pbid\tcount_fl\n")
+    f.write("pbid\tcount_fl\tcount_nfl\n")
     for line in open(collapse_prefix + '.group.txt'):
         pbid,members=line.strip().split('\t')
-        total = 0
+        total_fl = 0
+        total_nfl = 0
         for m in members.split(','):
-            raw = m.split('|')
-            cid = raw[1].split('/')[0]
-            pre = raw[0].split('_')[0]
-            total += len(fl_ass[(pre,cid)])
-        f.write("{0}\t{1}\n".format(pbid, total))
+            cid = m.split('/')[0]
+            total_fl += len(fl_ass[cid])
+            total_nfl += len(fl_ass[cid]) + len(filter(lambda x: nfl_hit_count[x]==1, nfl_ass[cid]))
+        f.write("{0}\t{1}\t{2}\n".format(pbid, total_fl, total_nfl))
     f.close()
 
 def sanity_check_script_dependencies():
@@ -61,13 +76,19 @@ def sanity_check_script_dependencies():
         print >> sys.stderr, "chain_samples.py required in PATH! Please install Cupcake ToFU!"
         sys.exit(-1)
 
-def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count):
+def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice):
 
     cur_dir = os.getcwd()
     os.chdir(out_dir)
 
-    cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+    if aligner_choice=='gmap':
+        cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
         gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    elif aligner_choice=='star':
+        cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
+            star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    else:
+        raise Exception, "Unrecognized aligner choice: {0}!".format(aligner_choice)
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -161,11 +182,12 @@ if __name__ == "__main__":
     parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
+    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star'), help="Aligner choice (default: star)")
 
     args = parser.parse_args()
     sanity_check_script_dependencies()
 
-    o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_SIRV(o, a, b, args.min_count)
+    o, a, b = link_files(os.path.realpath('.'), args.tmp_dir)
+    collapse_to_SIRV(o, a, b, args.min_count, args.aligner_choice)
     validate_with_SIRV(args.tmp_dir, args.eval_dir)
     eval_result(args.eval_dir, args.smrtlink_dir, args.min_count)

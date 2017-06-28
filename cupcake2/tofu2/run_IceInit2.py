@@ -32,8 +32,8 @@ if __name__ == "__main__":
     parser.add_argument("--flnc_fq", default=None, help="FLNC fastq fileame (to provide QV information)")
     parser.add_argument("--ece_penalty", default=1, type=int, help="ECE penalty (default: 1)")
     parser.add_argument("--ece_min_len", default=20, type=int, help="ECE min len (default: 20)")
-    parser.add_argument("--max_missed_start", default=400, type=int, help="Max missed 5'(default: 400 bp)" )
-    parser.add_argument("--max_missed_end", default=50, type=int, help="Max missed 3' (default: 50 bp)")
+    parser.add_argument("--max_missed_start", default=100, type=int, help="Max missed 5'(default: 100 bp)" )
+    parser.add_argument("--max_missed_end", default=30, type=int, help="Max missed 3' (default: 30 bp)")
     parser.add_argument("--aligner_choice", default='daligner', choices=['daligner', 'blasr'], help="Aligner (default: daligner)")
     parser.add_argument("--cpus", default=4, help="Number of CPUs aligner uses (default: 4)")
 
@@ -43,8 +43,8 @@ if __name__ == "__main__":
                            ece_min_len=args.ece_min_len,
                            max_missed_start=args.max_missed_start,
                            max_missed_end=args.max_missed_end,
-                           full_missed_start=50,
-                           full_missed_end=30,
+                           full_missed_start=30,
+                           full_missed_end=20,
                            aligner_choice=args.aligner_choice,
                            )
 

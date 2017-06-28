@@ -111,8 +111,8 @@ class IceOptions2(object):
 
     def __init__(self, cDNA_size="under1k", flnc_reads_per_split=20000,
                  ece_penalty=1, ece_min_len=20, bestn=100,
-                 max_missed_start=400, max_missed_end=100,
-                 full_missed_start=50, full_missed_end=30,
+                 max_missed_start=100, max_missed_end=30,
+                 full_missed_start=30, full_missed_end=20,
                  min_match_len=50,
                  quiver=False,
                  use_finer_qv=False, targeted_isoseq=False,
@@ -129,7 +129,7 @@ class IceOptions2(object):
 
         # (user-set) maximum allowed missed/start to be considered an "isoform"
         # setting this allows for 5' degradation and some slight 3' differences
-        # recommended: 400 bp for 5', 50 bp for 3'
+        # recommended: 100 bp for 5', 30 bp for 3'
         self.max_missed_start = int(max_missed_start)
         self.max_missed_end = int(max_missed_end)
 
@@ -213,7 +213,7 @@ class IceOptions2(object):
         if len(lens) == 1:
             self.low_cDNA_size, self.high_cDNA_size = lens[0], lens[0]
         if len(lens) >= 2:
-            self.low_cDNA_size  = int(np.percentile(lens, 10))
+            self.low_cDNA_size  = int(np.percentile(lens, 1))
             self.high_cDNA_size = int(np.percentile(lens, 90))
 
         try:

@@ -72,8 +72,8 @@ if __name__ == "__main__":
                            ece_min_len=args.ece_min_len,
                            max_missed_start=args.max_missed_start,
                            max_missed_end=args.max_missed_end,
-                           full_missed_start=50,
-                           full_missed_end=30,
+                           full_missed_start=30,
+                           full_missed_end=20,
                            aligner_choice=args.aligner_choice,
                            )
 
