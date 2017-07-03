@@ -1,5 +1,5 @@
 __author__ = 'etseng@pacb.com'
-__version__ = '1.2'
+__version__ = '2.0'
 
 import os, sys, subprocess
 from csv import DictReader

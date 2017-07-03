@@ -11,15 +11,18 @@ Modify the cids from "c0" --> "pC<bin>_c0"
 """
 
 import os, sys, glob
+import fileinput
 from Bio import SeqIO
 from cPickle import *
 from cupcake.io.SeqReaders import LazyFastaReader
+
 
 def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_format="b{bin}_c{cid}"):
 
     outf = open(output_fasta, 'w')
     combined_uc = {}
     combined_refs = {}
+
 
     for d1 in dirs_to_collect:
         bin = os.path.basename(d1)
@@ -37,17 +40,57 @@ def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_form
             with open(new_ref, 'w') as f:
                 f.write(">{newcid}\n{seq}\n".format(newcid=newcid, seq=r.seq))
             combined_refs[newcid] = new_ref
-        for r in SeqIO.parse(open(fasta_file), 'fasta'):
-            cid, rest = r.id.split('/', 1)
-            assert cid.startswith('c')
-            cid = int(cid[1:])
-            outf.write(">{newcid}/{rest}\n{seq}\n".format(\
-                newcid=new_cid_format.format(bin=os.path.basename(d1), cid=cid), rest=rest, seq=r.seq))
+
+        for line in fileinput.input(fasta_file):
+            if line.startswith('>'):
+                cid, rest = line.split('/', 1)
+                # assert cid.startswith('>c')
+                cid = int(cid[2:])
+                outf.write(">{newcid}/{rest}".format(\
+                    newcid=new_cid_format.format(bin=os.path.basename(d1), cid=cid), rest=rest))
+            else:
+                outf.write(line)
+
     outf.close()
     with open(output_pickle, 'w') as f:
         dump({'uc': combined_uc, 'refs': combined_refs}, f)
 
     return combined_uc, combined_refs
+
+
+# def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_format="b{bin}_c{cid}"):
+#
+#     outf = open(output_fasta, 'w')
+#     combined_uc = {}
+#     combined_refs = {}
+#
+#     for d1 in dirs_to_collect:
+#         bin = os.path.basename(d1)
+#         fasta_file = os.path.join(d1, 'output', 'final.consensus.fasta')
+#         pickle_file = os.path.join(d1, 'output', 'final.pickle')
+#         a = load(open(pickle_file))
+#         uc = a['uc']
+#         refs = a['refs']
+#         for cid in uc:
+#             newcid = new_cid_format.format(bin=bin, cid=cid)
+#             combined_uc[newcid] = uc[cid]
+#             # also need to re-write the refs
+#             new_ref = os.path.join(os.path.dirname(refs[cid]), 'collected_ref.fasta')
+#             r  = SeqIO.parse(open(refs[cid]), 'fasta').next()
+#             with open(new_ref, 'w') as f:
+#                 f.write(">{newcid}\n{seq}\n".format(newcid=newcid, seq=r.seq))
+#             combined_refs[newcid] = new_ref
+#         for r in SeqIO.parse(open(fasta_file), 'fasta'):
+#             cid, rest = r.id.split('/', 1)
+#             assert cid.startswith('c')
+#             cid = int(cid[1:])
+#             outf.write(">{newcid}/{rest}\n{seq}\n".format(\
+#                 newcid=new_cid_format.format(bin=os.path.basename(d1), cid=cid), rest=rest, seq=r.seq))
+#     outf.close()
+#     with open(output_pickle, 'w') as f:
+#         dump({'uc': combined_uc, 'refs': combined_refs}, f)
+#
+#     return combined_uc, combined_refs
 
 
 def chunk_collected_fasta_pickle(combined_fasta, combined_uc, combined_refs, num_chunks, chunk_prefix):

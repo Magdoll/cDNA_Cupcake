@@ -1,5 +1,5 @@
 __author__ = 'etseng@pacb.com'
-__version__ = '1.2'
+__version__ = '2.0'
 
 import os, sys, subprocess
 from csv import DictReader
@@ -61,13 +61,17 @@ def sanity_check_script_dependencies():
         print >> sys.stderr, "chain_samples.py required in PATH! Please install Cupcake ToFU!"
         sys.exit(-1)
 
-def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count):
+def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice):
 
     cur_dir = os.getcwd()
     os.chdir(out_dir)
 
-    cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+    if aligner_choice=='gmap':
+        cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
         gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    elif aligner_choice=='star':
+        cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
+            star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -161,11 +165,12 @@ if __name__ == "__main__":
     parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
+    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star'), help="Aligner choice (default: star)")
 
     args = parser.parse_args()
     sanity_check_script_dependencies()
 
     o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_SIRV(o, a, b, args.min_count)
+    collapse_to_SIRV(o, a, b, args.min_count, args.aligner_choice)
     validate_with_SIRV(args.tmp_dir, args.eval_dir)
     eval_result(args.eval_dir, args.smrtlink_dir, args.min_count)

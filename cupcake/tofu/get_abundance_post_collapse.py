@@ -75,6 +75,8 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
 
 cluster_rex_sa3 = re.compile('i\d+_ICE_\S+\|c(\d+)')
 cluster_rex_sa2 = re.compile('i\d+[HL]Q_\S+|c(\d+)')
+# ex: cb100_c7,m54006_170206_215027/70189550/2661_56_CCS,FL
+cluster_rex_tofu2 = re.compile('cb(\d+)_c(\d+)')
 
 def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output_mode='w'):
     """
@@ -108,13 +110,16 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
     unmapped_holder = set()
     for r in DictReader(open(csv_filename), delimiter=','):
         cid = str(r['cluster_id'])
+        if cid=='cluster_id': continue # ignore header
         # if starts with c<cid>, is old SMRTPortal/SA2.x
         # if starts with i<bin>_ICE_<sample|c<cid>, is new SMRTLink/SA3.x
         m = cluster_rex_sa3.match(cid)
         if m is None:
             m = cluster_rex_sa2.match(cid)
             if m is None:
-                raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
+                m = cluster_rex_tofu2.match(cid)
+                if m is None:
+                    raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
 
         x = r['read_id']
         if cid in cid_info:
