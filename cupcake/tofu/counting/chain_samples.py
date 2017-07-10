@@ -33,6 +33,7 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
 
 def read_config(filename):
     """
+    tmpSAMPLE=<name>;<path>
     SAMPLE=<name>;<path>
 
     must also have
@@ -48,10 +49,26 @@ def read_config(filename):
     group_filename, gff_filename, count_filename = None, None, None
     fastq_filename = None
 
+    no_more_tmp = False
+
     with open(filename) as f:
         for line in f:
-            if line.startswith('SAMPLE='):
-                name, path = line.strip()[7:].split(';')
+            if line.startswith('tmpSAMPLE='):
+                if no_more_tmp:
+                    print >> sys.stderr, "Cannot have tmp_ samples after non-tmp_ samples! Abort!"
+                    sys.exit(-1)
+                name, path = line.strip()[len('tmpSAMPLE='):].split(';')
+                if name.startswith('tmp_'):
+                    print >> sys.stderr, "Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name)
+                    sys.exit(-1)
+                sample_dirs[name] = os.path.abspath(path)
+                sample_names.append('tmp_'+name)
+            elif line.startswith('SAMPLE='):
+                no_more_tmp = True
+                name, path = line.strip()[len('SAMPLE='):].split(';')
+                if name.startswith('tmp_'):
+                    print >> sys.stderr, "Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name)
+                    sys.exit(-1)
                 sample_dirs[name] = os.path.abspath(path)
                 sample_names.append(name)
             elif line.startswith('GROUP_FILENAME='):
@@ -95,15 +112,36 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
         for r in DictReader(f, delimiter='\t'):
             count_info[name, r['pbid']] = r[field_to_use]
 
-    name = names[0]
-    d = dirs[name]
-    chain = [name]
 
-    o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
-                      self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction, \
-                      allow_5merge=allow_5merge, \
-                      fastq_filename=os.path.join(d, fastq_filename) if fastq_filename is not None else None)
-    for name in names[1:]:
+    # some names may already start with "tmp_" which means they are intermediate results that have already been chained
+    # find the first non "tmp_" and start from there
+    if names[0].startswith('tmp_'):
+        chain = []
+        for start_i,name in enumerate(names):
+            if name.startswith('tmp_'):
+                chain.append(name[4:])
+            else:
+                break
+        # start_i, name now points at the first "non-tmp" sample
+        # we want to go to the last tmp_ sample and read it
+        name = names[start_i-1][4:] # this is the last tmp_ sample, let's read it
+        o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, \
+                        internal_fuzzy_max_dist=fuzzy_junction, \
+                        allow_5merge=allow_5merge, \
+                        fastq_filename='tmp_'+name+'.rep.fq' if fastq_filename is not None else None)
+        #chain.append(name) # no need, already done above
+    else: # everything is new, start fresh
+        name = names[0]
+        d = dirs[name]
+        chain = [name]
+        o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
+                        self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction, \
+                        allow_5merge=allow_5merge, \
+                        fastq_filename=os.path.join(d, fastq_filename) if fastq_filename is not None else None)
+        start_i = 1
+
+    for name in names[start_i:]:
+        assert not name.startswith('tmp_')
         d = dirs[name]
         o.add_sample(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
                      sample_prefix=name, output_prefix='tmp_'+name, \
