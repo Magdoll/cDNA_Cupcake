@@ -93,15 +93,7 @@ def read_config(filename):
 
     return sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename
 
-
-def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
-
-    for d in dirs.itervalues():
-        sample_sanity_check(os.path.join(d, group_filename),\
-                            os.path.join(d, gff_filename),\
-                            os.path.join(d, count_filename),\
-                            os.path.join(d, fastq_filename) if fastq_filename is not None else None)
-
+def read_count_info(count_filename, dirs, field_to_use):
     count_info = {} # key: (sample, PB.1.1) --> count
     for name, d in dirs.iteritems():
         f = open(os.path.join(d, count_filename))
@@ -111,7 +103,17 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
         f.seek(cur)
         for r in DictReader(f, delimiter='\t'):
             count_info[name, r['pbid']] = r[field_to_use]
+    return count_info
 
+def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
+
+    for d in dirs.itervalues():
+        sample_sanity_check(os.path.join(d, group_filename),\
+                            os.path.join(d, gff_filename),\
+                            os.path.join(d, count_filename),\
+                            os.path.join(d, fastq_filename) if fastq_filename is not None else None)
+
+    count_info = read_count_info(count_filename, dirs, field_to_use)
 
     # some names may already start with "tmp_" which means they are intermediate results that have already been chained
     # find the first non "tmp_" and start from there

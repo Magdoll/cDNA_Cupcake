@@ -4,7 +4,7 @@ import numpy as np
 
 
 __author__ = "etseng@pacb.com"
-version = "2.5"
+version = "3.0"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -39,6 +39,7 @@ setup(
                'cupcake/tofu/process_blasr_to_read_stat.py',
                'cupcake/tofu/fusion_finder.py',
                'cupcake/tofu/counting/chain_samples.py',
+               'cupcake/tofu/counting/chain_fusion_samples.py',
                'cupcake2/tofu2/ice_pbdagcon2.py',
                'cupcake2/tofu2/run_preCluster.py',
                'cupcake2/tofu2/run_IceInit2.py',

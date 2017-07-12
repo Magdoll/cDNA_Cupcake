@@ -1,4 +1,4 @@
-import sys
+import os, re, sys
 import pdb
 from bx.intervals.intersection import Interval
 from bx.intervals.intersection import IntervalNode
@@ -374,7 +374,7 @@ class gmapRecord:
             self.seq_exons.append(Interval(sStart0, sEnd1))
             
     
-class gmapGFFReader:
+class gmapGFFReader(object):
     def __init__(self, filename):
         self.filename = filename
         self.f = open(filename)
@@ -568,7 +568,30 @@ class collapseGFFReader(gmapGFFReader):
                 self.f.seek(cur)
                 return rec
         raise Exception, "Should not reach here!"
-                
+
+
+fusion_seqid_rex = re.compile('(\S+\\.\d+)\\.(\d+)')
+class collapseGFFFusionReader(collapseGFFReader):
+    def read(self):
+        r0 = super(collapseGFFFusionReader, self).read()
+        m = fusion_seqid_rex.match(r0.seqid)
+        fusion_id = m.group(1)
+        records = [r0]
+        while True:
+            cur = self.f.tell()
+            try:
+                r = super(collapseGFFFusionReader, self).read()
+            except StopIteration:
+                return fusion_id, records
+            m = fusion_seqid_rex.match(r.seqid)
+            if m.group(1) != fusion_id:
+                self.f.seek(cur)
+                return fusion_id, records
+            else:
+                records.append(r)
+
+
+
 
 class ucscGFFReader(gmapGFFReader):
     def read(self):

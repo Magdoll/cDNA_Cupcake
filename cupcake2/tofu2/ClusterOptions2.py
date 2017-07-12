@@ -160,7 +160,7 @@ class IceOptions2(object):
     @classmethod
     def cDNA_sizeBins(cls):
         """Return cDNA size bins."""
-        return ("under1k", "between1k2k", "between2k3k", "3to5k", "above5k")
+        return ("under500bp", "under1k", "between1k2k", "between2k3k", "3to5k", "above5k")
 
     def detect_cDNA_size(self, fasta_filename):
         """
@@ -179,7 +179,9 @@ class IceOptions2(object):
         else:
             self._write_config(fasta_filename=fasta_filename)
 
-        if self.low_cDNA_size <= 1000:
+        if self.low_cDNA_size <= 500:
+            self.cDNA_size = "under500bp"
+        elif self.low_cDNA_size <= 1000:
             self.cDNA_size = "under1k"
         elif  self.low_cDNA_size <= 2000:
             self.cDNA_size = "between1k2k"
@@ -246,7 +248,7 @@ class IceOptions2(object):
         if self.cDNA_size not in IceOptions2.cDNA_sizeBins():
             raise ValueError("Invalid cDNA size: {cs}".
                              format(cs=self.cDNA_size))
-        d = {"under1k": -1000, "between1k2k": -2000, "between2k3k": -3000,
+        d = {"under500bp":-500, "under1k": -1000, "between1k2k": -2000, "between2k3k": -3000,
              "3to5k": -5000, "above5k": -8000}
         return d[self.cDNA_size]
 

@@ -22,8 +22,11 @@ def alignment_missed_start_end_less_than_threshold(r, max_missed_start, max_miss
     (subject to full_missed_start/end)
     and the longer one is allowed to have more missed start/end
     (subject to max_missed_start/end)
+
     """
     assert max_missed_start >= full_missed_start and max_missed_end >= full_missed_end
+
+
 
     # which ever is the shorter one, must be fully mapped
     missed_start_1 = r.qStart

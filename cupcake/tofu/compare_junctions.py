@@ -4,7 +4,7 @@ __author__ = 'etseng@pacb.com'
 def overlaps(s1, s2):
     return max(0, min(s1.end, s2.end) - max(s1.start, s2.start))
 
-def compare_junctions(r1, r2, internal_fuzzy_max_dist=0):
+def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=100, max_3_diff=30):
     """
     r1, r2 should both be BioReaders.GMAPSAMRecord
 
@@ -41,7 +41,15 @@ def compare_junctions(r1, r2, internal_fuzzy_max_dist=0):
             else:
                 return "partial"
     else:
-        if len(r2.segments) == 1: return "super"
+        if len(r2.segments) == 1:
+            # r1.segments[i] matches r2.segments[0]
+            # need to check that the r2, being single exon, did not look too diff
+            if (i==0 or r1.segments[i-1].end < r2.segments[0].start) and \
+               (abs(r1.segments[i].start-r2.segments[0].start) <= max_5_diff) and \
+               (abs(r1.segments[i].end-r2.segments[0].end) <= max_3_diff):
+                return "super"
+            else:
+                return "partial"
         else: # both r1 and r2 are multi-exon, check that all remaining junctions agree
             k = 0
             while i+k+1 < len(r1.segments) and j+k+1 < len(r2.segments):

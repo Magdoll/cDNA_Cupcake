@@ -1,7 +1,7 @@
 __author__ = 'etseng@pacb.com'
 __version__ = '2.0'
 
-import os, sys, subprocess
+import os, sys, subprocess, shutil
 from csv import DictReader
 from collections import defaultdict
 
@@ -27,12 +27,18 @@ SIRV_STAR_DB = smrtlink_sirv.SIRV_STAR_DB
 
 
 def link_files(src_dir, out_dir):
-    os.makedirs(out_dir)
     hq_fastq = os.path.join(src_dir, 'hq_isoforms.fastq')
     cluster_csv = os.path.join(src_dir, 'cluster_report.csv')
 
-    os.symlink(hq_fastq, os.path.join(out_dir, 'hq_isoforms.fastq'))
-    os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
+    o_fq = os.path.join(out_dir, 'hq_isoforms.fastq')
+    o_csv = os.path.join(out_dir, 'cluster_report.csv')
+    if os.path.exists(out_dir):
+        assert len(os.popen("diff {0} {1}".format(hq_fastq, o_fq)).read().strip()) == 0
+        print >> sys.stderr, "Re-using data in {0}....".format(out_dir)
+    else:
+        os.makedirs(out_dir)
+        os.symlink(hq_fastq, o_fq)
+        os.symlink(cluster_csv, o_csv)
 
     return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv'
 
@@ -81,17 +87,23 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice):
     cur_dir = os.getcwd()
     os.chdir(out_dir)
 
-    if aligner_choice=='gmap':
-        cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
-        gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
-    elif aligner_choice=='star':
-        cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
-            star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    # don't re-do alignment if already there
+    if os.path.exists(hq_fastq+'.sam'):
+        os.remove('touse.group.txt')
+        os.remove('touse.count.txt')
+        os.remove('touse.gff')
     else:
-        raise Exception, "Unrecognized aligner choice: {0}!".format(aligner_choice)
+        if aligner_choice=='gmap':
+            cmd = "{gmap} -D {gmap_db} -d SIRV -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+            gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+        elif aligner_choice=='star':
+            cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
+                star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+        else:
+            raise Exception, "Unrecognized aligner choice: {0}!".format(aligner_choice)
 
-    if subprocess.check_call(cmd, shell=True)!=0:
-        raise Exception, "ERROR CMD:", cmd
+        if subprocess.check_call(cmd, shell=True)!=0:
+            raise Exception, "ERROR CMD:", cmd
 
     cmd = "sort -k 3,3 -k 4,4n {hq}.sam > {hq}.sorted.sam".format(hq=hq_fastq)
     if subprocess.check_call(cmd, shell=True)!=0:
@@ -128,6 +140,8 @@ def validate_with_SIRV(out_dir, eval_dir):
     eval_dir = os.path.abspath(eval_dir)
 
     cur_dir = os.getcwd()
+    if os.path.exists(eval_dir):
+        shutil.rmtree(eval_dir)
     os.makedirs(eval_dir)
     os.chdir(eval_dir)
     os.symlink(SIRV_DIR, "SIRV")
