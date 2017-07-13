@@ -912,10 +912,10 @@ class IceIterative2(IceFiles2):
                 if hit.qID not in self.d:
                     self.d[hit.qID] = {}
                 if hit.fakecigar is not None:
-                    self.add_log("[Liz] fakecigar string is {0}".format(hit.fakecigar))
+                    #self.add_log("[Liz] fakecigar string is {0}".format(hit.fakecigar))
                     self.d[hit.qID][hit.cID] = self.probQV.calc_prob_from_aln(
                         hit.qID, hit.qStart, hit.qEnd, hit.fakecigar)
-                    self.add_log("[Liz] {0}-{1}:{2}".format(hit.qID, hit.cID,self.d[hit.qID][hit.cID]))
+                    #self.add_log("[Liz] {0}-{1}:{2}".format(hit.qID, hit.cID,self.d[hit.qID][hit.cID]))
 
 
     def g(self, output_filename):

@@ -74,9 +74,11 @@ def generate_batch_cmds(csv_filename, dirname, cmd_filename, cpus):
 
         fa_files, fq_files = preprocess_flnc_split_if_necessary(d2, int(r['size']), flnc_split=20000)
 
+        ice2_aligner = 'blasr' if int(r['size']) <= 20000 else 'daligner'
+
         cmd_f.write("run_IceInit2.py {fa} init.uc.pickle --aligner_choice=blasr --cpus={c}\n".format(c=cpus, fa=fa_files[0]))
         cmd_f.write("run_IceIterative2.py {fas} {fqs} isoseq_flnc.fasta . ".format(fas=",".join(fa_files), fqs=",".join(fq_files)) + \
-                    "--init_uc_pickle=init.uc.pickle --aligner_choice=blasr " + \
+                    "--init_uc_pickle=init.uc.pickle --aligner_choice={aln} ".format(aln=ice2_aligner) + \
                     "--blasr_nproc {c} --gcon_nproc {c2}\n".format(c=cpus, c2=min(cpus, 4)))
 #        cmd_f.write("run_IcePartial2.py all {nfl},{tucked} ".format(nfl=nfl_filename, tucked=tucked_filename) + \
 #                    "output/final.consensus.fasta nfl.pickle " + \

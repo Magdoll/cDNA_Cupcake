@@ -166,7 +166,7 @@ def daligner_against_ref2(query_dazz_handler, target_dazz_handler, la4ice_filena
 
         # regardless if whether is full-length (is_FL)
         # the query MUST be mapped fully (based on full_missed_start/end)
-        print "r.qStart:", r.qID, r.sID, r.qStart, full_missed_start, (r.qLength-r.qEnd), full_missed_end, r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end
+        #print "r.qStart:", r.qID, r.sID, r.qStart, full_missed_start, (r.qLength-r.qEnd), full_missed_end, r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end
 
         if r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end:
             yield HitItem(qID=r.qID, cID=cID)

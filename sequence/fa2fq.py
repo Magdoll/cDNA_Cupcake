@@ -30,6 +30,7 @@ def fa2fq(input):
     f.close()
 
     print >> sys.stderr, "Output written to", f.name
+    return f.name
 
 if __name__ == "__main__":
     main()
