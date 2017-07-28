@@ -1,10 +1,11 @@
 __author__ = 'etseng@pacb.com'
 
+import pdb
 
 def overlaps(s1, s2):
     return max(0, min(s1.end, s2.end) - max(s1.start, s2.start))
 
-def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=100, max_3_diff=30):
+def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=999999, max_3_diff=999999):
     """
     r1, r2 should both be BioReaders.GMAPSAMRecord
 
@@ -17,6 +18,7 @@ def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=100, max_3_d
     <internal_fuzzy_max_dist> allows for very small amounts of diff between internal exons
     useful for chimeric & slightly bad mappings
     """
+    strand = r1.strand
     found_overlap = False
     # super/partial --- i > 0, j = 0
     # exact/partial --- i = 0, j = 0
@@ -32,19 +34,47 @@ def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=100, max_3_d
             break
     if not found_overlap: return "nomatch"
     # now we have r1[i] matched to r2[j]
-    # if just one exon, then regardless of how much overlap there is, just call it exact
+    # check that r1[i] and r2[j] match within 5'/3' max diff
+    if strand == '+':
+        if abs(r1.segments[i].start-r2.segments[j].start) > max_5_diff or \
+           abs(r1.segments[i].end-r2.segments[j].end) > max_3_diff:
+           return "partial"
+    else:
+        if abs(r1.segments[i].start-r2.segments[j].start) > max_3_diff or \
+           abs(r1.segments[i].end-r2.segments[j].end) > max_5_diff:
+            return "partial"
+
+    # if just one exon, then must have less than 5'/3' diff
+    #pdb.set_trace()
+
+
     if len(r1.segments) == 1:
-        if len(r2.segments) == 1: return "exact"
+        if len(r2.segments) == 1:
+            # if both are single-exon, check that they have less than 5'/3' diff
+            if abs(r1.segments[0].start-r2.segments[0].start) <= max_5_diff and \
+               abs(r1.segments[0].end-r2.segments[0].end) <= max_3_diff:
+                return "exact"
+            else:
+                return "partial"
         else:
-            if r1.segments[0].end <= r2.segments[j].end:
+            # case: r1 single exon, r2 multi-exon
+            # check that the matching exon is within difference
+            # and that the r1 exon does NOT overlap with previous or later exons in r2
+            if abs(r1.segments[0].end-r2.segments[j].end) <= max_3_diff and \
+                abs(r1.segments[0].start-r2.segments[j].start) <= max_5_diff and \
+                    ((j==0 and r1.segments[0].end < r2.segments[1].start) or
+                      (j>=1 and r1.segments[0].start > r2.segments[j-1].end and (j==len(r2.segments)-1 or r1.segments[0].end < r2.segments[j+1].start))):
                 return "subset"
             else:
                 return "partial"
     else:
         if len(r2.segments) == 1:
+            # case: r1 multi exon, r2 single exon
             # r1.segments[i] matches r2.segments[0]
-            # need to check that the r2, being single exon, did not look too diff
+            # need to check that the r2, being single exon, did not overlap with previous or later r1 exons
+            # and also the matching r1, r2 exon does not have huge 5'/3' difference
             if (i==0 or r1.segments[i-1].end < r2.segments[0].start) and \
+               (i==len(r1.segments)-1 or r1.segments[i].start > r2.segments[0].end) and \
                (abs(r1.segments[i].start-r2.segments[0].start) <= max_5_diff) and \
                (abs(r1.segments[i].end-r2.segments[0].end) <= max_3_diff):
                 return "super"
@@ -58,6 +88,14 @@ def compare_junctions(r1, r2, internal_fuzzy_max_dist=0, max_5_diff=100, max_3_d
                     return "partial"
                 k += 1
             #print i, j, k
+            # check that the last matching exon, the ends are with max 5'/3' diff
+            if strand == '+':
+                if abs(r1.segments[i+k].end-r2.segments[j+k].end) > max_3_diff:
+                    return "partial"
+            else:
+                if abs(r1.segments[i+k].end-r2.segments[j+k].end) > max_5_diff:
+                    return "partial"
+
             if i+k+1 == len(r1.segments):
                 if j+k+1 == len(r2.segments):
                     if i == 0:

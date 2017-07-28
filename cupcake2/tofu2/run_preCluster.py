@@ -82,7 +82,7 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus):
 
     return pCS, orphans
 
-def main(cpus):
+def main(cpus, dun_make_bins=False):
     print "Indexing isoseq_flnc.fasta using LazyFastaReader..."
     d = LazyFastaReader('isoseq_flnc.fasta')
 
@@ -131,7 +131,8 @@ def main(cpus):
         for x in orphans: f.write("{0},orphan\n".format(x))
         for x in chimeras: f.write("{0},chimera\n".format(x))
 
-    FileIO.write_seqids_to_fasta(tucked_seqids, "preCluster_out.tucked.fasta", d)
+    # Liz: currently not using tucked...
+    #FileIO.write_seqids_to_fasta(tucked_seqids, "preCluster_out.tucked.fasta", d)
 
     infof = open('preCluster.cluster_info.csv', 'w')
     infof.write("cluster,size\n")
@@ -145,10 +146,11 @@ def main(cpus):
     #        singlef.write(">{0}\n{1}\n".format(r.id, r.seq))
     #    else:
         if True:
-            dirname = os.path.join("preCluster_out", str(cid))
-            os.makedirs(dirname)
-            file = os.path.join(dirname, 'isoseq_flnc.fasta')
-            FileIO.write_seqids_to_fasta(pCS.S[cid].members, file, d)
+            if not dun_make_bins:
+                dirname = os.path.join("preCluster_out", str(cid))
+                os.makedirs(dirname)
+                file = os.path.join(dirname, 'isoseq_flnc.fasta')
+                FileIO.write_seqids_to_fasta(pCS.S[cid].members, file, d)
             infof.write("{0},{1}\n".format(cid, len(pCS.S[cid].members)))
     #singlef.close()
     infof.close()
@@ -159,6 +161,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser("PreCluster processing of isoseq_flnc.fasta using minimap")
     parser.add_argument("--cpus", default=12, type=int, help="Number of CPUs minimap uses (default: 12)")
+    parser.add_argument("--dun_make_bins", default=False, action="store_true", help="Only write out CSV files, do not make the actual bins (default: OFF)")
 
     args = parser.parse_args()
 
@@ -167,4 +170,4 @@ if __name__ == "__main__":
         print >> sys.stderr, "Expects isoseq_flnc.fasta in local directory but failed! Abort."
         sys.exit(-1)
 
-    main(args.cpus)
+    main(args.cpus, args.dun_make_bins)

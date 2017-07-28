@@ -121,7 +121,7 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
         r.segments = r.ref_exons
         for r2 in recs[r.chr][r.strand].find(r.start, r.end):
             r2.segments = r2.ref_exons
-            m = compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=internal_fuzzy_max_dist)
+            m = compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=internal_fuzzy_max_dist, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
             if can_merge(m, r, r2):
                 fuzzy_match[r2.seqid].append(r.seqid)
                 has_match = True
@@ -185,7 +185,7 @@ def main(args):
         cov_threshold = 1
     f_txt = open(args.prefix + '.collapsed.group.txt', 'w')
 
-    b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq)
+    b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
     iter = b.iter_gmap_sam(args.sam, ignored_fout)
     for recs in iter:
         for v in recs.itervalues():
@@ -234,6 +234,8 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--min-coverage", dest="min_aln_coverage", type=float, default=.99, help="Minimum alignment coverage (default: 0.99)")
     parser.add_argument("-i", "--min-identity", dest="min_aln_identity", type=float, default=.95, help="Minimum alignment identity (default: 0.95)")
     parser.add_argument("--max_fuzzy_junction", default=5, type=int, help="Max fuzzy junction dist (default: 5 bp)")
+    parser.add_argument("--max_5_diff", default=1000, help="Maximum allowed 5' difference if on same exon (default: 1000 bp)")
+    parser.add_argument("--max_3_diff", default=100, help="Maximum allowed 3' difference if on same exon (default: 100 bp)")
     parser.add_argument("--flnc_coverage", dest="flnc_coverage", type=int, default=-1, help="Minimum # of FLNC reads, only use this for aligned FLNC reads, otherwise results undefined!")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
 

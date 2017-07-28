@@ -1,4 +1,4 @@
-__author__ = 'etseng@pacb.com'
+__author__ = 'etseng@pacb.coatchAn'
 __version__ = '1.2'
 
 import os, sys, subprocess

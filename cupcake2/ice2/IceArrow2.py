@@ -318,7 +318,7 @@ class IceArrow2(IceFiles2):
         cmds.append("samtools index {f}".format(f=real_upath(bin_bam_file)))
         cmds.append("samtools faidx {ref}".format(ref=real_upath(bin_ref_fa)))
         cmds.append("pbindex {f}".format(f=real_upath(bin_bam_file)))
-        cmds.append("variantCaller --algorithm=best " +
+        cmds.append("variantCaller --maskRadius 3 -x 1 --minAccuracy 0 --algorithm=best " +
                     "{f} ".format(f=real_upath(bin_bam_file)) +
                     "--verbose -j{n} ".format(n=self.sge_opts.arrow_nproc) +
                     "--referenceFilename={ref} ".format(ref=real_upath(bin_ref_fa)) +

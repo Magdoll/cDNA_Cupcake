@@ -1,4 +1,5 @@
 import os, sys
+import pdb
 import numpy as np
 
 import cupcake.io.BioReaders as BioReaders
@@ -25,10 +26,14 @@ class BranchSimple:
     BranchSimple is designed for just creating exons from PacBio's GMAP results
     Does not use Illumina
     """
-    def __init__(self, transfrag_filename, cov_threshold=2, min_aln_coverage=.99, min_aln_identity=.85, is_fq=False):
+    def __init__(self, transfrag_filename, cov_threshold=2, min_aln_coverage=.99, min_aln_identity=.85, is_fq=False,
+                 max_5_diff=1000, max_3_diff=100):
         self.contiVec = None # current ContiVec object
         self.exons = None
         #self.MIN_EXON_SIZE = max_fuzzy_junction
+
+        self.max_5_diff = max_5_diff
+        self.max_3_diff = max_3_diff
 
         self.transfrag_filename = transfrag_filename
         self.transfrag_len_dict = dict((r.id.split()[0], len(r.seq)) for r in SeqIO.parse(open(transfrag_filename), 'fastq' if is_fq else 'fasta'))
@@ -139,7 +144,7 @@ class BranchSimple:
                             len(v.baseC), 2, 0, offset=self.offset)
 
 
-    def match_record(self, r, tolerate_middle=0, tolerate_end=10**4, ok_to_miss_matches=False, intervals_adjacent=True):
+    def match_record(self, r, tolerate_middle=0, tolerate_end=1000, ok_to_miss_matches=False, intervals_adjacent=True):
         """
         r --- a gmap record (GFF.gmapRecord) containing the full contig alignment of a FL long read
         """
@@ -257,7 +262,7 @@ class BranchSimple:
             result.append((r.qID, r.flag.strand, m))
 
         result_merged = list(result)
-        iterative_merge_transcripts(result_merged, node_d, allow_extra_5_exons)
+        iterative_merge_transcripts(result_merged, node_d, allow_extra_5_exons, self.max_5_diff, self.max_3_diff)
 
         print >> sys.stderr, "merged {0} down to {1} transcripts".format(len(result), len(result_merged))
 
@@ -291,7 +296,7 @@ class BranchSimple:
 
         return result, result_merged
 
-def iterative_merge_transcripts(result_list, node_d, merge5=True):
+def iterative_merge_transcripts(result_list, node_d, merge5, max_5_diff, max_3_diff):
     """
     result_list --- list of (qID, strand, binary exon sparse matrix)
     """
@@ -306,7 +311,7 @@ def iterative_merge_transcripts(result_list, node_d, merge5=True):
             if (strand1 != strand2) or (m1.nonzero()[1][-1] < m2.nonzero()[1][0]):
                 break
             else:
-                flag, m3 = compare_exon_matrix(m1, m2, node_d, strand1, merge5)
+                flag, m3 = compare_exon_matrix(m1, m2, node_d, strand1, merge5, max_5_diff, max_3_diff)
                 if flag:
                     result_list[i] = (id1+','+id2, strand1, m3)
                     result_list.pop(j)
@@ -315,7 +320,7 @@ def iterative_merge_transcripts(result_list, node_d, merge5=True):
         i += 1
 
         
-def compare_exon_matrix(m1, m2, node_d, strand, merge5=True):
+def compare_exon_matrix(m1, m2, node_d, strand, merge5, max_5_diff, max_3_diff):
     """
     m1, m2 are 1-d array where m1[0, i] is 1 if it uses the i-th exon, otherwise 0
     compare the two and merge them if they are compatible
@@ -347,6 +352,16 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5=True):
         elif i > 0 and (strand=='+' and not merge5 and node_d[l1[i-1]].end!=node_d[l1[i]].start): return False, None # 5' end disagree, in other words m1 has an extra 5' exon that m2 does not have and merge5 is no allowed
     # at this point: l1[i] == l2[0]
 
+    # check to see the amount of unmatched 5' in l1 already exceeded max allowed 5' diff
+    # if i = 0, first exon matches, so no need to check
+    # if - strand, then need to check for max_3_diff instead of max_5_diff
+    # if + strand, then need to check for max_5_diff unless merge5 is True
+    if i > 0 and strand == '+' and (not merge5) and (node_d[l1[i-1]].end-node_d[l1[0]].start > max_5_diff):
+        return False, None
+    if i > 0 and strand == '-' and (node_d[l1[i-1]].end-node_d[l1[0]].start > max_3_diff):
+        return False, None
+
+    #pdb.set_trace()
     for j in xrange(i, min(n1, n2+i)):
         # matching l1[j] with l2[j-i]
         if l1[j] != l2[j-i]: # they must not match
@@ -358,17 +373,18 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5=True):
             return True, m1
         for k in xrange(j-i+1, n2):
             # case 1: this is the 3' end, check that there are no additional 3' exons
-            if (strand=='+' and node_d[l2[k-1]].end!=node_d[l2[k]].start): return False, None
+            #         AND that the 3' exon for l2 is not more than <max_3_diff> bp longer
+            if (strand=='+' and (node_d[l2[k-1]].end!=node_d[l2[k]].start or node_d[l2[k]].end-node_d[l2[j-i]].end>max_3_diff)): return False, None
             # case 2: this is the 5' end, check that there are no additional 5' exons unless allowed
-            if (strand=='-' and not merge5 and node_d[l2[k-1]].end!=node_d[l2[k]].start): return False, None
+            if (strand=='-' and (not merge5) and (node_d[l2[k-1]].end!=node_d[l2[k]].start or node_d[l2[k]].end-node_d[l2[j-i]].end>max_5_diff)): return False, None
         m1[0, l2[j-i+1]:] = m1[0, l2[j-i+1]:] + m2[0, l2[j-i+1]:]
         return True, m1
-    elif j-i == n2-1:
+    elif j-i == n2-1: # we've reached end of l2, there's more l1
         for k in xrange(j+1, n1):
             # case 1, but for m1
-            if (strand=='+' and node_d[l1[k-1]].end!=node_d[l1[k]].start): return False, None
+            if (strand=='+' and (node_d[l1[k-1]].end!=node_d[l1[k]].start or node_d[l1[k]].end-node_d[l1[j]].end>max_3_diff)): return False, None
             # case 2, but for m1
-            if (strand=='-' and not merge5 and node_d[l1[k-1]].end!=node_d[l1[k]].start): return False, None
+            if (strand=='-' and (not merge5) and (node_d[l1[k-1]].end!=node_d[l1[k]].start or node_d[l1[k]].end-node_d[l1[j]].end>max_5_diff)): return False, None
         return True, m1
 
     raise Exception, "Should not happen"

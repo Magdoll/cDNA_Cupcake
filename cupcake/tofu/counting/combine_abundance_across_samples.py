@@ -10,11 +10,12 @@ from bx.intervals import IntervalTree
 from bx.intervals.cluster import ClusterTree
 
 seqid_rex = re.compile('(\S+\\.\d+)\\.(\d+)')
+
 def sanity_check_seqids(seqids):
     for seqid in seqids:
         m = seqid_rex.match(seqid)
         if m is None:
-            print >> sys.stderr, "Expected ID format (ex: PB.1.2) not followed by {0}! Abort!".format(k)
+            print >> sys.stderr, "Expected ID format (ex: PB.1.2) not followed by {0}! Abort!".format(seqid)
             sys.exit(-1)
 
 def get_fusion_id(seqid):
@@ -34,7 +35,7 @@ class MegaPBTree(object):
         self.internal_fuzzy_max_dist = internal_fuzzy_max_dist
         self.allow_5merge = allow_5merge
         self.record_d = dict((r.seqid, r) for r in GFF.collapseGFFReader(gff_filename))
-        sanity_check_seqids(self.record_d.keys()) # sanity check all IDs look like PB.1.2
+        #sanity_check_seqids(self.record_d.keys()) # sanity check all IDs look like PB.1.2
         self.tree = defaultdict(lambda: {'+':IntervalTree(), '-':IntervalTree()}) # chr --> strand --> tree
         self.fastq_dict = None
         if fastq_filename is not None:
