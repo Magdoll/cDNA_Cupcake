@@ -8,7 +8,12 @@ from functools import partial
 import networkx as nx
 from Bio import SeqIO
 
+<<<<<<< HEAD
 from cupcake2.ice2.preCluster import preClusterSet2
+=======
+from cupcake2.ice2.preCluster import preClusterSet, preClusterSet2
+from cupcake2.io.minimapIO import MiniReader
+>>>>>>> master
 
 def sanity_checking(pCS, orphans):
     # do some sanity checking
@@ -28,6 +33,28 @@ def sanity_checking2(pCS, orphans):
             assert pCS.seq_map[x]==cid
             assert x not in orphans
 
+<<<<<<< HEAD
+=======
+
+def sanity_checking(pCS, orphans):
+    # do some sanity checking
+    # 1. all members should be uniquely in one S
+    for cid in pCS.S:
+        for x in pCS.S[cid].members:
+            assert pCS.seq_map[x]==cid
+            assert x not in orphans
+    # 2. anything in tucked must not be in seq_map
+    for x in pCS.tucked:
+        assert x not in pCS.seq_map
+        assert x not in orphans
+
+def sanity_checking2(pCS, orphans):
+    for cid in pCS.S:
+        for x in pCS.S[cid].members:
+            assert pCS.seq_map[x]==cid
+            assert x not in orphans
+
+>>>>>>> master
     for x in pCS.seq_map:
         if pCS.seq_stat[x] == 'T':
             assert x not in orphans
@@ -51,12 +78,21 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None)
     reader = reader_class(align_filename)
     for r in reader:
         if r.qID >= r.sID or r.strand == '-': continue
+<<<<<<< HEAD
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
         #if s == 'partial': continue
 
         #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
         #    pdb.set_trace()
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
+=======
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+
+        #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
+        #    pdb.set_trace()
+        if s == 'match':
+>>>>>>> master
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             pCS.add_seqid_contained(r.qID, r.sID)
@@ -92,9 +128,15 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
     reader = reader_class(align_filename)#'batch1.fasta.S.f00001.minimap')
     for r in reader:
         if r.strand == '-': continue
+<<<<<<< HEAD
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
         #if s == 'partial': continue
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
+=======
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+        if s == 'match':
+>>>>>>> master
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             # sID must be in cluster, so just call pCS to handle the tucking
@@ -120,14 +162,24 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
     if q_contained: add orphan to S, tuck qID; also remove orphan from the variable "orphan"; remove qID from tmp
     if s_contained: add qID to S, tuck orphan; also remove orphan from the variable "orphan"; remove qID from tmp
 
+<<<<<<< HEAD
     Returns: pCS, tucked, orphans, remaining
+=======
+    Returns: pCS, orphans, remaining
+>>>>>>> master
     """
     reader = reader_class(align_filename)
     for r in reader:
         if r.strand == '-': continue
+<<<<<<< HEAD
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
         #if s == 'partial': continue
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
+=======
+        s = r.characterize(400, 0.1, 400, 0.1, 100, 0.1)
+        if s == 'partial': continue
+        if s == 'match':
+>>>>>>> master
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             pCS.add_seqid_contained(r.qID, r.sID)

@@ -1,12 +1,10 @@
 # cDNA_Cupcake
 
-![cupcake](http://i87.photobucket.com/albums/k138/Elizabeth_Tseng/cupcake-778703_640_zpsonkeyb9w.png)
-
-Last Updated: 05/19/2017
+Last Updated: 08/14/2017
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 2.5
+Current version: 3.1
 
 ## Python Requirements
 * Python >= 2.7
@@ -58,3 +56,7 @@ A brief list of currently listed scripts are:
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
 * `chain_samples.py`: Chaining together multiple samples.
 * `fusion_finder.py`: Finding fusion genes.
+
+### ToFU2: a beta version of Iso-Seq2
+See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki/%5BBeta%5D-ToFU2:-running-and-installing-ToFU2) about improvements and how to install.
+
