@@ -24,12 +24,8 @@ setup(
     ext_modules = ext_modules,
     include_dirs = [np.get_include()],
     zip_safe=False,
-<<<<<<< HEAD
     packages = ['cupcake', 'cupcake.io', 'cupcake.ice',
                 'cupcake.tofu', 'cupcake.tofu.branch', 'cupcake.tofu.counting',
-=======
-    packages = ['cupcake', 'cupcake.io', 'cupcake.ice', 'cupcake.tofu', 'cupcake.tofu.branch', \
->>>>>>> master
                 'cupcake2', 'cupcake2.io', 'cupcake2.ice2', 'cupcake2.tofu2'],
     install_requires=[
         'biopython',
@@ -55,4 +51,3 @@ setup(
                'cupcake2/tofu2/generate_batch_cmd_for_polishing.py',
                'cupcake2/tofu2/collect_IceIterative2_result.py'
                ],
-    )
