@@ -51,3 +51,4 @@ setup(
                'cupcake2/tofu2/generate_batch_cmd_for_polishing.py',
                'cupcake2/tofu2/collect_IceIterative2_result.py'
                ],
+    )
