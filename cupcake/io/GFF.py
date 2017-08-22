@@ -378,6 +378,12 @@ class gmapGFFReader(object):
     def __init__(self, filename):
         self.filename = filename
         self.f = open(filename)
+        # read through possible header
+        while True:
+            cur = self.f.tell()
+            if not self.f.readline().startswith('#') or self.f.tell()==cur: # first non-# seen or EOF
+                self.f.seek(cur)
+                break
         
     def __iter__(self):
         return self
