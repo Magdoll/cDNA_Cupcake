@@ -30,6 +30,55 @@ from Bio import SeqIO
 from cupcake.io import GFF
 from cupcake.tofu import compare_junctions
 
+def sanity_check_collapse_input(input_prefix):
+    """
+    Check that
+    1. the count, gff, rep files exist
+    2. the number of records agree among the three
+    """
+    group_filename = input_prefix + '.group.txt'
+    count_filename = input_prefix + '.abundance.txt'
+    gff_filename = input_prefix + '.gff'
+    rep_filename = input_prefix + '.rep.fq'
+    if not os.path.exists(count_filename):
+        print >> sys.stderr, "File {0} does not exist. Abort!".format(count_filename)
+        sys.exit(-1)
+    if not os.path.exists(gff_filename):
+        print >> sys.stderr, "File {0} does not exist. Abort!".format(gff_filename)
+        sys.exit(-1)
+    if not os.path.exists(rep_filename):
+        print >> sys.stderr, "File {0} does not exist. Abort!".format(rep_filename)
+        sys.exit(-1)
+
+    pbids1 = set([r.id for r in SeqIO.parse(open(rep_filename),'fastq')])
+    pbids2 = set([r.seqid for r in GFF.collapseGFFReader(gff_filename)])
+    pbids3 = set(read_count_file(count_filename).keys())
+
+    if pbids1!=pbids2 or pbids2!=pbids3 or pbids1!=pbids3:
+        print >> sys.stderr, "The number of PBID records in the files disagree! Sanity check failed."
+        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(rep_filename, len(pbids1))
+        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(gff_filename, len(pbids2))
+        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(count_filename, len(pbids3))
+        sys.exit(-1)
+
+    return count_filename, gff_filename, rep_filename
+
+
+def read_count_file(count_filename):
+    f = open(count_filename)
+    count_header = ''
+    while True:
+        cur_pos = f.tell()
+        line = f.readline()
+        if not line.startswith('#'):
+            f.seek(cur_pos)
+            break
+        else:
+            count_header += line
+    d = dict((r['pbid'], r) for r in DictReader(f, delimiter='\t'))
+    for k,v in d.iteritems():
+    f.close()
+    return d
 
 
 def can_merge(m, r1, r2, internal_fuzzy_max_dist):
@@ -75,20 +124,7 @@ def main():
     args = parser.parse_args()
     output_prefix = args.input_prefix + '.filtered'
 
-    #group_filename = args.input_prefix + '.group.txt'
-    count_filename = args.input_prefix + '.abundance.txt'
-    gff_filename = args.input_prefix + '.gff'
-    rep_filename = args.input_prefix + '.rep.fq'
-
-    if not os.path.exists(count_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(count_filename)
-        sys.exit(-1)
-    if not os.path.exists(gff_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(gff_filename)
-        sys.exit(-1)
-    if not os.path.exists(rep_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(rep_filename)
-        sys.exit(-1)
+    count_filename, gff_filename, rep_filename = sanity_check_collapse_input(args.input_prefix)
 
     recs = defaultdict(lambda: [])
     reader = GFF.collapseGFFReader(gff_filename)
@@ -109,20 +145,7 @@ def main():
     f.close()
 
     # read abundance first
-    f = open(count_filename)
-    count_header = ''
-    while True:
-        cur_pos = f.tell()
-        line = f.readline()
-        if not line.startswith('#'):
-            f.seek(cur_pos)
-            break
-        else:
-            count_header += line
-    d = dict((r['pbid'], r) for r in DictReader(f, delimiter='\t'))
-    for k,v in d.iteritems():
-        print k,v
-    f.close()
+    d = read_count_file(count_filename)
 
     # write output rep.fq
     f = open(output_prefix + '.rep.fq', 'w')
