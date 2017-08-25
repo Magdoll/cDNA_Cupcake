@@ -52,7 +52,7 @@ def sanity_check_collapse_input(input_prefix):
 
     pbids1 = set([r.id for r in SeqIO.parse(open(rep_filename),'fastq')])
     pbids2 = set([r.seqid for r in GFF.collapseGFFReader(gff_filename)])
-    pbids3 = set(read_count_file(count_filename).keys())
+    pbids3 = set(read_count_file(count_filename)[0].keys())
 
     if len(pbids1)!=len(pbids2) or len(pbids2)!=len(pbids3) or len(pbids1)!=len(pbids3):
         print >> sys.stderr, "The number of PBID records in the files disagree! Sanity check failed."
@@ -77,7 +77,7 @@ def read_count_file(count_filename):
             count_header += line
     d = dict((r['pbid'], r) for r in DictReader(f, delimiter='\t'))
     f.close()
-    return d
+    return d, count_header
 
 
 def can_merge(m, r1, r2, internal_fuzzy_max_dist):
@@ -144,7 +144,7 @@ def main():
     f.close()
 
     # read abundance first
-    d = read_count_file(count_filename)
+    d, count_header = read_count_file(count_filename)
 
     # write output rep.fq
     f = open(output_prefix + '.rep.fq', 'w')
