@@ -54,7 +54,7 @@ def sanity_check_collapse_input(input_prefix):
     pbids2 = set([r.seqid for r in GFF.collapseGFFReader(gff_filename)])
     pbids3 = set(read_count_file(count_filename).keys())
 
-    if pbids1!=pbids2 or pbids2!=pbids3 or pbids1!=pbids3:
+    if len(pbids1)!=len(pbids2) or len(pbids2)!=len(pbids3) or len(pbids1)!=len(pbids3):
         print >> sys.stderr, "The number of PBID records in the files disagree! Sanity check failed."
         print >> sys.stderr, "# of PBIDs in {0}: {1}".format(rep_filename, len(pbids1))
         print >> sys.stderr, "# of PBIDs in {0}: {1}".format(gff_filename, len(pbids2))
@@ -76,7 +76,6 @@ def read_count_file(count_filename):
         else:
             count_header += line
     d = dict((r['pbid'], r) for r in DictReader(f, delimiter='\t'))
-    for k,v in d.iteritems():
     f.close()
     return d
 

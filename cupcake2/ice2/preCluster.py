@@ -18,12 +18,9 @@ class preCluster(object):
         self.size += len(seqids)
         self.members += seqids
 
-<<<<<<< HEAD
-    #def add_tucked(self, seqids):
-    #    self.tucked += seqids
+    def add_tucked(self, seqids):
+        self.tucked += seqids
 
-=======
->>>>>>> master
 
 # preClusterSet is currently NOT used. Testing preClusterSet2 isntead.
 class preClusterSet(object):
@@ -198,10 +195,6 @@ class preClusterSet(object):
         del self.S[cid1]
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> master
 class preClusterSet2:
     def __init__(self):
         self.S = {}
