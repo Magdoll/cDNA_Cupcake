@@ -4,10 +4,14 @@ import random
 from collections import defaultdict
 
 class preCluster(object):
-    def __init__(self, cid, members=[]):
+    def __init__(self, cid, members=None):
         self.cid = cid
-        self.size = len(members)
-        self.members = members
+        if members is None:
+            self.size = 0
+            self.members = []
+        else:
+            self.size = len(members)
+            self.members = members
         self.tucked = []
 
     def add_member(self, seqid):
