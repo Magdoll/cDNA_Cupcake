@@ -108,7 +108,7 @@ def read_count_info(count_filename, dirs, field_to_use):
         f.seek(cur)
         for r in DictReader(f, delimiter='\t'):
             count_info[name, r['pbid']] = r[field_to_use]
-    return count_info
+    return count_header, count_info
 
 def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
 
