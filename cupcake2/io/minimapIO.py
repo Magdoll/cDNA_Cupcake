@@ -16,7 +16,7 @@ Output format:
 8. Target end coordinate on the original strand
 9. Number of matching bases in the mapping
 10. Number bases, including gaps, in the mapping
-11. Mapping quality (0–255 with 255 missing unavailable)
+11. Mapping quality (0-255 with 255 missing unavailable)
 """
 
 from cupcake.io.BLASRRecord import BLASRReaderBase

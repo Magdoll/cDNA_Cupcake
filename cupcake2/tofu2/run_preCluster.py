@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 import os, sys, pdb, subprocess, glob
 from cPickle import dump
