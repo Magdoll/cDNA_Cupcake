@@ -104,7 +104,7 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False):
     # step 2a. minimap batch1 against seed1.S and process
 
     for i in xrange(1, num_batchs):
-        pCS, orphans = add_batch(i, pCS, orphans, d, cpus=cpus)
+        pCS, orphans = add_batch(i, pCS, orphans, d, cpus=cpus, dun_use_partial=dun_use_partial)
         cleanup_precluster_intermediate_files(i)
 
     # detect PCR chimeras from orphans
