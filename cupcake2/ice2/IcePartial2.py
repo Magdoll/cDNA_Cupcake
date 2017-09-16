@@ -367,8 +367,9 @@ class IcePartialOne2(object):
                                                no_qv_or_aln_checking=False,
                                                tmp_dir=self.tmp_dir,
                                                sID_starts_with_c=sID_starts_with_c)
-            except:
+            except Exception:
                 # fall back to blasr
+                logging.exception('Daligner failed. Falling back to blasr.')
                 self.ice_opts.aligner_choice = 'blasr'
                 self.run()
         elif self.ice_opts.aligner_choice == 'blasr':
