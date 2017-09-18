@@ -307,7 +307,9 @@ class IceIterative2(IceFiles2):
 
         obj = IceIterative2(
             fasta_filename=a['fasta_filename'],
+            fastq_filename=None,
             fasta_filenames_to_add=a['fasta_filenames_to_add'],
+            fastq_filenames_to_add=a['fastq_filenames_to_add'],
             all_fasta_filename=all_fasta_filename,
             root_dir=a['root_dir'],
             ice_opts=a['ice_opts'],
@@ -316,9 +318,11 @@ class IceIterative2(IceFiles2):
             probQV=probQV,
             refs=a['refs'],
             d=a['d'],
+            is_FL=True,
             qv_prob_threshold=a['qv_prob_threshold'])
         obj.changes = a['changes']
         return obj
+
 
     def write_final_consensus(self):
         """
