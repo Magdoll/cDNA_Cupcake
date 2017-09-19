@@ -1288,7 +1288,7 @@ class IceIterative2(IceFiles2):
         while len(self.fasta_filenames_to_add) > 0:
             f = self.fasta_filenames_to_add.pop(0)
             fq = self.fastq_filenames_to_add.pop(0)
-            self.add_log("adding file {f}".format(f=f))
+            self.add_log("adding file {f}, {fq}".format(f=f, fq=fq))
             self.run_post_ICE_merging(
                 consensusFa=self.tmpConsensusFa,
                 pickleFN=self.tmpPickleFN,

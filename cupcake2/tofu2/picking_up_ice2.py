@@ -7,7 +7,7 @@ from pbcore.io.FastqIO import FastqReader, FastqWriter
 
 import cupcake2.ice2.IceIterative2 as ice
 
-from pbtranscript.ice.IceUtils import set_probqv_from_model
+import pbtranscript.ice.ProbModel as pm
 
 """
 Pickle requirements:
@@ -28,7 +28,7 @@ sge_opts: cupcake2.tofu2.ClusterOptions2.SgeOptions2
 
 """
 
-def ensure_pickle_goodness(pickle_filename, root_dir, fasta_files_to_add, fastq_files_to_add):
+def ensure_pickle_goodness(pickle_filename, root_dir, flnc_filename, fasta_files_to_add, fastq_files_to_add):
     """
     Old versions of IceIterative.write_pickle is missing some key/values.
     Add if needed.
@@ -42,6 +42,7 @@ def ensure_pickle_goodness(pickle_filename, root_dir, fasta_files_to_add, fastq_
 
     a['fasta_filenames_to_add'] = fasta_files_to_add.split(',')
     a['fastq_filenames_to_add'] = fastq_files_to_add.split(',')
+    a['all_fasta_filename'] = flnc_filename
 
     # add the paired fasta/fastq files
     if len(fasta_files_to_add) != len(fastq_files_to_add):
@@ -58,7 +59,6 @@ def ensure_pickle_goodness(pickle_filename, root_dir, fasta_files_to_add, fastq_
     if 'root_dir' not in a:
         print >> sys.stderr, "Pickle {0} missing some key-values. Fixing it.".format(pickle_filename)
         a['root_dir'] = root_dir
-        a['all_fasta_filename'] = a['all_fasta_fiilename']
         a['qv_prob_threshold'] = 0.03
         with open(pickle_filename + '.fixed', 'w') as f:
             dump(a, f)
@@ -82,9 +82,23 @@ def check_n_fix_newids(icec_obj):
     return newids
 
 
-def pickup_icec_job(pickle_filename, root_dir, flnc_filename, fasta_files_to_add, fastq_files_to_add):
-    icec_obj, icec_pickle_filename = ensure_pickle_goodness(pickle_filename, root_dir, fasta_files_to_add, fastq_files_to_add)
-    probqv, msg = set_probqv_from_model()
+def make_current_fastq(icec_obj, flnc_filename, root_dir):
+    """
+    current fasta will consists of all ids
+
+    however --- if this was a already finished run and we are adding more input,
+        then newids is empty, in this case we set newids = everything that
+        has no affiliation or more than one affiliated cluster in d
+    """
+    with FastqWriter(os.path.join(root_dir, 'current.fastq')) as f:
+        for r in FastqReader(flnc_filename):
+            f.writeRecord(r)
+
+def pickup_icec_job(pickle_filename, root_dir, flnc_filename, flnc_fq, fasta_files_to_add, fastq_files_to_add):
+    icec_obj, icec_pickle_filename = ensure_pickle_goodness(pickle_filename, root_dir, flnc_filename, fasta_files_to_add, fastq_files_to_add)
+    make_current_fastq(icec_obj, flnc_fq, root_dir)
+    print >> sys.stderr, "Reading QV information...."
+    probqv = pm.ProbFromFastq(os.path.join(root_dir,'current.fastq'))
 
     icec = ice.IceIterative2.from_pickle(icec_pickle_filename, probqv)
 
@@ -92,6 +106,11 @@ def pickup_icec_job(pickle_filename, root_dir, flnc_filename, fasta_files_to_add
     icec.changes = set()
     icec.refs = {}
     icec.all_fasta_filename = flnc_filename
+    icec.fasta_filename = 'current.fasta'
+    icec.fastq_filename = 'current.fastq'
+    icec.fasta_filenames_to_add = fasta_files_to_add.split(',')
+    icec.fastq_filenames_to_add = fastq_files_to_add.split(',')
+
     todo = icec.uc.keys()
     print >> sys.stderr, "Re-run gcon for proper refs...."
     icec.run_gcon_parallel(todo)
@@ -110,11 +129,12 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("pickle_filename", help="Last successful pickle (ex: clusterOut/output/input.split_00.fa.pickle)")
     parser.add_argument("--root_dir", default="clusterOut/", help="root dir (default: clusterOut/)")
-    parser.add_argument("--flnc", default="isoseq_flnc.fasta", help="(default: isoseq_flnc.fasta)")
+    parser.add_argument("--flnc_fa", default="isoseq_flnc.fasta", help="(default: isoseq_flnc.fasta)")
+    parser.add_argument("--flnc_fq", default="isoseq_flnc.fastq", help="(default: isoseq_flnc.fastq)")
     parser.add_argument("--fasta_files_to_add", default=None, help="Comma-separated additional fasta files to add (default: None)")
     parser.add_argument("--fastq_files_to_add", default=None, help="Comma-separated additional fastq files to add (default: None)")
 
     args = parser.parse_args()
 
-    pickup_icec_job(args.pickle_filename, args.root_dir, args.flnc, args.fasta_files_to_add, args.fasta_files_to_add)
+    pickup_icec_job(args.pickle_filename, args.root_dir, args.flnc_fa, args.flnc_fq, args.fasta_files_to_add, args.fastq_files_to_add)
 
