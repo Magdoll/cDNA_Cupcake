@@ -150,6 +150,8 @@ def is_fusion_compatible(r1, r2, max_fusion_point_dist, max_exon_end_dist, allow
         in_5_portion = False
     plus_is_5end = (r1.flag.strand == '+')
 
+    r1.strand = r1.flag.strand
+    r2.strand = r2.flag.strand
     type = compare_junctions(r1, r2)
     if type == 'exact':
         if len(r1.segments) == 1:
