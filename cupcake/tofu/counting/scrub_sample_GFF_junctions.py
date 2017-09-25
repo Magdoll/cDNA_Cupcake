@@ -234,9 +234,9 @@ def cleanup_scrubbed_files_redundancy(gff_filename, group_filename, count_filena
     outf = open(output_prefix + '.group.txt', 'w')
     for pbid, bunch in merged.iteritems():
         # combine the groups
-        g = group_info[bunch[0]]
+        g = [group_info[bunch[0]]]
         for _id in bunch[1:]:
-            g += group_info[_id]
+            g.append(group_info[_id])
         outf.write("{0}\t{1}\n".format(pbid, ",".join(g)))
     outf.close()
 

@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 09/20/2017
+Last Updated: 09/25/2017
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 3.6
+Current version: 3.7
 
 ## Python Requirements
 * Python >= 2.7
@@ -60,3 +60,7 @@ A brief list of currently listed scripts are:
 ### ToFU2: a beta version of Iso-Seq2
 See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki/%5BBeta%5D-ToFU2:-running-and-installing-ToFU2) about improvements and how to install.
 
+
+## Version Changes
+
+2015.09.25 updated to v3.7. Fixed minor printing error in `scrubbed.group.txt` for `scrub_sample_GFF_junctions.py`. 
