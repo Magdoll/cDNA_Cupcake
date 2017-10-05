@@ -24,7 +24,6 @@ from collections import defaultdict
 from csv import DictReader
 from Bio import SeqIO
 
-import fire
 
 class ReadTally:
     def __init__(self):
@@ -61,12 +60,15 @@ def gather_read_stat(read_stat_filename):
     return o
 
 
-def tally_count_file(fasta_filename, tally_obj, output_filename):
+def tally_count_file(fasta_filename, tally_obj, output_filename, is_pbid):
     # now properly form
     # nfl = fl_only + nfl_only
     # nfl_amb = fl_only + nfl_only + nfl_amb_only
 
-    allids = [r.id.split('|')[0] for r in SeqIO.parse(open(fasta_filename), 'fasta')]
+    if is_pbid:
+        allids = [r.id.split('|')[0] for r in SeqIO.parse(open(fasta_filename), 'fasta')]
+    else:
+        allids = [r.id for r in SeqIO.parse(open(fasta_filename), 'fasta')]
 
     o = tally_obj
     total_fl = o.num_fl
@@ -98,10 +100,19 @@ def tally_count_file(fasta_filename, tally_obj, output_filename):
                                              count_nfl*1./total_nfl,\
                                              count_nfl_amb*1./total_nfl_amb))
 
-def main(fasta_filename, read_stat_filename, output_filename):
+def main(fasta_filename, read_stat_filename, output_filename, is_pbid):
     print read_stat_filename, output_filename
     o = gather_read_stat(read_stat_filename)
-    tally_count_file(fasta_filename, o, output_filename)
+    tally_count_file(fasta_filename, o, output_filename, is_pbid)
 
 if __name__ == "__main__":
-    fire.Fire(main, name='process')
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("fasta_filename", help="The reference fasta filename (ex: ref.fasta)")
+    parser.add_argument("read_stat_filename", help="The processed read stat filename (ex: test.blasr.txt)")
+    parser.add_argument("output_filename", help="Output count filename (ex: test.count.txt")
+    parser.add_argument("--is_pbid", default=False, action="store_true", help="Ref fasta has PBIDs (ex: PB.1.2)")
+
+    args = parser.parse_args()
+    main(args.fasta_filename, args.read_stat_filename, args.output_filename, args.is_pbid)
+

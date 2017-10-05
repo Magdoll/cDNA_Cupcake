@@ -36,7 +36,7 @@ def sanity_checking2(pCS, orphans):
             assert x not in orphans
 
 
-def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None):
+def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None, dun_use_partial=False):
     """
     Ignore hits that are - strand or qID >= sID (self hit or already reported)
 
@@ -52,16 +52,17 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None)
     for r in reader:
         if r.qID >= r.sID or r.strand == '-': continue
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
-        #if s == 'partial': continue
+        if dun_use_partial and s == 'partial': continue
 
         #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
         #    pdb.set_trace()
+        # Liz note: currently, just add all to match because minimap sensitivity not enough to do "tuck" properly
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
-        elif s == 'q_contained':
-            pCS.add_seqid_contained(r.qID, r.sID)
-        elif s == 's_contained':
-            pCS.add_seqid_contained(r.sID, r.qID)
+        #elif s == 'q_contained':
+        #    pCS.add_seqid_contained(r.qID, r.sID)
+        #elif s == 's_contained':
+        #    pCS.add_seqid_contained(r.sID, r.qID)
         try:
             orphans.remove(r.qID)
         except:
@@ -77,7 +78,7 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None)
 
     return pCS, orphans
 
-def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
+def process_align_to_pCS(align_filename, seqids, pCS, reader_class, dun_use_partial=False):
     """
     Batch against {S}, so it is NOT self align! Only have to ignore - strand hits.
 
@@ -93,15 +94,16 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
     for r in reader:
         if r.strand == '-': continue
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
-        #if s == 'partial': continue
+        if dun_use_partial and s == 'partial': continue
+        # Liz note: currently, just add all to match because minimap sensitivity not enough to do "tuck" properly
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
-        elif s == 'q_contained':
-            # sID must be in cluster, so just call pCS to handle the tucking
-            pCS.add_seqid_contained(r.qID, r.sID)
-        elif s == 's_contained':
-            # sID must be in cluster
-            pCS.add_seqid_contained(r.sID, r.qID)
+        #elif s == 'q_contained':
+        #    # sID must be in cluster, so just call pCS to handle the tucking
+        #    pCS.add_seqid_contained(r.qID, r.sID)
+        #elif s == 's_contained':
+        #    # sID must be in cluster
+        #    pCS.add_seqid_contained(r.sID, r.qID)
         try:
             orphans.remove(r.qID)
         except:
@@ -111,7 +113,7 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class):
 
 
 
-def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_class):
+def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_class, dun_use_partial=False):
     """
     remaining of "batch" against orphans
 
@@ -126,13 +128,13 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
     for r in reader:
         if r.strand == '-': continue
         s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
-        #if s == 'partial': continue
+        if dun_use_partial and s == 'partial': continue
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
-        elif s == 'q_contained':
-            pCS.add_seqid_contained(r.qID, r.sID)
-        elif s == 's_contained':
-            pCS.add_seqid_contained(r.sID, r.qID)
+        #elif s == 'q_contained':
+        #    pCS.add_seqid_contained(r.qID, r.sID)
+        #elif s == 's_contained':
+        #    pCS.add_seqid_contained(r.sID, r.qID)
 
         try:
             orphans.remove(r.sID)

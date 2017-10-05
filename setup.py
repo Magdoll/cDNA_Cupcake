@@ -4,7 +4,11 @@ import numpy as np
 
 
 __author__ = "etseng@pacb.com"
+<<<<<<< HEAD
 version = "3.7"
+=======
+version = "3.4"
+>>>>>>> pCS_dev
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -36,7 +40,8 @@ setup(
                'cupcake/tofu/make_sam_by_isoforms.py',
                'cupcake/tofu/filter_by_count.py',
                'cupcake/tofu/filter_away_subset.py',
-               'cupcake/tofu/process_blasr_to_read_stat.py',
+               'cupcake/tofu/process_blasr_to_read_stat.py', 
+			   'cupcake/tofu/process_read_stats_to_count.py',
                'cupcake/tofu/fusion_finder.py',
                'cupcake/tofu/counting/chain_samples.py',
                'cupcake/tofu/counting/chain_fusion_samples.py',
