@@ -140,7 +140,7 @@ class IceArrow2(IceFiles2):
         e.g.,
             self.g_consensus_ref_fa_of_cluster(cid)
 
-        cids --- list[int(cid)], e.g., [10, 11, 12, ..., 20]
+        Liz: new cids after ice2 collection is b<bin>_c<cid>
         refs --- dict{int(cid): ref_fa of cluster(cid)}
         """
         # Check existence when first time it is read.
@@ -148,19 +148,17 @@ class IceArrow2(IceFiles2):
             raise IOError("Final consensus FASTA file {f}".format(
                 f=self.final_consensus_fa) + "does not exist.")
 
-        self.add_log("Reconstructing g consensus files for clusters "
-                     "[%d, %d] in %s" % (cids[0], cids[-1], self.tmp_dir),
-                     level=logging.INFO)
+        print "Reconstructing g consensus files for clusters {0}, {1} in {2}".format(cids[0], cids[-1], self.tmp_dir)
+        self.add_log("Reconstructing g consensus files for clusters {0}, {1} in {2}".format(cids[0], cids[-1], self.tmp_dir))
 
         final_consensus_d = FastaRandomReader(self.final_consensus_fa)
         for ref_id in final_consensus_d.d.keys():
-            cid = int(ref_id.split('/')[0].replace('c', ''))
-            # e.g., ref_id = c103/1/3708, cid = 103,
-            #       refs[cid] = ...tmp/0/c103/g_consensus_ref.fasta
+            # Liz: this is no longer valid for the Ice2 cids #cid = int(ref_id.split('/')[0].replace('c', ''))
+            cid = ref_id
             if cid in cids:
-                mkdir(self.cluster_dir(cid))
-                ref_fa = op.join(self.cluster_dir(cid),
-                                 op.basename(refs[cid]))
+                _dir = self.cluster_dir_for_reconstructed_ref(cid)
+                mkdir(_dir)
+                ref_fa = op.join(_dir, op.basename(refs[cid]))
                 refs[cid] = ref_fa
                 with FastaWriter(ref_fa) as writer:
                     self.add_log("Writing ref_fa %s" % refs[cid])
@@ -465,8 +463,10 @@ class IceArrow2(IceFiles2):
         #new_refs = {cid: op.join(self.cluster_dir(cid), op.basename(refs[cid])) for cid in cids_todo}
         #refs = new_refs
 
+        #print "create_arrows_bins_no_submit calld for {0}-{1}, {2} files".format(cids_todo[0],cids_todo[-1], len(cids_todo))
         # Reconstruct refs if not exist.
-        cids_missing_refs = filter(lambda x: not nfs_exists(refs[x]), cids_todo)
+        cids_missing_refs = filter(lambda x: not op.exists(refs[x]), cids_todo)
+        #print "{0} missing refs".format(len(cids_missing_refs))
         if len(cids_missing_refs) > 0:
             self.reconstruct_ref_fa_for_clusters_in_bin(cids=cids_missing_refs, refs=refs)
 

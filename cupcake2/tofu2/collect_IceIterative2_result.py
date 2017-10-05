@@ -35,10 +35,14 @@ def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_form
             newcid = new_cid_format.format(bin=bin, cid=cid)
             combined_uc[newcid] = uc[cid]
             # also need to re-write the refs
+            # in case where the refs no longer exist (user deletion, just SKIP)
             new_ref = os.path.join(os.path.dirname(refs[cid]), 'collected_ref.fasta')
-            r  = SeqIO.parse(open(refs[cid]), 'fasta').next()
-            with open(new_ref, 'w') as f:
-                f.write(">{newcid}\n{seq}\n".format(newcid=newcid, seq=r.seq))
+            if os.path.exists(refs[cid]):
+                r  = SeqIO.parse(open(refs[cid]), 'fasta').next()
+                with open(new_ref, 'w') as f:
+                    f.write(">{newcid}\n{seq}\n".format(newcid=newcid, seq=r.seq))
+            else:
+                print >> sys.stderr, "WARNING: ref file {0} no longer exists. new ref files not written.".format(refs[cid])
             combined_refs[newcid] = new_ref
 
         for line in fileinput.input(fasta_file):

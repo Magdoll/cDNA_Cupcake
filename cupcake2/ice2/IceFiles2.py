@@ -10,6 +10,7 @@ Diff with IceFiles:
 """
 
 import os.path as op
+import re
 import logging
 from pbtranscript.Utils import real_ppath, now_str, mkdir
 
@@ -166,3 +167,15 @@ class IceFiles2(IceFiles):
     def bam_of_cluster2(self, ref_file):
         """Return $cluster_dir/out.bam, like sam_of_cluster(cid)."""
         return op.join(op.dirname(ref_file), "out.bam")
+
+
+    def cluster_dir_for_reconstructed_ref(self, cid):
+        """
+        This cid is from ICE2 style: b<bin>_c<cid>.
+        """
+        rex = re.compile("b(\d+)_c(\d+)")
+        m = rex.match(cid)
+        if m is None:
+            raise Exception, "{0} is not a valid b<bin>_c<cid> format!".format(cid)
+        _cid = int(m.group(2))
+        return op.join(self.tmp_dir, str(_cid/10000), cid)
