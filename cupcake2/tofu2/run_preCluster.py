@@ -1,6 +1,6 @@
+#!/usr/bin/env python
 
-
-import os, sys, pdb, subprocess, glob
+import os, sys, pdb, subprocess, glob, random
 from cPickle import dump
 from Bio import SeqIO
 
@@ -163,6 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--cpus", default=12, type=int, help="Number of CPUs minimap uses (default: 12)")
     parser.add_argument("--dun_make_bins", default=False, action="store_true", help="Only write out CSV files, do not make the actual bins (default: OFF)")
     parser.add_argument("--dun_use_partial", default=False, action="store_true", help="Don't use partial hits (default: OFF)")
+    parser.add_argument("--random-seed", default=None, type=int, help="Random number seed (default: None => use system time)")
 
     args = parser.parse_args()
 
@@ -170,5 +171,8 @@ if __name__ == "__main__":
     if not os.path.exists("isoseq_flnc.fasta"):
         print >> sys.stderr, "Expects isoseq_flnc.fasta in local directory but failed! Abort."
         sys.exit(-1)
+
+    if args.random_seed is not None:
+        random.seed(args.random_seed)
 
     main(args.cpus, args.dun_make_bins, args.dun_use_partial)
