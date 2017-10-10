@@ -44,7 +44,7 @@ def cleanup_precluster_intermediate_files(batch_index):
             print >> sys.stderr, "Failure to remove {0}. Ignore.".format(file)
 
 
-def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
+def add_batch(batch_index, pCS, orphans, fasta_d, cpus):
     """
     1. align batch<i>.fasta against seed<i>.S.fasta, process -> write remains to batch<i>.remains.fasta
     2. align batch<i>.remains.fasta against seed<i>.orphans.fasta -> write remains to batch<i>.remains2.fasta
@@ -56,7 +56,7 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
     seqids = set([r.id for r in SeqIO.parse(open(cur_file), 'fasta')])
     o = ar.run_minimap(cur_file, "seed{0}.S.fasta".format(batch_index), cpus=cpus)
     print >> sys.stderr, "processing", o
-    pCS, remains = sp.process_align_to_pCS(o, seqids, pCS, MiniReader, dun_use_partial=dun_use_partial)
+    pCS, remains = sp.process_align_to_pCS(o, seqids, pCS, MiniReader)
     print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
         len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
     # write batch<i>.remains.fasta
@@ -64,7 +64,7 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
     FileIO.write_seqids_to_fasta(remains, cur_file, fasta_d)
     o = ar.run_minimap(cur_file, "seed{0}.orphans.fasta".format(batch_index), cpus=cpus)
     print >> sys.stderr, "processing", o
-    pCS, orphans, remains = sp.process_align_to_orphan(o, remains, orphans, pCS, MiniReader, dun_use_partial=dun_use_partial)
+    pCS, orphans, remains = sp.process_align_to_orphan(o, remains, orphans, pCS, MiniReader)
     print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
         len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
     # write batch<i>.remains2.fasta and self align
@@ -72,7 +72,7 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
     FileIO.write_seqids_to_fasta(remains, cur_file, fasta_d)
     o = ar.run_minimap(cur_file, cur_file, cpus=cpus)
     print >> sys.stderr, "processing", o
-    pCS, remains = sp.process_self_align_into_seed(o, remains, MiniReader, pCS, dun_use_partial=dun_use_partial)
+    pCS, remains = sp.process_self_align_into_seed(o, remains, MiniReader, pCS)
     print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
         len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
     # combine remains+orphans to new orphans
@@ -82,7 +82,7 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
 
     return pCS, orphans
 
-def main(cpus, dun_make_bins=False, dun_use_partial=False):
+def main(cpus, dun_make_bins=False):
     print "Indexing isoseq_flnc.fasta using LazyFastaReader..."
     d = LazyFastaReader('isoseq_flnc.fasta')
 
@@ -93,7 +93,7 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False):
     # step1. run minimap of seed0 against itself and process
     o = ar.run_minimap('seed0.fasta', 'seed0.fasta', cpus=cpus)
     seqids = set([r.id for r in SeqIO.parse(open('seed0.fasta'),'fasta')])
-    pCS, orphans = sp.process_self_align_into_seed(o, seqids, MiniReader, dun_use_partial=dun_use_partial)
+    pCS, orphans = sp.process_self_align_into_seed(o, seqids, MiniReader)
     # keep stats
     size_S, size_tucked, size_orphans = len(pCS.S), sum(v=='T' for v in pCS.seq_stat.itervalues()), len(orphans)
     print "seed 0 initial: S {0}, tucked {1}, orphans {2}".format(size_S, size_tucked, size_orphans)
@@ -104,7 +104,7 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False):
     # step 2a. minimap batch1 against seed1.S and process
 
     for i in xrange(1, num_batchs):
-        pCS, orphans = add_batch(i, pCS, orphans, d, cpus=cpus, dun_use_partial=dun_use_partial)
+        pCS, orphans = add_batch(i, pCS, orphans, d, cpus=cpus)
         cleanup_precluster_intermediate_files(i)
 
     # detect PCR chimeras from orphans
@@ -162,7 +162,6 @@ if __name__ == "__main__":
     parser = ArgumentParser("PreCluster processing of isoseq_flnc.fasta using minimap")
     parser.add_argument("--cpus", default=12, type=int, help="Number of CPUs minimap uses (default: 12)")
     parser.add_argument("--dun_make_bins", default=False, action="store_true", help="Only write out CSV files, do not make the actual bins (default: OFF)")
-    parser.add_argument("--dun_use_partial", default=False, action="store_true", help="Don't use partial hits (default: OFF)")
 
     args = parser.parse_args()
 
@@ -171,4 +170,8 @@ if __name__ == "__main__":
         print >> sys.stderr, "Expects isoseq_flnc.fasta in local directory but failed! Abort."
         sys.exit(-1)
 
-    main(args.cpus, args.dun_make_bins, args.dun_use_partial)
+    if os.path.exists("preCluster_out"):
+        print >> sys.stderr, "preCluster_out/ already exists! Abort."
+        sys.exit(-1)
+
+    main(args.cpus, args.dun_make_bins)
