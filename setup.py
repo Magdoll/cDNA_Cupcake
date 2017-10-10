@@ -4,11 +4,7 @@ import numpy as np
 
 
 __author__ = "etseng@pacb.com"
-<<<<<<< HEAD
 version = "3.7"
-=======
-version = "3.4"
->>>>>>> pCS_dev
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
