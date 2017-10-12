@@ -295,6 +295,10 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
     """
     If given_total is not None, use it instead of the total count based on <read_count_filename>
     given_total should be dict of {fl, nfl, nfl_amb}
+
+    total_ids['fl'] --- number of FL, mapped or unmapped
+    total_ids['nfl'] --- number of mapped unique nFL plus unmapped nFL, but excludes mapped ambiguous nFL
+    total_ids['nfl_amb'] --- number of mapped, non-unique (ambiguous) nFL
     """
     total_ids = {'fl': set(), 'nfl': set(), 'nfl_amb': set()}
     tally = defaultdict(lambda: {'fl': 0, 'nfl': 0, 'nfl_amb': 0}) # pbid, could be NA --> # of FL reads mapped to it
@@ -349,8 +353,8 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
         f.write("# count_fl: Number of associated FL reads\n")
         f.write("# count_nfl: Number of associated FL + unique nFL reads\n")
         f.write("# count_nfl_amb: Number of associated FL + unique nFL + weighted ambiguous nFL reads\n")
-        f.write("# norm_fl: count_fl / total number of FL reads\n")
-        f.write("# norm_nfl: count_nfl / total number of FL + unique nFL reads\n")
+        f.write("# norm_fl: count_fl / total number of FL reads, mapped or unmapped\n")
+        f.write("# norm_nfl: count_nfl / total number of mapped unique or unmapped (FL + nFL) reads\n")
         f.write("# norm_nfl_amb: count_nfl_amb / total number of all reads\n")
         f.write("# Total Number of FL reads: {0}\n".format(use_total_fl))
         f.write("# Total Number of FL + unique nFL reads: {0}\n".format(use_total_nfl))
