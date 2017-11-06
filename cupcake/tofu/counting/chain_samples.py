@@ -100,11 +100,14 @@ def read_config(filename):
 
 def read_count_info(count_filename, dirs, field_to_use):
     count_info = {} # key: (sample, PB.1.1) --> count
+    count_header = ''
     for name, d in dirs.iteritems():
         f = open(os.path.join(d, count_filename))
         while True:
             cur = f.tell()
-            if not f.readline().startswith('#'): break
+            line = f.readline().strip()
+            if not line.startswith('#'): break
+            count_header += line
         f.seek(cur)
         for r in DictReader(f, delimiter='\t'):
             count_info[name, r['pbid']] = r[field_to_use]
@@ -118,7 +121,7 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
                             os.path.join(d, count_filename),\
                             os.path.join(d, fastq_filename) if fastq_filename is not None else None)
 
-    count_info = read_count_info(count_filename, dirs, field_to_use)
+    count_header, count_info = read_count_info(count_filename, dirs, field_to_use)
 
     # some names may already start with "tmp_" which means they are intermediate results that have already been chained
     # find the first non "tmp_" and start from there

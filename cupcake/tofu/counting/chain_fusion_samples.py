@@ -54,7 +54,7 @@ def chain_fusion_samples(dirs, names, group_filename, gff_filename, count_filena
                             os.path.join(d, count_filename),\
                             os.path.join(d, fastq_filename) if fastq_filename is not None else None)
 
-    count_info = read_count_info(count_filename, dirs, field_to_use)
+    count_header, count_info = read_count_info(count_filename, dirs, field_to_use)
 
     # some names may already start with "tmp_" which means they are intermediate results that have already been chained
     # find the first non "tmp_" and start from there
