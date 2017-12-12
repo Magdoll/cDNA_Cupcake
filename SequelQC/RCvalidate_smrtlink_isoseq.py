@@ -4,6 +4,7 @@ __version__ = '1.2'
 import os, sys, subprocess
 from csv import DictReader
 from collections import defaultdict
+import SIRVvalidate_smrtlink_isoseq as smrtlink
 """
 pbtranscript.tasks.combine_cluster_bins-0
 """
@@ -70,13 +71,17 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
         f2.write("{0}\t{1}\tY\tNA\tNA\n".format(fl_read_id, _len))
     f2.close()
 
-def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count):
+def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, isoseq_version):
 
     cur_dir = os.getcwd()
     os.chdir(out_dir)
 
-    cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
-        gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    if aligner_choice == 'gmap':
+        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+            gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+    elif aligner_choice == 'minimap2':
+        cmd = "minimap2 -t {cpus} -ax splice {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
+            cpus=GMAP_CPUS, ref=smrtlink.HG38_GENOME, hq=hq_fastq)
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -92,7 +97,7 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count):
 
     ### make_abundance_from_CSV
     collapse_prefix = hq_fastq + '.no5merge.collapsed'
-    make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix)
+    smrtlink.make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix, isoseq_version)
 
 
 
@@ -179,8 +184,9 @@ if __name__ == "__main__":
     parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
+    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star', 'minimap2'), help="Aligner choice (default: star)")
 
     args = parser.parse_args()
-    o, a, b = link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_hg38(o, a, b, args.min_count)
+    o, a, b, v = smrtlink.link_files(args.smrtlink_dir, args.tmp_dir)
+    collapse_to_hg38(o, a, b, args.min_count, args.aligner_choice, v)
     validate_with_Gencode(args.tmp_dir, args.eval_dir)

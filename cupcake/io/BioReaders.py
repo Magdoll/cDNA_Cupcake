@@ -335,9 +335,11 @@ class SAMRecord:
         """
         PE_read_num = 0
         strand = '+'
-        if flag > 1024: #PCR or optical duplicate, should never see this...
+        if flag >= 2048: # supplementary alignment
+            flag -= 2048
+        if flag >= 1024: #PCR or optical duplicate, should never see this...
             flag -= 1024
-        if flag > 512: #not passing QC, should never see this
+        if flag >= 512: #not passing QC, should never see this
             flag -= 512
         if flag >= 256: #secondary alignment, OK to see this if option given in BowTie
             flag -= 256

@@ -13,7 +13,7 @@ Input: <prefix> (must have .group.txt, .abundance.txt, .gff, .rep.fq)
 Output: <output>.min_fl_<threshold>.{group|abundance|gff|rep fq}
 """
 
-def filter_by_count(input_prefix, output_prefix, min_count):
+def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=False):
 
     group_filename = input_prefix + '.group.txt'
     count_filename = input_prefix + '.abundance.txt'
@@ -60,7 +60,7 @@ def filter_by_count(input_prefix, output_prefix, min_count):
     f.close()
 
     # group_max_count_p NOT used for now
-    good = filter(lambda x: int(d[x]['count_fl']) >= min_count and group_max_count_fl[x] >= min_count and group_max_count_p >= 0, d)
+    good = filter(lambda x: int(d[x]['count_fl']) >= min_count and (dun_use_group_count or group_max_count_fl[x] >= min_count) and group_max_count_p >= 0, d)
 
     # write output GFF
     f = open(output_prefix + '.gff', 'w')
@@ -98,7 +98,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("input_prefix")
     parser.add_argument("--min_count", type=int, default=2, help="Minimum FL count (default: 2)")
+    parser.add_argument("--dun_use_group_count", action="store_true", default=False, help="Turn off more stringent min count (default: off)")
 
     args = parser.parse_args()
     output_prefix = "{i}.min_fl_{c}".format(i=args.input_prefix, c=args.min_count)
-    filter_by_count(args.input_prefix, output_prefix, args.min_count)
+    filter_by_count(args.input_prefix, output_prefix, args.min_count, args.dun_use_group_count)
