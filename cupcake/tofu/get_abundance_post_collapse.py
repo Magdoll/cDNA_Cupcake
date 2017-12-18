@@ -5,7 +5,7 @@ After running collapse, combine with the cluster FL/nFL assignment to get abunda
 Compliant with SMRTLink/SMRTAnalysis 3.2+ formatting.
 May break on older SMRTPortal/SMRTAnalysis 2.x formatting.
 
-cluster_report.csv format:
+cluster_report.csv format in IsoSeq1:
 
 cluster_id,read_id,read_type (FL or NonFL)
 i0_ICE_sample03146a|c4,m54026_161015_230744/74318463/31_970_CCS,FL
@@ -15,6 +15,20 @@ i0_ICE_sample03146a|c16,m54026_161015_230744/54395715/911_54_CCS,FL
 
 NOTE: in cluster_report, the sample prefix is i<bin>_ICE_<sample>, but in HQ isoforms is i<bin>_HQ_<sample>!
 Must address this :P
+
+
+cluster_report.csv format in IsoSeq2:
+
+cluster_id,read_id,read_type
+cb2729_c2,m54056_171130_193019/8388911/26_1296_CCS,FL
+cb2729_c3,m54056_171130_193019/34669415/1504_49_CCS,FL
+cb2729_c0,m54056_171130_193019/8716857/1298_46_CCS,FL
+
+where .group.txt is:
+
+PBfusion.1      HQ_sample0ZPg9hS7|cb7607_c93041/f2p0/1713
+PBfusion.2      HQ_sample0ZPg9hS7|cb7607_c16635/f3p0/810,HQ_sample0ZPg9hS7|cb7607_c32934/f2p1/1066
+
 """
 
 
@@ -37,10 +51,14 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
     Make the connection between partitioned results and final (ex: PB.1.1)
     The partitioned results could either be ICE cluster (ex: i1_c123) or RoIs
 
-    Group filename format: (SMRTLink/SA3.x)
+    Group filename format: (SMRTLink/SA3.x, IsoSeq1)
     PB.1.1  i0_HQ_sample03146a|c18072/f2p30/279,i0_HQ_sample03146a|c38435/f2p0/180
     PB.2.1  i2_HQ_sample03146a|c46363/f22p0/2776
     PB.2.2  i2_HQ_sample03146a|c46572/f37p0/2761
+
+    For IsoSeq2:
+    PBfusion.1      HQ_sample0ZPg9hS7|cb7607_c93041/f2p0/1713
+    PBfusion.2      HQ_sample0ZPg9hS7|cb7607_c16635/f3p0/810,HQ_sample0ZPg9hS7|cb7607_c32934/f2p1/1066
 
     Note: LQ/HQ isoforms use the _HQ_ or _LQ_ prefix, but in cluster_report.csv it will be _ICE_
     So we just replace _HQ_ or _LQ_ --> both to be _ICE_
@@ -61,10 +79,12 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
             if sample_prefixes is None:
                 if is_cid: cid = cid.split('/')[0]
                 # replace _HQ_ or _LQ_ with _ICE_ to be compatible with cluster_report.csv later
-                if cid.find('_HQ_') > 0:
+                if cid.find('_HQ_') > 0:  # isoseq1
                     cid = cid.replace('_HQ_', '_ICE_')
-                elif cid.find('_LQ_') > 0:
+                elif cid.find('_LQ_') > 0:  # isoseq1
                     cid = cid.replace('_LQ_', '_ICE_')
+                elif cid.startswith('HQ_') or cid.startswith('LQ_'): # isoseq2
+                    cid = cid.split('|')[1].split('/')[0]  # cid = cb7607_c93041, for example
                 cid_info[cid] = pbid
             else:
                 if any(cid.startswith(sample_prefix + '|') for sample_prefix in sample_prefixes):
@@ -82,7 +102,13 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
     """
     Given an Iso-Seq csv output file w/ format:
 
-    (SMRTLink / SA3.x)
+    (SMRTLInk / SA5.x+) IsoSeq2, ToFU2
+    cluster_id,read_id,read_type
+    cb2729_c2,m54056_171130_193019/8388911/26_1296_CCS,FL
+    cb2729_c3,m54056_171130_193019/34669415/1504_49_CCS,FL
+    cb2729_c0,m54056_171130_193019/8716857/1298_46_CCS,FL
+
+    (SMRTLink / SA3.x) IsoSeq1
     cluster_id,read_id,read_type (FL or NonFL)
     i0_ICE_sample03146a|c4,m54026_161015_230744/74318463/31_970_CCS,FL
 

@@ -37,27 +37,36 @@ def sim_start(ntimes, profile):
     return start, acc
 
 def sim_seq(seq, profile):
+    """
+    :param seq: sequence to simulate from
+    :param profile: accumulative prob vector for simType, ex: [0.01, 0.05, 0.07, 1.] means 1% sub, 4% ins, 2% del
+    :return: simulated sequence, qv string ('!' for err, ']' for no err, currently don't handle deletion)
+    """
     nucl = set(['A','T','C','G'])
     sim = ''
+    qv = ''  # qv string,
     for i, s in enumerate(seq):
         while True:
             type = throwdice(profile)
             if type=='match': 
                 sim += s
+                qv += ']'
                 break
             elif type=='ins':
                 # insertion occurred, with 1/4 chance it'll match
                 choice = random.sample(nucl,1)[0]
                 sim += choice
+                qv += '!'
             elif type=='sub': # anything but the right one
                 choice = random.sample(nucl.difference([s]),1)[0]
                 sim += choice
+                qv += '!'
                 break
             elif type=='del': # skip over this
                 break
             else: raise KeyError, "Invalid type {0}".format(type)
         
-    return sim
+    return sim, qv
             
 if __name__ == "__main__":
     from argparse import ArgumentParser
