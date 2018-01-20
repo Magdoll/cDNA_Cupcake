@@ -80,7 +80,7 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
         cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
             gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
     elif aligner_choice == 'minimap2':
-        cmd = "minimap2 -t {cpus} -ax splice {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
+        cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no  {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
             cpus=GMAP_CPUS, ref=smrtlink.HG38_GENOME, hq=hq_fastq)
 
     if subprocess.check_call(cmd, shell=True)!=0:
@@ -111,8 +111,13 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
 
     rep = collapse_prefix + ".min_fl_{0}.filtered".format(min_count)
 
-    cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
-        gmap=GMAP_BIN, gmap_db=GMAP_DB, cpus=GMAP_CPUS, rep=rep)
+    if aligner_choice=='gmap':
+        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
+            gmap=GMAP_BIN, gmap_db=GMAP_DB, cpus=GMAP_CPUS, rep=rep)
+    elif aligner_choice=='minimap2':
+        cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no  {ref} {rep}.rep.fq > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
+            cpus=GMAP_CPUS, ref=smrtlink.HG38_GENOME, rep=rep)
+
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
@@ -184,7 +189,7 @@ if __name__ == "__main__":
     parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
-    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star', 'minimap2'), help="Aligner choice (default: star)")
+    parser.add_argument("--aligner_choice", default='minimap2', choices=('gmap', 'star', 'minimap2'), help="Aligner choice (default: minimap2)")
 
     args = parser.parse_args()
     o, a, b, v = smrtlink.link_files(args.smrtlink_dir, args.tmp_dir)
