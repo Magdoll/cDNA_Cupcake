@@ -32,7 +32,7 @@ class MPileUpRecord(object):
     def __init__(self, chr, pos, ref, cov, readBase, baseQuals, alnQuals):
         """
         In addition to storing the 7 cols from mpileup,
-        also stores
+        nalso stores
         counter: Counter of (key) -> (obs count in pileup)
         """
         self.chr = chr
@@ -139,14 +139,28 @@ class MPileUpReader(object):
 
     def parseLine(self, line):
         raw = line.strip().split('\t')
-        if len(raw)!=7:
-            raise Exception, "Expected to have 7 cols in mpileup record \
-            but saw only {0}, abort! Line was: {1}".format(len(raw), line)
-        return MPileUpRecord(chr=raw[0],\
+        if len(raw)==7:
+            return MPileUpRecord(chr=raw[0],\
                              pos=int(raw[1])-1,\
                              ref=raw[2],
                              cov=int(raw[3]),
                              readBase=raw[4],
                              baseQuals=raw[5],
                              alnQuals=raw[6])
+        elif len(raw)==4:
+            # only way to have only 4 columns is because after --min-BQ filtering there are no bases
+            # ex:
+            # fake    8728    T       3       .$.$.   ;q:     ]]]
+            # fake    8729    T       0
+            return MPileUpRecord(chr=raw[0],\
+                                 pos=int(raw[1])-1,\
+                                 ref=raw[2],
+                                 cov=0,
+                                 readBase='',
+                                 baseQuals='',
+                                 alnQuals='')
+        else:
+            raise Exception, "Expected to have 7 cols in mpileup record \
+            but saw only {0}, abort! Line was: {1}".format(len(raw), line)
+
 

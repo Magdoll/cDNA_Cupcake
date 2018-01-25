@@ -82,12 +82,12 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
 
     return pCS, orphans
 
-def main(cpus, dun_make_bins=False, dun_use_partial=False):
+def main(cpus, dun_make_bins=False, dun_use_partial=False, num_seqs_per_batch=100000, dun_cleanup_files=False):
     print "Indexing isoseq_flnc.fasta using LazyFastaReader..."
     d = LazyFastaReader('isoseq_flnc.fasta')
 
     print "Splitting input isoseq_flnc.fasta into seed/batches..."
-    num_batchs = create_seed_n_batch_files(input='isoseq_flnc.fasta', fasta_d=d, seed_filename='seed0.fasta', batch_pre='batch')
+    num_batchs = create_seed_n_batch_files(input='isoseq_flnc.fasta', fasta_d=d, seed_filename='seed0.fasta', batch_pre='batch', num_seqs_per_batch=num_seqs_per_batch)
 
 
     # step1. run minimap of seed0 against itself and process
@@ -155,14 +155,22 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False):
     #singlef.close()
     infof.close()
 
+    if not dun_cleanup_files: # clean up all seed* and batch* files
+        for file in glob.glob('batch*fasta*'):
+            os.remove(file)
+        for file in glob.glob('seed*fasta*'):
+            os.remove(file)
 
 if __name__ == "__main__":
+    import argparse
     from argparse import ArgumentParser
 
     parser = ArgumentParser("PreCluster processing of isoseq_flnc.fasta using minimap")
     parser.add_argument("--cpus", default=12, type=int, help="Number of CPUs minimap uses (default: 12)")
     parser.add_argument("--dun_make_bins", default=False, action="store_true", help="Only write out CSV files, do not make the actual bins (default: OFF)")
     parser.add_argument("--dun_use_partial", default=False, action="store_true", help="Don't use partial hits (default: OFF)")
+    parser.add_argument("--num_seqs_per_batch", default=100000, type=int, help="Number of seqs per batch (default: 100000, use less for targeted)")
+    parser.add_argument("--dun_cleanup_files", action="store_true", default=False, help=argparse.SUPPRESS)
 
     args = parser.parse_args()
 
@@ -175,4 +183,4 @@ if __name__ == "__main__":
         print >> sys.stderr, "preCluster_out/ already exists! Abort."
         sys.exit(-1)
 
-    main(args.cpus, args.dun_make_bins, args.dun_use_partial)
+    main(args.cpus, args.dun_make_bins, args.dun_use_partial, args.num_seqs_per_batch, args.dun_cleanup_files)

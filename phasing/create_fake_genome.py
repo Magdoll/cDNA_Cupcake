@@ -13,7 +13,7 @@ create a fake genome that is the concatenation of all seen exons.
 extra_bp_around_junctions = 100 # get this much around junctions to be safe AND to not screw up GMAP who doesn't like microintrons....
 __padding_before_after__ = 1000 # get this much before and after the start
 
-def make_fake_genome(genome_filename, gff_filename, ref_chr, ref_start, ref_end, ref_strand, output_prefix, genome_d=None):
+def make_fake_genome(genome_filename, gff_filename, ref_chr, ref_start, ref_end, ref_strand, output_prefix, output_name, genome_d=None):
     if genome_d is None:
         print >> sys.stderr, "Reading genome file {0}...".format(genome_filename)
         d = SeqIO.to_dict(SeqIO.parse(open(genome_filename),'fasta'))
@@ -45,9 +45,10 @@ def make_fake_genome(genome_filename, gff_filename, ref_chr, ref_start, ref_end,
     regions[-1] = (regions[-1][0], regions[-1][1]+__padding_before_after__)
 
     with open(output_prefix+'.fasta', 'w') as f:
-        f.write(">fake\n")
+        f.write(">" + output_name + "\n")
         for a,b in regions:
             f.write(str(d[r.chr][a:b].seq))
+        f.write("\n")
         f.close()
 
     # for mapping, write <0-based index on fake genome>, <ref chrom>, <0-based index on ref genome>

@@ -7,7 +7,7 @@ from cupcake2.io.FileIO import write_seqids_to_fasta
 
 input = 'isoseq_flnc.fasta'
 
-NUM_SEQS_PER_BATCH = 200000
+NUM_SEQS_PER_BATCH = 50000
 
 d = LazyFastaReader(input)
 

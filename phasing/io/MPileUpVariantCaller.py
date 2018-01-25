@@ -21,6 +21,7 @@ class MPileUPVariant(object):
         self.record_by_pos = dict((r.pos, r) for r in record_list)
         self.min_cov = min_cov
         self.err_sub = err_sub
+
         self.pval_cutoff = pval_cutoff
         self.expected_strand = expected_strand
 

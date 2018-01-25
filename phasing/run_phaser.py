@@ -11,7 +11,7 @@ import phasing.io.MPileUpVariantCaller as VC
 from phasing.io import VariantPhaser
 from phasing.io import VariantPhaseCleaner
 
-MIN_COVERAGE = 10
+MIN_COVERAGE = 10     # minimum number of FL reads for a gene to do SNP calling and phasing
 ERR_SUB = 0.005
 MAX_DIFF_ALLOWED = 3  # maximum difference in bases allowed for two haplotype strings
 PVAL_CUTOFF = 0.01
@@ -42,7 +42,7 @@ vc.call_variant()
 print vc.variant
 
 if len(vc.variant) == 0:
-    os.system("touch NO_SNPS_FOUND")
+    os.system("touch {out}.NO_SNPS_FOUND".format(out=args.output_prefix))
     print >> sys.stderr, "No SNPs found. END."
     sys.exit(0)
 
@@ -56,7 +56,7 @@ pp.haplotypes.get_haplotype_vcf_assignment()
 seqids = set([r.id for r in SeqIO.parse(open(args.fasta_filename), 'fasta')])
 isoform_tally = VariantPhaser.phase_isoforms(args.read_stat, seqids, pp)
 if len(isoform_tally) == 0:
-    os.system("touch NO_HAPS_FOUND")
+    os.system("touch {out}.NO_HAPS_FOUND".format(out=args.output_prefix))
     print >> sys.stderr, "No good haps found. END."
     sys.exit(0)
 pp.haplotypes.write_haplotype_to_vcf(args.mapping_filename, isoform_tally, args.output_prefix)

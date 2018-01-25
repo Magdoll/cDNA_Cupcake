@@ -509,8 +509,11 @@ class GMAPSAMRecord(SAMRecord):
             except KeyError: # HACK for blasr's extended qID
                 k = self.qID.rfind('/')
                 if k >= 0:
-                    self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
+                    try:
+                        self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
+                    except KeyError:
+                        self.qLen = query_len_dict[self.qID]
                 else:
-                    self.qLen = query_len_dict[self.qID]
+                    raise Exception, "Unable to find qID {0} in the input fasta/fastq!".format(self.qID)
             self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen    
                 

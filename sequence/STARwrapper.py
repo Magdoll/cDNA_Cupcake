@@ -19,8 +19,7 @@ def run_STAR(args):
     out_sam = os.path.abspath(args.out_sam)
     cur_dir = os.getcwd()
     os.chdir(tmp_dir)
-    os.symlink(in_fasta, "in.fasta")
-    cmd = CMD_STAR2_format.format(c=args.cpus, d=args.genome_dir, i="in.fasta")
+    cmd = CMD_STAR2_format.format(c=args.cpus, d=args.genome_dir, i=in_fasta)
     if subprocess.check_call(cmd, shell=True)!=0:
         print >> sys.stderr, "ERROR RUNNING CMD:", cmd
         sys.exit(-1)

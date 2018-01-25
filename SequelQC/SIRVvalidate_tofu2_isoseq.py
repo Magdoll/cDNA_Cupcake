@@ -21,6 +21,9 @@ GMAP_BIN = smrtlink_sirv.GMAP_BIN
 GMAP_DB = smrtlink_sirv.GMAP_DB
 GMAP_CPUS = smrtlink_sirv.GMAP_CPUS
 SIRV_DIR = smrtlink_sirv.SIRV_DIR
+SIRV_GENOME = smrtlink_sirv.SIRV_GENOME
+
+HG38_GENOME = smrtlink_sirv.HG38_GENOME
 
 STAR_BIN = smrtlink_sirv.STAR_BIN
 SIRV_STAR_DB = smrtlink_sirv.SIRV_STAR_DB
@@ -99,6 +102,9 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice):
         elif aligner_choice=='star':
             cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
                 star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+        elif aligner_choice=='minimap2':
+            cmd = "minimap2 -ax splice -uf --secondary=no --splice-flank=no -C5 -t {cpus} {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
+                cpus=GMAP_CPUS, ref=SIRV_GENOME, hq=hq_fastq)
         else:
             raise Exception, "Unrecognized aligner choice: {0}!".format(aligner_choice)
 
@@ -196,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("--tmp_dir", default="tmp", help="tmp dirname (default: tmp)")
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
-    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star'), help="Aligner choice (default: star)")
+    parser.add_argument("--aligner_choice", default='star', choices=('gmap', 'star', 'minimap2'), help="Aligner choice (default: star)")
 
     args = parser.parse_args()
     sanity_check_script_dependencies()

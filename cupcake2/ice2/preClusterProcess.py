@@ -51,7 +51,7 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None,
     reader = reader_class(align_filename)
     for r in reader:
         if r.qID >= r.sID or r.strand == '-': continue
-        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        s = r.characterize(400, 0.4, 100, 0.1, 50, 0.05)
         if dun_use_partial and s == 'partial': continue
 
         #if r.qID=='m54119_170322_155415/12845906/28_5778_CCS' or r.sID=='m54119_170322_155415/12845906/28_5778_CCS':
@@ -93,7 +93,7 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class, dun_use_part
     reader = reader_class(align_filename)#'batch1.fasta.S.f00001.minimap')
     for r in reader:
         if r.strand == '-': continue
-        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        s = r.characterize(400, 0.4, 100, 0.1, 50, 0.05)
         if dun_use_partial and s == 'partial': continue
         # Liz note: currently, just add all to match because minimap sensitivity not enough to do "tuck" properly
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
@@ -127,7 +127,7 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
     reader = reader_class(align_filename)
     for r in reader:
         if r.strand == '-': continue
-        s = r.characterize(100, 0.05, 50, 0.02, 20, 0.01)
+        s = r.characterize(400, 0.4, 100, 0.1, 50, 0.05)
         if dun_use_partial and s == 'partial': continue
         if s == 'match' or s == 'partial' or s.endswith('_contained'):
             pCS.add_seqid_match(r.qID, r.sID)
