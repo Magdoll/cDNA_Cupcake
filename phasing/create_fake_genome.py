@@ -10,8 +10,8 @@ Given a GFF file and selected loci (ex: PB.45),
 create a fake genome that is the concatenation of all seen exons.
 """
 
-extra_bp_around_junctions = 100 # get this much around junctions to be safe AND to not screw up GMAP who doesn't like microintrons....
-__padding_before_after__ = 1000 # get this much before and after the start
+extra_bp_around_junctions = 50 # get this much around junctions to be safe AND to not screw up GMAP who doesn't like microintrons....
+__padding_before_after__ = 10 # get this much before and after the start
 
 def make_fake_genome(genome_filename, gff_filename, ref_chr, ref_start, ref_end, ref_strand, output_prefix, output_name, genome_d=None):
     if genome_d is None:

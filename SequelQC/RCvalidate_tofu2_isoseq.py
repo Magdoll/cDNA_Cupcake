@@ -91,8 +91,13 @@ def validate_with_Gencode(out_dir, eval_dir):
     os.chdir(eval_dir)
     os.symlink(GENCODE_GTF, os.path.basename(GENCODE_GTF))
     os.symlink(os.path.join(out_dir, 'touse.rep.fq.sorted.sam'), 'touse.rep.fq.sorted.sam')
+    os.symlink(os.path.join(out_dir, 'touse.rep.fq'), 'touse.rep.fq')
 
     cmd = "matchAnnot.py --gtf={0} {1} > {1}.matchAnnot.txt".format(GENCODE_GTF, 'touse.rep.fq.sorted.sam')
+    if subprocess.check_call(cmd, shell=True)!=0:
+        raise Exception, "ERROR CMD:", cmd
+
+    cmd = "parse_matchAnnot.py touse.rep.fq touse.rep.fq.sorted.sam.matchAnnot.txt"
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
