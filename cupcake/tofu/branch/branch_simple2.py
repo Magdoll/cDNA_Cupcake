@@ -4,6 +4,7 @@ import numpy as np
 
 import cupcake.io.BioReaders as BioReaders
 import cupcake.tofu.branch.c_branch as c_branch
+from bx.intervals.cluster import ClusterTree
 #from cupcake.tofu.branch.intersection_unique import IntervalTreeUnique, Interval, IntervalNodeUnique
 
 from Bio import SeqIO
@@ -51,10 +52,25 @@ class BranchSimple:
         Iterate over a SORTED GMAP SAM file.
         Return a collection of records that overlap by at least 1 base.
         """
+        def sep_by_clustertree(records):
+            tree = ClusterTree(0,0)
+            for i,r in enumerate(records): tree.insert(r.sStart, r.sEnd, i)
+            result = []
+            for s,e,indices in tree.getregions():
+                result.append([records[i] for i in indices])
+            return result
+
         def sep_by_strand(records):
+            """
+            Note! Must further separate again within each strand. Because of initially processing
+            the strands together, could've collapesd some genes.
+            """
             output = {'+':[], '-':[]}
             for r in records:
                 output[r.flag.strand].append(r)
+            # process + strand using ClusterTree
+            output['+'] = sep_by_clustertree(output['+'])
+            output['-'] = sep_by_clustertree(output['-'])
             return output
 
         records = None # holds the current set of records that overlap in coordinates

@@ -48,6 +48,8 @@ def read_probe_bed(bed_filename, start_base=0, end_base=1):
         tree[r.chr].add(r.start, r.end, (i,Interval(r.start, r.end)))
         if r.name is not None:
             gene_info[i] = r.name
+        else:
+            gene_info[i] = 'NA'
         i += 1
     return tree, gene_info
 

@@ -187,9 +187,10 @@ def main(args):
 
     b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
     iter = b.iter_gmap_sam(args.sam, ignored_fout)
-    for recs in iter:
+    for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
         for v in recs.itervalues():
-            if len(v) > 0: b.process_records(v, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
+            for v2 in v:
+                if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
 
     ignored_fout.close()
     f_good.close()
