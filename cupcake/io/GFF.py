@@ -1089,8 +1089,87 @@ def make_sim_and_ref_seqlength_report(ref_fasta_filename, sim_fasta_filename):
             f.write("SIM\t{0}\t{1}\n".format(len(r.seq),r.id))
             
         
-    
-    
+
+"""
+##gff-version 3
+# generated on Tue Dec 10 12:13:05 2013 by ./dump_all_gramene_dbs_continuing.pl
+# for species maize
+# genebuild 2010-01-MaizeSequence
+5       ensembl gene    1579    3920    .       -       .       ID=GRMZM2G356204;Name=GRMZM2G356204;biotype=protein_coding
+5       ensembl mRNA    1579    3920    .       -       .       ID=GRMZM2G356204_T01;Parent=GRMZM2G356204;Name=GRMZM2G356204_T01;biotype=protein_coding
+5       ensembl exon    1579    3920    .       -       .       Parent=GRMZM2G356204_T01;Name=exon.12
+5       ensembl CDS     1681    3903    .       -       .       Parent=GRMZM2G356204_T01;Name=CDS.13
+5       ensembl gene    10731   23527   .       -       .       ID=GRMZM2G054378;Name=GRMZM2G054378;biotype=protein_coding
+5       ensembl mRNA    22087   23527   .       -       .       ID=GRMZM2G054378_T09;Parent=GRMZM2G054378;Name=GRMZM2G054378_T09;biotype=protein_coding
+5       ensembl intron  22956   23034   .       -       .       Parent=GRMZM2G054378_T09;Name=intron.19
+5       ensembl intron  22799   22898   .       -       .       Parent=GRMZM2G054378_T09;Name=intron.20
+5       ensembl intron  22634   22722   .       -       .       Parent=GRMZM2G054378_T09;Name=intron.21
+5       ensembl intron  22456   22553   .       -       .       Parent=GRMZM2G054378_T09;Name=intron.22
+5       ensembl exon    23035   23527   .       -       .       Parent=GRMZM2G054378_T09;Name=exon.23
+5       ensembl exon    22899   22955   .       -       .       Parent=GRMZM2G054378_T09;Name=exon.24
+5       ensembl exon    22723   22798   .       -       .       Parent=GRMZM2G054378_T09;Name=exon.25
+5       ensembl exon    22554   22633   .       -       .       Parent=GRMZM2G054378_T09;Name=exon.26
+5       ensembl exon    22087   22455   .       -       .       Parent=GRMZM2G054378_T09;Name=exon.27
+5       ensembl CDS     23035   23193   .       -       .       Parent=GRMZM2G054378_T09;Name=CDS.28
+5       ensembl CDS     22929   22955   .       -       0       Parent=GRMZM2G054378_T09;Name=CDS.29
+"""
+class MaizeGFFReader(collapseGFFReader):
+    def read(self):
+        """
+        PacBio-style GFF from the collapsed output, which is
+        0) chrmosome
+        1) source (PacBio)
+        2) feature (transcript|exon)
+        3) start (1-based)
+        4) end (1-based)
+        5) score (always .)
+        6) strand
+        7) frame (always .)
+        8) blurb
+
+        ex:
+        chr1    PacBio  transcript      897326  901092  .       +       .       gene_id "PB.1"; transcript_id "PB.1.1";
+        chr1    PacBio  exon    897326  897427  .       +       .       gene_id "PB.1"; transcript_id "PB.1.1";
+        """
+        cur = self.f.tell()
+        line = self.f.readline().strip()
+        if self.f.tell() == cur:
+            raise StopIteration, "EOF reached!!"
+
+        raw = line.strip().split('\t')
+        if raw[2] == 'gene': # ignore this and read the next line 'mRNA'
+            line = self.f.readline().strip()
+            raw = line.strip().split('\t')
+        assert raw[2] == 'mRNA'
+        chr = raw[0]
+        strand = raw[6]
+        seqid = None
+        for stuff in raw[8].split(';'): # ex: ID=GRMZM2G054378;Name=GRMZM2G054378;biotype=protein_coding
+            a, b = stuff.strip().split('=')
+            if a == 'ID':
+                seqid = b
+                break
+
+        rec = gmapRecord(chr, coverage=None, identity=None, strand=strand, seqid=seqid)
+
+        while True:
+            cur = self.f.tell()
+            line = self.f.readline().strip()
+            if self.f.tell() == cur:
+                return rec
+            raw = line.split('\t')
+            if raw[2] == 'exon':
+                s, e = int(raw[3])-1, int(raw[4])
+                rec.add_exon(s, e, s, e, rstrand=strand, score=None)
+            elif raw[2] == 'CDS':
+                s, e = int(raw[3])-1, int(raw[4])
+                rec.add_cds_exon(s, e)
+            elif raw[2] == 'intron':
+                pass # ignore intron annotations
+            else: # another new record, wind back and return
+                self.f.seek(cur)
+                return rec
+        raise Exception, "Should not reach here!"
                 
     
         
