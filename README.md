@@ -1,6 +1,6 @@
 # cDNA_Cupcake
 
-Last Updated: 03/29/2018
+Last Updated: 04/12/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
@@ -62,9 +62,15 @@ See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki
 
 
 ## Version Changes
+
 2018.03.29 updated to v5.3. Update to work with pitchfork SA5.1
+
 2018.03.12 updated to v5.2. Fixed over-collapsing genes in collapse script. Now processing strands separately in correct manner.
+
 2017.11.06 updated to v4.1. pCS merge incorrect in `chain_samples.py`. Fixed.
+
 2017.10.31 updated to v4.0. pCS merge incorrect in `run_preCluster.py`. Fixed.
+
 2017.10.10 updated to v3.9. Merged pCS branch (`--dun_use_partial`) and cdunn's random seed.
+
 2017.09.25 updated to v3.7. Fixed minor printing error in `scrubbed.group.txt` for `scrub_sample_GFF_junctions.py`. 
