@@ -12,7 +12,7 @@ pbtranscript.tasks.combine_cluster_bins-0
 GMAP_BIN = "/home/UNIXHOME/etseng/bin/gmap"
 GMAP_DB = "/home/UNIXHOME/etseng/share/gmap_db_new/"
 GMAP_CPUS = 12
-GENCODE_GTF = "/home/UNIXHOME/etseng/share/gencode/gencode27-ucsc.gtf"
+GENCODE_GTF = "/home/UNIXHOME/etseng/share/gencode/gencode.v27.annotation.gtf"
 
 def link_files(src_dir, out_dir):
     os.makedirs(out_dir)
@@ -77,7 +77,7 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
     os.chdir(out_dir)
 
     if aligner_choice == 'gmap':
-        cmd = "{gmap} -D {gmap_db} -d hg38_noalt -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
             gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
     elif aligner_choice == 'minimap2':
         cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5  {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
@@ -112,7 +112,7 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
     rep = collapse_prefix + ".min_fl_{0}.filtered".format(min_count)
 
     if aligner_choice=='gmap':
-        cmd = "{gmap} -D {gmap_db} -d hg38_noalt -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
+        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
             gmap=GMAP_BIN, gmap_db=GMAP_DB, cpus=GMAP_CPUS, rep=rep)
     elif aligner_choice=='minimap2':
         cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5  {ref} {rep}.rep.fq > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
