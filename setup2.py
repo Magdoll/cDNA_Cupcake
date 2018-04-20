@@ -4,7 +4,7 @@ import numpy as np
 
 
 __author__ = "etseng@pacb.com"
-version = "5.1"
+version = "5.3"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -30,7 +30,7 @@ setup(
                 'phasing', 'phasing.io'],
     install_requires=[
         'biopython',
-        'bx-python'
+        'bx-python==0.7.3'
         ],
     scripts = ['cupcake/tofu/collapse_isoforms_by_sam.py',
                'cupcake/tofu/get_abundance_post_collapse.py',

@@ -113,7 +113,7 @@ class MPileUpRecord(object):
             else:
                 raise Exception, "Unknown {0} in readBase!".format(b)
 
-        assert self.cov == sanity_counter
+        assert self.cov == sanity_counter or (self.readBase=='*' and self.cov==0)
         # set nCov which is cov provided by non-indel non-skipped bases
         self.nCov = 0
         self.nType = 0
