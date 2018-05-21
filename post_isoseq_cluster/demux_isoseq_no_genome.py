@@ -136,7 +136,7 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
     info = read_cluster_csv(cluster_csv, classify_csv, isoseq_version)
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join("primer"+str(i) for i in xrange(max_primer+1))))
+    f.write("id,{0}\n".format(",".join("primer"+str(i) for i in xrange( max_primer+1))))
     print >> sys.stderr, "Reading {0}....".format(hq_fastq)
     for r in SeqIO.parse(open(hq_fastq), 'fastq'):
         if isoseq_version=='1':

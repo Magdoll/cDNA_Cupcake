@@ -74,6 +74,8 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
         total_fl = 0
         total_nfl = 0
         for m in members.split(','):
+            i = m.find('|')
+            if i > 0: m = m[i+1:]
             cid = m.split('/')[0]
             total_fl += len(fl_ass[cid])
             total_nfl += len(fl_ass[cid]) + len(filter(lambda x: nfl_hit_count[x]==1, nfl_ass[cid]))

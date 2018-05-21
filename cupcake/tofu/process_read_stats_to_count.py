@@ -87,7 +87,7 @@ def tally_count_file(fasta_filename, tally_obj, output_filename, is_pbid):
 
         for pbid in allids:
             print "processing", pbid
-            if pbid in o.tally:
+            if pbid not in o.tally:
                 f.write("{0}\t0\t0\t0\t0\t0\t0\n".format(pbid))
             else:
                 x = o.tally[pbid]

@@ -1,0 +1,22 @@
+# IPython log file
+import pdb
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from cupcake.io.SeqReaders import LazyFastaReader
+#fastad = LazyFastaReader('unpolished.flnc.fasta')
+f = open('unpolished.flnc.fastq','w')
+reader = SeqIO.parse(open('ccs.fastq'),'fastq')
+for r in reader:
+    if r.id not in fastad.d.keys(): continue
+    r2 = fastad[r.id]
+    s2 = r2.seq.tostring()
+    i = r.seq.find(s2)
+    if i > 0: # + strand
+        r3 = SeqRecord(id=r.id, name=r.id, seq=r.seq[i:i+len(s2)], letter_annotations={'phred_quality':r.letter_annotations['phred_quality'][i:i+len(s2)]})
+    else:
+        s4 = r.seq.reverse_complement()
+        p4 = r.letter_annotations['phred_quality'][::-1]
+        i = s4.find(s2)
+        r3 = SeqRecord(id=r.id, name=r.id, seq=s4[i:i+len(s2)], letter_annotations={'phred_quality':p4[i:i+len(s2)]})
+    print r3.id
+    SeqIO.write(r3, f, 'fastq')

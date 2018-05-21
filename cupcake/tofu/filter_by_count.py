@@ -20,28 +20,29 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
     gff_filename = input_prefix + '.gff'
     rep_filename = input_prefix + '.rep.fq'
 
-    # read group
-    group_max_count_fl = {}
-    group_max_count_p = {}
-    f = open(group_filename)
-    for line in f:
-        #ex: PB.1.1  i0HQ_54b0ca|c58773/f30p16/700
-        pbid, members = line.strip().split('\t')
-        group_max_count_fl[pbid] = 0
-        group_max_count_p[pbid] = 0
-        members = members.split(',')
-        for m in members:
-            i = m.find('|')
-            if i > 0:
-                tmp = m.split('|')[1].split('/')[1] #ex: tmp = f30p16
-            else:
-                tmp = m.split('/')[1]
-            fl_count, p_count = tmp.split('p')
-            fl_count = int(fl_count[1:])
-            p_count = int(p_count)
-            group_max_count_fl[pbid] = max(group_max_count_fl[pbid], fl_count)
-            group_max_count_p[pbid] = max(group_max_count_p[pbid], p_count)
-    f.close()
+    if not dun_use_group_count:
+        # read group
+        group_max_count_fl = {}
+        group_max_count_p = {}
+        f = open(group_filename)
+        for line in f:
+            #ex: PB.1.1  i0HQ_54b0ca|c58773/f30p16/700
+            pbid, members = line.strip().split('\t')
+            group_max_count_fl[pbid] = 0
+            group_max_count_p[pbid] = 0
+            members = members.split(',')
+            for m in members:
+                i = m.find('|')
+                if i > 0:
+                    tmp = m.split('|')[1].split('/')[1] #ex: tmp = f30p16
+                else:
+                    tmp = m.split('/')[1]
+                fl_count, p_count = tmp.split('p')
+                fl_count = int(fl_count[1:])
+                p_count = int(p_count)
+                group_max_count_fl[pbid] = max(group_max_count_fl[pbid], fl_count)
+                group_max_count_p[pbid] = max(group_max_count_p[pbid], p_count)
+        f.close()
 
     # read abundance first
     f = open(count_filename)
@@ -60,7 +61,7 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
     f.close()
 
     # group_max_count_p NOT used for now
-    good = filter(lambda x: int(d[x]['count_fl']) >= min_count and (dun_use_group_count or group_max_count_fl[x] >= min_count) and group_max_count_p >= 0, d)
+    good = filter(lambda x: int(d[x]['count_fl']) >= min_count and (dun_use_group_count or group_max_count_fl[x] >= min_count), d)
 
     # write output GFF
     f = open(output_prefix + '.gff', 'w')
