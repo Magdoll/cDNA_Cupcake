@@ -1,0 +1,6 @@
+*.o
+*.pyc
+*.so
+
+build/*
+cupcake/tofu/branch/*

@@ -1,0 +1,126 @@
+# IPython log file
+import os, sys
+from csv import DictReader
+from bx.intervals import IntervalTree
+t = {'+':IntervalTree(), '-':IntervalTree()}
+reader = DictReader(open('ProteinTable149_154224.txt'),delimiter='\t')
+info = {}
+for r in reader:
+    if r['#Replicon Name']!='chr': 
+        print >> sys.stderr, "Ignore", r
+        continue
+    info[r['Locus tag']] = (int(r['Start']), int(r['Stop']), r['Locus tag'])
+    t[r['Strand']].add(int(r['Start']), int(r['Stop']), r['Locus tag'])
+    
+import BioReaders
+from Bio import SeqIO
+d = dict((r.id,len(r.seq)) for r in SeqIO.parse(open('isoseq_flnc.fasta'),'fasta'))
+reader = BioReaders.GMAPSAMReader('test.sam', True, query_len_dict=d)
+get_ipython().magic(u'edit test.py_log')
+get_ipython().magic(u'logstart test.py_log append')
+result = defaultdict(lambda: []) # gene -> list of rec
+from collections import defaultdict
+result = defaultdict(lambda: []) # gene -> list of rec
+get_ipython().magic(u'pdb ')
+for r in reader:
+    ans = sp.match_w_annotation(t, r, info)
+    result[ans[0]].append(ans)
+    
+import match_w_annotation as sp
+reload(sp)
+for r in reader:
+    ans = sp.match_w_annotation(t, r, info)
+    result[ans[0]].append(ans)
+    
+get_ipython().magic(u'ls ')
+get_ipython().magic(u'edit match_w_annotation.py')
+reload(sp)
+result = defaultdict(lambda: []) # gene -> list of rec
+reader = BioReaders.GMAPSAMReader('test.sam', True, query_len_dict=d)
+for r in reader:
+    ans = sp.match_w_annotation(t, r, info)
+    result[ans[0]].append(ans)
+    
+result.keys()[:5]
+result['poly-CJSA_RS07170-CJSA_RS07175']
+get_ipython().magic(u'ls ')
+tail aloha.sam
+get_ipython().magic(u'pwd ')
+len(result)
+result['poly-CJSA_RS07170-CJSA_RS07175']
+result['poly-CJSA_RS07170-CJSA_RS07175'][0]
+a,b,c,d = result['poly-CJSA_RS07170-CJSA_RS07175'][0]
+d
+print d
+d.record_line
+get_ipython().magic(u'ls ')
+reader.header
+f = open('test.grouped_by_annotation.sam', 'w')
+f.write(reader.header)
+result['poly-CJSA_RS07170-CJSA_RS07175'][0]
+result.keys()
+result['novel']
+result.keys()
+for k,v in result.iteritems():
+    if k=='novel': tagRG='novel'
+    elif k.startswith('poly-'): tagRG='poly'
+    else: tagRG='single'
+    v.sort(key=lambda x: (x[1],x[2])) # sort by start, then end
+    for i,x in enumerate(v):
+        f.write("{0}\tSN:Z:{1:06d}\tRG:Z:{2}\n".format(x[3].record_line, i+1, tagRG))
+        
+f.close()
+f = open('test.grouped_by_annotation.sam', 'w')
+f.write(reader.header)
+for k,v in result.iteritems():
+    if k=='novel': tagRG='novel'
+    elif k.startswith('poly-'): tagRG='poly'
+    else: tagRG='single'
+    v.sort(key=lambda x: (x[1],x[2])) # sort by start, then end
+    for i,x in enumerate(v):
+        f.write("{0}\tSN:Z:{1:06d}\tRG:Z:{2}\tRG2:Z:{3}\n".format(x[3].record_line, i+1, tagRG, k))
+        
+f.close()
+f = open('test.grouped_by_annotation.sam', 'w')
+f.write(reader.header)
+for k,v in result.iteritems():
+    if k=='novel': tagRG='novel'
+    elif k.startswith('poly-'): tagRG='poly'
+    else: tagRG='single'
+    v.sort(key=lambda x: (x[1],x[2])) # sort by start, then end
+    for i,x in enumerate(v):
+        f.write("{0}\tSN:Z:{1:06d}\tRG:Z:{2}\tRG2:Z:{3}\n".format(x[3].record_line, i+1, tagRG, k.replace('_','').replace('-','')))
+        
+f.close()
+f = 
+f = open('test.grouped_by_annotation.sam', 'w')
+f.write(reader.header)
+for k,v in result.iteritems():
+    if k=='novel': tagRG='novel'
+    elif k.startswith('poly-'): tagRG='poly'
+    else: tagRG='single'
+    v.sort(key=lambda x: (x[1],x[2])) # sort by start, then end
+    for i,x in enumerate(v):
+        f.write("{0}\tSN:Z:{1:06d}\tRG:Z:{2}\tgn:Z:{3}\n".format(x[3].record_line, i+1, tagRG, k))
+        
+f.close()
+# do Kreuder_2_8
+d = dict((r.id,len(r.seq)) for r in SeqIO.parse(open('Kreuder_2_8.isoseq_flnc.fasta'),'fasta'))
+reader = BioReaders.GAMPSAMReader('Kreuder_2_8.isoseq_flnc.min_cov_90.genome_corrected.sam', True, query_len_dict=d)
+reader = BioReaders.GMAPSAMReader('Kreuder_2_8.isoseq_flnc.min_cov_90.genome_corrected.sam', True, query_len_dict=d)
+f = open('Kreuder_2_8.isoseq_flnc.min_cov_90.genome_corrected.grouped_by_annotation.sam', 'w')
+f.write(reader.header)
+result = defaultdict(lambda: []) # gene -> list of rec
+for r in reader:
+    ans = sp.match_w_annotation(t, r, info)
+    result[ans[0]].append(ans)
+    
+for k,v in result.iteritems():
+    if k=='novel': tagRG='novel'
+    elif k.startswith('poly-'): tagRG='poly'
+    else: tagRG='single'
+    v.sort(key=lambda x: (x[1],x[2])) # sort by start, then end
+    for i,x in enumerate(v):
+        f.write("{0}\tSN:Z:{1:06d}\tRG:Z:{2}\tgn:Z:{3}\n".format(x[3].record_line, i+1, tagRG, k))
+        
+f.close()

@@ -1,0 +1,89 @@
+# IPython log file
+
+import os, sys
+import cupcake.tofu.filter_away_subset as sp
+from Bio import SeqIO
+from cupcake.io.SeqReaders import LazyFastqReader
+
+READ_STAT='hq.no5merge.collapsed.read_stat.txt'
+GFF_FILE='hq.no5merge.collapsed.filtered.gff'
+GENOME_FILE='potato_dm_v404_all_pm_un.fasta'
+MIN_LOCI_COVERAGE=80
+
+print >> sys.stderr, "Reading isoseq_flnc.fastq..."
+
+# 1. read into a dict of zmw --> lazy file pointer
+# 2. also record the zmws and record in rich_zmws
+flnc_fastq_d = LazyFastqReader('isoseq_flnc.fastq')
+rich_zmws = set()
+for k in flnc_fastq_d.keys():
+    zmw = k[:k.rfind('/')]
+    flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
+    rich_zmws.add(zmw)
+
+print >> sys.stderr, "Finished reading isoseq_flnc.fastq."
+
+# use clean pbid remapped results instead
+from csv import DictReader
+from collections import defaultdict
+
+print >> sys.stderr, "Reading read_stat...."
+tally_by_loci = defaultdict(lambda: []) # PB.1 --> [(PB.1.1, zmw1), (PB.1.1, zmw2), (PB.1.2, zmw3)...]
+poor_zmws_not_in_rich = set()
+for r in DictReader(open(READ_STAT),delimiter='\t'):
+    if r['is_fl']=='Y' and r['stat']=='unique':    
+        k = r['pbid']
+        locus = k[:k.rfind('.')] # ex: PB.1
+        zmw = r['id'][:r['id'].rfind('/')] # <movie>/<holeNumber>
+        if zmw in rich_zmws:
+            tally_by_loci[locus].append((k, zmw))
+        else:
+            poor_zmws_not_in_rich.add(zmw)
+    
+from cupcake.io.GFF import collapseGFFReader
+gff_regions = {} # loci --> chr, strand, min start, max end
+for r in collapseGFFReader(GFF_FILE):
+    locus = r.seqid[:r.seqid.rfind('.')]
+    if locus not in gff_regions:
+        gff_regions[locus] = (r.chr, r.strand, r.start, r.end)
+    else:
+        a, b, c, d = gff_regions[locus]
+        gff_regions[locus] = (r.chr, r.strand, min(c, r.start), max(d, r.end))
+
+import phasing.create_fake_genome as ttt        
+from Bio import SeqIO
+
+print >> sys.stderr, "Reading genome..."
+genome_d = SeqIO.to_dict(SeqIO.parse(open(GENOME_FILE),'fasta'))
+cands = filter(lambda k: len(tally_by_loci[k]) >= MIN_LOCI_COVERAGE, tally_by_loci)
+for cand in cands:
+    print >> sys.stderr, "making", cand
+    d2 = os.path.join("by_loci/{0}_size{1}".format(cand, len(tally_by_loci[cand]))) 
+    os.makedirs(d2)
+    f = open(os.path.join(d2, 'config'), 'w')
+    f.write("pbid={0}\n".format(cand))
+    _chr, _strand, _start, _end = gff_regions[cand]
+    f.write("ref_chr={0}\n".format(_chr))
+    f.write("ref_strand={0}\n".format(_strand))
+    f.write("ref_start={0}\n".format(_start-100))
+    f.write("ref_end={0}\n".format(_end+100))
+    f.close()
+    
+    a,b,c,d=gff_regions[cand]
+    try:
+        ttt.make_fake_genome(GENOME_FILE, GFF_FILE, a, c, d, b, d2+'/fake', 'fake_'+str(cand), genome_d)
+    except:
+        # possibly error because there are no spliced transcripts, all single exon
+        print >> sys.stderr, "error in making fake.fasta for {0}. check and possibly delete".format(cand)
+    print a, b, c, d
+
+    # write ccs.fastq
+    f = open(os.path.join(d2, 'ccs.fastq'), 'w')
+    h = open(os.path.join(d2, 'fake.read_stat.txt'), 'w')
+    h.write("id\tlength\tis_fl\tstat\tpbid\n")
+    for _iso, _id in tally_by_loci[cand]:
+        rec = flnc_fastq_d[_id]
+        SeqIO.write(rec, f, 'fastq')
+        h.write("{0}\t{1}\tY\tunique\t{2}\n".format(_id, len(rec.seq), _iso))
+    f.close()
+    h.close()

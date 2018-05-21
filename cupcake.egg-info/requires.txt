@@ -1,0 +1,2 @@
+biopython
+bx-python==0.7.3
