@@ -98,7 +98,7 @@ def read_classify_csv(classify_csv):
     return max_p, info
 
 
-def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, output_filename=sys.stdout):
+def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
     if job_dir is not None:
         out_dir_ignore, mapped_fastq, read_stat, classify_csv, isoseq_version = link_files(job_dir)
         assert isoseq_version in ('1', '2')
@@ -113,8 +113,17 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
     print >> sys.stderr, "Reading {0}....".format(read_stat)
     info = read_read_stat(read_stat, classify_csv)
 
+    # if primer names are not given, just use primer0, primer1, primer2, primer3....
+    tmp_primer_names = dict((i,"primer"+str(i)) for i in xrange(max_primer+1))
+    if primer_names is None:
+        primer_names = tmp_primer_names
+    else:
+        for k,v in tmp_primer_names.iteritems():
+            if k not in primer_names:
+                primer_names[k] = v
+
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join("primer"+str(i) for i in xrange(max_primer+1))))
+    f.write("id,{0}\n".format(",".join(primer_names[i] for i in xrange(max_primer+1))))
     print >> sys.stderr, "Reading {0}....".format(mapped_fastq)
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
         pbid = r.id.split('|')[0]
@@ -133,9 +142,17 @@ if __name__ == "__main__":
     parser.add_argument("--mapped_fastq", help="mapped fastq (overridden by --job_dir if given)")
     parser.add_argument("--read_stat", help="read_stat txt (overridden by --job_dir if given)")
     parser.add_argument("--classify_csv", help="Classify report CSV (overriden by --job_dir if given)")
+    parser.add_argument("--primer_names", default=None, help="Text file showing primer sample names (default: None)")
     parser.add_argument("-o", "--output", help="Output count filename", required=True)
 
     args = parser.parse_args()
 
+    if args.primer_names is not None:
+        primer_names = {}
+        for line in open(args.primer_names):
+            index, name = line.strip().split()
+            primer_names[int(index)] = name
+    else:
+        primer_names = None
 
-    main(args.job_dir, args.mapped_fastq, args.read_stat, args.classify_csv, args.output)
+    main(args.job_dir, args.mapped_fastq, args.read_stat, args.classify_csv, args.output, primer_names)
