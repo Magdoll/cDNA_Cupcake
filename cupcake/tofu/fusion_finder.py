@@ -88,24 +88,20 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
                 # this is the .1 portion
                 coords[r.qID] = "{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
                 isoform_index = 1
-                record_storage[pb_id] = r
+                record_storage[pb_id] = [r]
             else:
-                # this is the .2 portion
+                # this is the .2 portion, or even .3, .4....! handle fusions with > 2 loci correctly
                 coords[r.qID] += "+{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
-                isoform_index = 1
+                record_storage[pb_id].append(r)
 
-                old_r = record_storage[pb_id]
-                f_gff.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
-                    chr=old_r.sID, s=old_r.segments[0].start+1, e=old_r.segments[-1].end, pi=pb_id, j=isoform_index, strand=old_r.flag.strand))
-                for s in old_r.segments:
-                    f_gff.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
-                        chr=old_r.sID, s=s.start+1, e=s.end, pi=pb_id, j=isoform_index, strand=old_r.flag.strand))
-                isoform_index = 2
-                f_gff.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
-                    chr=r.sID, s=r.segments[0].start+1, e=r.segments[-1].end, pi=pb_id, j=isoform_index, strand=r.flag.strand))
-                for s in r.segments:
-                    f_gff.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
-                        chr=r.sID, s=s.start+1, e=s.end, pi=pb_id, j=isoform_index, strand=r.flag.strand))
+    for pb_id, records in record_storage.iteritems():
+        for i,r in enumerate(records):
+            isoform_index = i + 1
+            f_gff.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
+                chr=r.sID, s=r.segments[0].start+1, e=r.segments[-1].end, pi=pb_id, j=isoform_index, strand=r.flag.strand))
+            for s in r.segments:
+                f_gff.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
+                    chr=r.sID, s=s.start+1, e=s.end, pi=pb_id, j=isoform_index, strand=r.flag.strand))
     f_gff.close()
 
     for pb_id in rep_info:
@@ -335,6 +331,7 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
 
 
     # step (4). read the tmp file and modify to display per fusion gene
+    # IMPORTANT: sometimes a fusion can involve more than 2 loci!
     f_group = open(output_prefix + '.group.txt', 'w')
     group_info = {} # ex: PBfusion.1 --> [id1, id2, id3...]
     count = 0
@@ -343,9 +340,17 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
             line = f.readline().strip()
             if len(line) == 0: break
             pbid1, groups1 = line.strip().split('\t')
-            pbid2, groups2 = f.readline().strip().split('\t')
-            assert pbid1.split('.')[1] == pbid2.split('.')[1]
-            group = set(groups1.split(',')).intersection(groups2.split(','))
+            group = set(groups1.split(','))
+            while True:
+                cur_pos = f.tell()
+                line = f.readline().strip()
+                if len(line) == 0: break
+                new_pbid, new_group = line.strip().split('\t')
+                if new_pbid.split('.')[1]!=pbid1.split('.')[1]:
+                    f.seek(cur_pos)
+                    break
+                else: # still in the same fusion group
+                    group = group.intersection(new_group.split(','))
             f_group.write("{0}\t{1}\n".format(pbid1[:pbid1.rfind('.')], ",".join(group)))
             group_info[pbid1[:pbid1.rfind('.')]] = list(group)
             count += 1
