@@ -128,8 +128,12 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
         pbid = r.id.split('|')[0]
         f.write(pbid)
-        for p in xrange(max_primer+1):
-            f.write(",{0}".format(info[pbid][p]))
+        if pbid not in info:
+            print >> sys.stderr, "WARNING: {0} not seen in .read_stat.txt!".format(pbid)
+            for p in xrange(max_primer+1): f.write(",0")
+        else:
+            for p in xrange(max_primer+1):
+                f.write(",{0}".format(info[pbid][p]))
         f.write("\n")
     f.close()
     print >> sys.stderr, "Count file written to {0}.".format(f.name)

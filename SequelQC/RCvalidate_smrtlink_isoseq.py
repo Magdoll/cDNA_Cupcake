@@ -14,15 +14,6 @@ GMAP_DB = "/home/UNIXHOME/etseng/share/gmap_db_new/"
 GMAP_CPUS = 12
 GENCODE_GTF = "/home/UNIXHOME/etseng/share/gencode/gencode.v27.annotation.gtf"
 
-def link_files(src_dir, out_dir):
-    os.makedirs(out_dir)
-    hq_fastq = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'hq_isoforms.fastq')
-    cluster_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'cluster_report.csv')
-
-    os.symlink(hq_fastq, os.path.join(out_dir, 'hq_isoforms.fastq'))
-    os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
-
-    return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv'
 
 def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
     """

@@ -39,9 +39,13 @@ from csv import DictReader
 from Bio import SeqIO
 
 def get_roi_len(seqid):
-    # <movie>/<zmw>/<start>_<end>_CCS
-    if not seqid.endswith('_CCS'):
-        print >> sys.stderr, "Sequence ID format must be <movie>/<zmw>/<start>_<end>_CCS! Abort!"
+    # before isoseq3: <movie>/<zmw>/<start>_<end>_CCS
+    # for isoseq3: <movie>/<zmw>/ccs
+    if seqid.endswith('/ccs'):
+        print >> sys.stderr, "WARNING: isoseq3 format detected. Output `length` column will be `NA`."
+        return "NA"
+    elif not seqid.endswith('_CCS'):
+        print >> sys.stderr, "Sequence ID format must be <movie>/<zmw>/<start>_<end>_CCS or <movie>/<zmw>/ccs! Abort!"
         sys.exit(-1)
     s, e, junk = seqid.split('/')[2].split('_')
     return abs(int(s)-int(e))
@@ -76,8 +80,9 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
         for cid in members.split(','):
             # ex: x is 'i1_c123/f3p0/123 or 'i0_HQ_samplexxxx|c1234/f2p30/279' or 'c123/f3p0/123'
             # m131116_014707_42141_c100591062550000001823103405221462_s1_p0/93278/31_1189_CCS
+            # if cid starts with 'transcript/' it is from isoseq3, do not split by '/'
             if sample_prefixes is None:
-                if is_cid: cid = cid.split('/')[0]
+                if not cid.startswith('transcript/') and is_cid: cid = cid.split('/')[0]
                 # replace _HQ_ or _LQ_ with _ICE_ to be compatible with cluster_report.csv later
                 if cid.find('_HQ_') > 0:  # isoseq1
                     cid = cid.replace('_HQ_', '_ICE_')
@@ -89,7 +94,7 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
             else:
                 if any(cid.startswith(sample_prefix + '|') for sample_prefix in sample_prefixes):
                     sample_prefix, cid = cid.split('|', 1)
-                    if is_cid: cid = cid.split('/')[0]
+                    if not cid.startswith('transcript/') and is_cid: cid = cid.split('/')[0]
                     cid_info[sample_prefix][cid] = pbid
     return cid_info
 
@@ -97,6 +102,7 @@ cluster_rex_sa3 = re.compile('i\d+_ICE_\S+\|c(\d+)')
 cluster_rex_sa2 = re.compile('i\d+[HL]Q_\S+|c(\d+)')
 # ex: cb100_c7,m54006_170206_215027/70189550/2661_56_CCS,FL
 cluster_rex_tofu2 = re.compile('cb(\d+)_c(\d+)')
+cluster_rex_isoseq3 = re.compile('transcript/(\d+)') # for isoseq3: transcript/0, transcript/1, etc
 
 def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output_mode='w'):
     """
@@ -145,7 +151,9 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
             if m is None:
                 m = cluster_rex_tofu2.match(cid)
                 if m is None:
-                    raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
+                    m = cluster_rex_isoseq3.match(cid)
+                    if m is None:
+                        raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
 
         x = r['read_id']
         if cid in cid_info:
@@ -187,134 +195,6 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
             id=x, len=get_roi_len(x), is_fl='N', stat=stat, pbid=pbid))
 
     f.close()
-
-
-# def output_read_count_RoI(cid_info, roi_filename, output_filename):
-#     """
-#     For each
-#     """
-#     f = open(output_filename, 'w')
-#     f.write("id\tlength\tis_fl\tstat\tpbid\n")
-#     for r in FastaReader(roi_filename):
-#         if r.id in cid_info: pbid, stat = cid_info[r.name], 'unique'
-#         else: pbid, stat = 'NA', 'unmapped'
-#         f.write("{id}\t{len}\t{is_fl}\t{stat}\t{pbid}\n".format(\
-#             id=r.name, len=get_roi_len(r.name), is_fl='Y', stat=stat, pbid=pbid))
-#     f.close()
-#
-# def output_read_count_FL(cid_info, pickle_prefix_list, output_filename, output_mode='w', restricted_movies=None):
-#     """
-#     If restricted_movies is None, all nonFL reads are output.
-#     Otherwise (esp. in case where I binned by size then pooled in the end), give the list of movies associated
-#     with a particular list of cell runs (ex: brain_2to3k_phusion nonFL only)
-#
-#     Because may have multiple pickles, can ONLY determine which FL reads are unmapped at the VERY END
-#     """
-#     unmapped_holder = set() # will hold anything that was unmapped in one of the pickles
-#     mapped_holder = set() # will hold anything that was mapped in (must be exactly) one of the pickles
-#     # then to get the true unmapped just to {unmapped} - {mapped}
-#
-#     if output_mode == 'w':
-#         f = open(output_filename, 'w')
-#         f.write("id\tlength\tis_fl\tstat\tpbid\n")
-#     elif output_mode == 'a':
-#         f = open(output_filename, 'a')
-#     else:
-#         raise Exception, "Output mode {0} not valid!".format(output_mode)
-#
-#     for sample_prefix, pickle_filename in pickle_prefix_list:
-#         with open(pickle_filename) as h:
-#             uc = load(h)['uc']
-#         for cid_no_prefix, members in uc.iteritems():
-#             cid = 'c' + str(cid_no_prefix)
-#             if cid in cid_info[sample_prefix]:
-#                 # can immediately add all (movie-restricted) members to mapped
-#                 pbid, stat = cid_info[sample_prefix][cid], 'unique'
-#                 for x in members:
-#                     movie = x.split('/')[0]
-#                     if restricted_movies is None or movie in restricted_movies:
-#                         mapped_holder.add(x)
-#                         f.write("{id}\t{len}\t{is_fl}\t{stat}\t{pbid}\n".format(\
-#                         id=x, len=get_roi_len(x), is_fl='Y', stat=stat, pbid=pbid))
-#             else:
-#                 # is only potentially unmapped, add all (movie-restricted) members to unmapped holder
-#                 for x in members:
-#                     movie = x.split('/')[0]
-#                     if restricted_movies is None or movie in restricted_movies:
-#                         unmapped_holder.add(x)
-#
-#     # now with all the pickles processed we can determine which of all (movie-restricted) FL reads
-#     # are not mapped in any of the pickles
-#     unmapped_holder = unmapped_holder.difference(mapped_holder)
-#     pbid, stat = 'NA', 'unmapped'
-#     for x in unmapped_holder:
-#         f.write("{id}\t{len}\t{is_fl}\t{stat}\t{pbid}\n".format(\
-#         id=x, len=get_roi_len(x), is_fl='Y', stat=stat, pbid=pbid))
-#     f.close()
-#
-# def output_read_count_nFL(cid_info, pickle_prefix_list, output_filename, output_mode='w', restricted_movies=None):
-#     """
-#     If restricted_movies is None, all nonFL reads are output.
-#     Otherwise (esp. in case where I binned by size then pooled in the end), give the list of movies associated
-#     with a particular list of cell runs (ex: brain_2to3k_phusion nonFL only)
-#
-#     There is no guarantee that the non-FL reads are shared between the pickles, they might be or not
-#     Instead determine unmapped (movie-restricted) non-FL reads at the very end
-#     """
-#     unmapped_holder = set() # will hold anything that was unmapped in one of the pickles
-#     # then to get the true unmapped just to {unmapped} - {mapped}
-#
-#     mapped = {}  # nFL seq -> list of (sample_prefix, cluster) it belongs to
-#
-#     if output_mode == 'w':
-#         f = open(output_filename, 'w')
-#         f.write("id\tlength\tis_fl\tstat\tpbid\n")
-#     elif output_mode == 'a':
-#         f = open(output_filename, 'a')
-#     else:
-#         raise Exception, "Output mode {0} not valid!".format(output_mode)
-#
-#     for sample_prefix, pickle_filename in pickle_prefix_list:
-#         with open(pickle_filename) as h:
-#             result = load(h)
-#             uc = result['partial_uc']
-#             if restricted_movies is None:
-#                 unmapped_holder.update(result['nohit'])
-#             else:
-#                 unmapped_holder.update(filter(lambda x: x.split('/')[0] in restricted_movies, result['nohit']))
-#
-#         for cid_no_prefix, members in uc.iteritems():
-#             cid = 'c' + str(cid_no_prefix)
-#             if cid in cid_info[sample_prefix]: # is at least mapped
-#                 pbid = cid_info[sample_prefix][cid]
-#                 for x in members:
-#                     movie = x.split('/')[0]
-#                     if restricted_movies is None or movie in restricted_movies:
-#                         if x not in mapped: mapped[x] = set()
-#                         mapped[x].add(pbid)
-#             else: # not entirely sure it is unmapped but put it in in the meantime
-#                 for x in members:
-#                     movie = x.split('/')[0]
-#                     if restricted_movies is None or movie in restricted_movies:
-#                         unmapped_holder.add(x)
-#
-#     # now we can go through the list of mapped to see which are uniquely mapped which are not
-#     for seqid, pbids in mapped.iteritems():
-#         if len(pbids) == 1: # unique
-#             stat = 'unique'
-#         else:
-#             stat = 'ambiguous'
-#         for pbid in pbids:
-#             f.write("{id}\t{len}\t{is_fl}\t{stat}\t{pbid}\n".format(\
-#                 id=seqid, len=get_roi_len(seqid), is_fl='N', stat=stat, pbid=pbid))
-#
-#     unmapped_holder = unmapped_holder.difference(mapped)
-#
-#     # write the nohits
-#     for seqid in unmapped_holder:
-#         f.write("{id}\t{len}\t{is_fl}\t{stat}\t{pbid}\n".format(\
-#             id=seqid, len=get_roi_len(seqid), is_fl='N', stat='unmapped', pbid='NA'))
-#     f.close()
 
 
 def make_abundance_file(read_count_filename, output_filename, given_total=None, restricted_movies=None, write_header_comments=True):
@@ -427,7 +307,7 @@ def get_abundance_post_collapse(collapse_prefix, cluster_report_csv, output_pref
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
-    parser = ArgumentParser("Get abundance/read stat information after running collapse script.")
+    parser = ArgumentParser("Get abundance/read stat information after running collapse script. Works for Iso-Seq1, 2, and 3 output.")
     parser.add_argument("collapse_prefix", help="Collapse prefix (must have .group.txt)")
     parser.add_argument("cluster_report", help="Cluster CSV report")
 

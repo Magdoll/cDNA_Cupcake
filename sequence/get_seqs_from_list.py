@@ -5,7 +5,7 @@ from Bio import SeqIO
 def get_seqs_from_list(fastafile, listfile):
     seqs = [line.strip() for line in open(listfile)]
     for r in SeqIO.parse(open(fastafile), 'fasta'):
-        if r.id in seqs or r.id.split('|')[0] in seqs:
+        if r.id in seqs or r.id.split('|')[0] in seqs or any(r.id.startswith(x) for x in seqs):
             print ">" + r.id
             print r.seq
 
