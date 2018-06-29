@@ -29,6 +29,12 @@ Classify report format:
     m54033_171031_152256/27919078/31_1250_CCS,+,1,1,1,31,1250,1280,3,0
     m54033_171031_152256/27919079/31_3840_CCS,+,1,1,1,31,3840,3869,2,0
     m54033_171031_152256/27919086/29_3644_CCS,+,1,1,1,29,3644,3674,2,0
+
+    (isoseq3)
+    id,strand,fivelen,threelen,polyAlen,insertlen,primer_index,primer
+    m54020_170625_150952/69664969/ccs,-,31,39,57,2627,0--7,Clontech--bc7
+    m54020_170625_150952/69664996/ccs,-,31,40,59,990,0--6,Clontech--bc6
+    m54020_170625_150952/69664999/ccs,+,30,38,59,1724,0--1,Clontech--bc1
 """
 
 import os, re, sys
@@ -86,16 +92,21 @@ def read_read_stat(read_stat, classify_info):
 def read_classify_csv(classify_csv):
     """
     :param classify_csv: classify report csv
-    :return: primer range, dict of FL/nFL id --> primer (in integer)
+    :return: primer list, dict of FL/nFL id --> primer (in integer if isoseq1 or 2)
     """
+    # for isoseq1 and 2, primer is an integer
+    # for isoseq3, use primer_index field which is ex: 0--1, 0--2
     info = {}
-    max_p = 0
+    primer_list = set()
     for r in DictReader(open(classify_csv), delimiter=','):
         if r['primer']=='NA': continue # skip nFL
-        p = int(r['primer'])
-        max_p = max(max_p, p)
+        if 'primer_index' in r: # isoseq3 version
+            p = r['primer_index']
+        else: # isoseq1 or 2
+            p = r['primer']
+        primer_list.add(p)
         info[r['id']] = p
-    return max_p, info
+    return primer_list, info
 
 
 def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
@@ -109,12 +120,14 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
 
     # info: dict of hq_isoform --> primer --> FL count
     print >> sys.stderr, "Reading {0}....".format(classify_csv)
-    max_primer, classify_csv = read_classify_csv(classify_csv)
+    primer_list, classify_csv = read_classify_csv(classify_csv)
     print >> sys.stderr, "Reading {0}....".format(read_stat)
     info = read_read_stat(read_stat, classify_csv)
 
-    # if primer names are not given, just use primer0, primer1, primer2, primer3....
-    tmp_primer_names = dict((i,"primer"+str(i)) for i in xrange(max_primer+1))
+    primer_list = list(primer_list)
+    primer_list.sort()
+    # if primer names are not given, just use as is...
+    tmp_primer_names = dict((x,x) for x in primer_list)
     if primer_names is None:
         primer_names = tmp_primer_names
     else:
@@ -123,17 +136,13 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
                 primer_names[k] = v
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join(primer_names[i] for i in xrange(max_primer+1))))
+    f.write("id,{0}\n".format(",".join(primer_names.keys())))
     print >> sys.stderr, "Reading {0}....".format(mapped_fastq)
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
         pbid = r.id.split('|')[0]
         f.write(pbid)
-        if pbid not in info:
-            print >> sys.stderr, "WARNING: {0} not seen in .read_stat.txt!".format(pbid)
-            for p in xrange(max_primer+1): f.write(",0")
-        else:
-            for p in xrange(max_primer+1):
-                f.write(",{0}".format(info[pbid][p]))
+        for p in primer_names:
+            f.write(",{0}".format(info[pbid][p]))
         f.write("\n")
     f.close()
     print >> sys.stderr, "Count file written to {0}.".format(f.name)
@@ -155,7 +164,7 @@ if __name__ == "__main__":
         primer_names = {}
         for line in open(args.primer_names):
             index, name = line.strip().split()
-            primer_names[int(index)] = name
+            primer_names[index] = name
     else:
         primer_names = None
 
