@@ -52,7 +52,7 @@ def make_classify_report_from_lima(clips_filename, primer_index_dict, flnc_bam=N
 
     """
     if flnc_bam is not None:
-        flnc_len_dict = dict((r.qname, r.qlen) for r in pysam.Samfile(flnc_bam))
+        flnc_len_dict = dict((r.qname, r.qlen) for r in pysam.Samfile(flnc_bam, check_sq=False))
     else:
         flnc_len_dict = None
         print >> sys.stderr, "WARNING: FLNC BAM not provided. `polyAlen` and `insertlen` fields will be `NA`."
@@ -64,6 +64,7 @@ def make_classify_report_from_lima(clips_filename, primer_index_dict, flnc_bam=N
     first_of_pair_seen = False
     rec = {'id':None,'strand':None,'fivelen':None,'threelen':None,'polyAlen':None,'insertlen':None,
                    'primer_index':None,'primer':None}
+
     for r in SeqIO.parse(open(clips_filename),'fasta'):
         m = clip_rex.match(r.description)
         zmw = m.group(1) + '/ccs'
@@ -72,11 +73,11 @@ def make_classify_report_from_lima(clips_filename, primer_index_dict, flnc_bam=N
 
         if primer_index_dict[bc][0]=='5p':
             p5 = bc
-            rec['fivelen'], end5 = e-s, e
+            rec['fivelen'], start5, end5 = e-s, s, e
         else:
             assert primer_index_dict[bc][0]=='3p'
             p3 = bc
-            rec['threelen'], end3 = e-s, e
+            rec['threelen'], start3, end3 = e-s, s, e
 
         if first_of_pair_seen:  # both pairs seen, write out and reset
             assert rec['id'] == zmw
@@ -86,7 +87,10 @@ def make_classify_report_from_lima(clips_filename, primer_index_dict, flnc_bam=N
                 rec['polyAlen']='NA'
             else:
                 rec['insertlen'] = flnc_len_dict[zmw]
-                rec['polyAlen'] = abs(end3-end5)-rec['insertlen']
+                if rec['strand'] == '+':
+                    rec['polyAlen'] = start3 - end5 -rec['insertlen']
+                else:
+                    rec['polyAlen'] = start5 - end3 -rec['insertlen']
 
             rec['primer'] = "{0}--{1}".format(primer_index_dict[p5][1], primer_index_dict[p3][1])
             rec['primer_index'] = "{0}--{1}".format(p5, p3)
@@ -101,7 +105,7 @@ def make_classify_report_from_lima(clips_filename, primer_index_dict, flnc_bam=N
             first_of_pair_seen = False
             rec = {'id':None,'strand':None, 'fivelen':None,'threelen':None,'polyAlen':None,'insertlen':None,
                    'primer_index':None,'primer':None}
-            p5, p3, end5, end3 = None, None, None, None
+            p5, p3, start5, end5, start3, end3 = None, None, None, None, None, None
         else: # first of the pair
             rec['id'] = zmw
             first_of_pair_seen = True

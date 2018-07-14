@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 06/29/2018
+Last Updated: 07/13/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 5.4
+Current version: 5.6
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki
 
 
 ## Version Changes
+
+2018.07.13 updated to v5.6. fixed polyA length bug in make classify report for isoseq3.
 
 2018.06.29 updated to v5.4. collapse,fusion,abundance,demux now works with isoseq3 output. 
 
