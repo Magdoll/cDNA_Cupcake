@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 07/13/2018
+Last Updated: 07/16/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 5.6
+Current version: 5.7
 
 ## Python Requirements
 * Python >= 2.7
@@ -45,6 +45,9 @@ A brief list of currently listed scripts are:
 * `sort_fasta_by_len.py`: sort fasta file by length (increasing or decreasing).
 * `get_seqs_from_list.py`: extract list of sequences given a fasta file and a list of IDs.
 * `err_correct_w_genome.py`: generate fasta sequences given genom
+* `sam_to_bam.py`: quick script to run SAM to BAM conversion. Assumes `samtools` is installed.
+* `sam_to_gff3.py`: use BCBio and BioPython to convert SAM file into GFF3 format. 
+
 
 ### Sequence Simulation
 * `simulate.py`: Simulate error in sequences.
@@ -62,6 +65,8 @@ See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki
 
 
 ## Version Changes
+
+2018.07.16 updated to v5.7. added `sam_to_bam.py` and `sam_to_gff3.py` (requires BCBio)
 
 2018.07.13 updated to v5.6. fixed polyA length bug in make classify report for isoseq3.
 
