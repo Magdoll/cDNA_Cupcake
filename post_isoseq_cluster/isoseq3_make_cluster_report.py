@@ -6,7 +6,7 @@ report_fields = ['cluster_id', 'read_id', 'read_type']
 
 
 def make_cluster_report_from_polished_bam(polished_bam):
-    f = pysam.Samfile(polished_bam)
+    f = pysam.Samfile(polished_bam, check_sq=False)
     h = open('cluster_report.csv', 'w')
     writer = DictWriter(h, fieldnames=report_fields, delimiter=',')
     writer.writeheader()
