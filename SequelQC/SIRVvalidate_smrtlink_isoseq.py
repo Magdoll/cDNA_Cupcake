@@ -18,7 +18,7 @@ SIRV_GENOME = "/home/UNIXHOME/etseng/projects2015/Lexogen_SIRV/ground_truth/SIRV
 STAR_BIN = "python /home/UNIXHOME/etseng/GitHub/cDNA_Cupcake/sequence/STARwrapper.py"
 SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
 
-HG38_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/hg38/hg38.mmi"
+HG38_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/hg38/hg38_noalt.mmi"
 MM10_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/mm10/mm10.mmi"
 
 def rename_isoseq3_hq(src_dir):

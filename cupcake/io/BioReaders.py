@@ -321,6 +321,7 @@ class SAMRecord:
     @classmethod
     def parse_sam_flag(self, flag):
         """
+		Heng Li's SAM https://samtools.github.io/hts-specs/SAMv1.pdf
         1 -- read is one of a pair
         2 -- alignment is one end of proper PE alignment          (IGNORE)
         4 -- read has no reported alignments                      (IGNORE)
@@ -330,6 +331,9 @@ class SAMRecord:
         64 -- first mate in pair
         128 -- second mate in pair
         256 -- not primary alignment
+		512 -- not passing filters
+		1024 -- PCR or optical duplicate
+		2048 -- supplementary alignment
 
         Return: SAMflag
         """

@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 07/16/2018
+Last Updated: 08/01/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 5.7
+Current version: 5.8
 
 ## Python Requirements
 * Python >= 2.7
@@ -60,11 +60,10 @@ A brief list of currently listed scripts are:
 * `chain_samples.py`: Chaining together multiple samples.
 * `fusion_finder.py`: Finding fusion genes.
 
-### ToFU2: a beta version of Iso-Seq2
-See [ToFU2 white paper](https://github.com/PacificBiosciences/IsoSeq_SA3nUP/wiki/%5BBeta%5D-ToFU2:-running-and-installing-ToFU2) about improvements and how to install.
-
 
 ## Version Changes
+
+2018.08.01 updated to v5.8. (also tagged as `cupcake_v5.8`) fixed `sam_to_gff3.py` to output GFF3 correctly, also refreshed BioReaders.py in sequence/ to be up-to-date with cupcake/io version.
 
 2018.07.16 updated to v5.7. added `sam_to_bam.py` and `sam_to_gff3.py` (requires BCBio)
 

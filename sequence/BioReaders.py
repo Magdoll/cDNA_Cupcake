@@ -1,3 +1,8 @@
+"""
+Should always be faithful duplicate of sequence/BioReaders.py
+Duplicated here for tofu installation. This one is called via cupcake.io.BioReaders.
+"""
+
 import re, sys
 from collections import namedtuple
 from exceptions import StopIteration
@@ -316,6 +321,7 @@ class SAMRecord:
     @classmethod
     def parse_sam_flag(self, flag):
         """
+		Heng Li's SAM https://samtools.github.io/hts-specs/SAMv1.pdf
         1 -- read is one of a pair
         2 -- alignment is one end of proper PE alignment          (IGNORE)
         4 -- read has no reported alignments                      (IGNORE)
@@ -325,14 +331,19 @@ class SAMRecord:
         64 -- first mate in pair
         128 -- second mate in pair
         256 -- not primary alignment
+		512 -- not passing filters
+		1024 -- PCR or optical duplicate
+		2048 -- supplementary alignment
 
         Return: SAMflag
         """
         PE_read_num = 0
         strand = '+'
-        if flag > 1024: #PCR or optical duplicate, should never see this...
+        if flag >= 2048: # supplementary alignment
+            flag -= 2048
+        if flag >= 1024: #PCR or optical duplicate, should never see this...
             flag -= 1024
-        if flag > 512: #not passing QC, should never see this
+        if flag >= 512: #not passing QC, should never see this
             flag -= 512
         if flag >= 256: #secondary alignment, OK to see this if option given in BowTie
             flag -= 256
@@ -502,8 +513,11 @@ class GMAPSAMRecord(SAMRecord):
             except KeyError: # HACK for blasr's extended qID
                 k = self.qID.rfind('/')
                 if k >= 0:
-                    self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
+                    try:
+                        self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
+                    except KeyError:
+                        self.qLen = query_len_dict[self.qID]
                 else:
-                    self.qLen = query_len_dict[self.qID]
+                    raise Exception, "Unable to find qID {0} in the input fasta/fastq!".format(self.qID)
             self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen    
                 

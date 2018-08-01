@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
 """
@@ -34,15 +35,17 @@ def convert_sam_rec_to_gff3_rec(r):
     :return SeqRecord ready to be written as GFF3
     """
     seq = Seq("AAAA")  # DO NOT CARE since sequence is not written in GFF3
-    rec = SeqRecord(seq, r.qID)
+    rec = SeqRecord(seq, r.sID)
     strand = 1 if r.flag.strand == '+' else -1
 
     indels = r.num_ins+r.num_del
     mismatches = r.num_nonmatches
     matches = r.num_mat_or_sub - r.num_nonmatches
 
-    gene_qualifiers = {"source": r.sID, "ID": r.qID} # for gene record
-    mRNA_qualifiers = {"source": r.sID, "ID": r.qID, "coverage": floor(r.qCoverage*10**2)/10**2, "identity": floor(r.identity*10**2)/10**2,
+    gene_qualifiers = {"source": "hg38", "ID": r.qID+'.gene', "Name": r.qID} # for gene record
+    mRNA_qualifiers = {"source": "hg38", "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
+                       "coverage": "{0:.2f}".format(r.qCoverage*10**2) if r.qCoverage is not None else "NA",
+                       "identity": "{0:.2f}".format(r.identity*10**2),
                        "matches": matches, "mismatches": mismatches, "indels": indels}
 
     # gene line, one per record
@@ -50,10 +53,16 @@ def convert_sam_rec_to_gff3_rec(r):
     # mRNA line, one per record
     top_feature.sub_features = [SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="mRNA", strand=strand, qualifiers=mRNA_qualifiers)]
     # exon lines, as many exons per record
-    for e in r.segments:
-        top_feature.sub_features.append(SeqFeature(FeatureLocation(e.start, e.end), type="exon", strand=strand, qualifiers=gene_qualifiers))
+    for i,e in enumerate(r.segments):
+        exon_qual = {"source": "hg38", "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
+        top_feature.sub_features.append(SeqFeature(FeatureLocation(e.start, e.end), type="exon", strand=strand, qualifiers=exon_qual))
     rec.features = [top_feature]
     return rec
+
+def convert_sam_to_gff3(sam_filename, output_gff3, q_dict=None):
+    with open(output_gff3, 'w') as f:
+        recs = [convert_sam_rec_to_gff3_rec(r0) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
+        BCBio_GFF.write(recs, f)
 
 def main():
     from argparse import ArgumentParser

@@ -8,8 +8,6 @@ from Bio import SeqIO
 import coordinate_mapper as sp
 import BioReaders
 
-from pbcore.io.FastaIO import FastaReader
-
 
 ###### MODIFY FILENAME BELOW #######
 #genome_file = 'hg38.fa'
@@ -19,12 +17,12 @@ from pbcore.io.FastaIO import FastaReader
 #output_err_corrected_fasta = 'isoseq_flnc.genome_corrected.fasta'
 ####################################
 
-def err_correct(genome_file, sam_file, output_err_corrected_fasta):
-    genome_dict = {}
-    for r in SeqIO.parse(open(genome_file), 'fasta'):
-        genome_dict[r.name] = r
-
-    print >> sys.stderr, "done reading", genome_file
+def err_correct(genome_file, sam_file, output_err_corrected_fasta, genome_dict=None):
+    if genome_dict is None:
+        genome_dict = {}
+        for r in SeqIO.parse(open(genome_file), 'fasta'):
+            genome_dict[r.name] = r
+        print >> sys.stderr, "done reading", genome_file
 
     f = open(output_err_corrected_fasta, 'w')
     reader = BioReaders.GMAPSAMReader(sam_file, True)
