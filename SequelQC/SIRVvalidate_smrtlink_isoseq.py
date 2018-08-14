@@ -23,11 +23,15 @@ MM10_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/mm10/mm10.mmi"
 
 def rename_isoseq3_hq(src_dir):
     unpolished_fa = os.path.join(src_dir, 'tasks', 'isoseqs.tasks.sierra-0', 'unpolished.fasta')
+    unpolished_fa2 = os.path.join(src_dir, 'tasks', 'isoseq3.tasks.cluster-0', 'unpolished.fasta')
     polished_hq = os.path.join(src_dir, 'tasks', 'pbcoretools.tasks.bam2fastq_transcripts-0', 'hq_transcripts.fastq')
 
     if not os.path.exists(unpolished_fa):
-        print >> sys.stderr, "{0} does not exist. Abort!".format(unpolished_fa)
-        sys.exit(-1)
+        if not os.path.exists(unpolished_fa2):
+            print >> sys.stderr, "{0} or {1} does not exist. Abort!".format(unpolished_fa, unpolished_fa2)
+            sys.exit(-1)
+        else:
+            unpolished_fa = unpolished_fa2
     if not os.path.exists(polished_hq):
         print >> sys.stderr, "{0} does not exist. Abort!".format(polished_hq)
         sys.exit(-1)
@@ -59,10 +63,13 @@ def isoseq3_cluster_report(src_dir):
     import glob
 
     polished_bams = glob.glob(src_dir + '/tasks/isoseqs.tasks.tango-*/polished.bam')
+    polished_bams2 = glob.glob(src_dir + '//tasks/isoseq3.tasks.polish-*/polished.bam')
 
     if len(polished_bams) == 0:
-        print >> sys.stderr, "polished.bam does not exist. Abort!"
-        sys.exit(-1)
+        if len(polished_bams2) == 0:
+            print >> sys.stderr, "polished.bam does not exist. Abort!"
+            sys.exit(-1)
+        else: polished_bams = polished_bams2
     else:
         print >> sys.stderr, "Found {0} polished bams.".format(len(polished_bams))
 

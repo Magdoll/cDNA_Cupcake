@@ -21,6 +21,7 @@ ex: from GMAP
 #!/usr/bin/env python
 import os, sys
 import subprocess
+from collections import Counter
 from math import floor
 from BCBio import GFF as BCBio_GFF
 from Bio import SeqIO
@@ -29,11 +30,15 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from cupcake.io.BioReaders import  GMAPSAMReader
 
-def convert_sam_rec_to_gff3_rec(r):
+def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
     """
     :param r: GMAPSAMRecord record
+	:param qid_seen: list of qIDs processed so far -- if redundant, we have to put a unique suffix
     :return SeqRecord ready to be written as GFF3
     """
+    if r.sID == '*':
+        print >> sys.stderr, "Skipping {0} because unmapped.".format(r.qID)
+        return None
     seq = Seq("AAAA")  # DO NOT CARE since sequence is not written in GFF3
     rec = SeqRecord(seq, r.sID)
     strand = 1 if r.flag.strand == '+' else -1
@@ -41,6 +46,12 @@ def convert_sam_rec_to_gff3_rec(r):
     indels = r.num_ins+r.num_del
     mismatches = r.num_nonmatches
     matches = r.num_mat_or_sub - r.num_nonmatches
+
+    if qid_index_dict is not None:
+        if r.qID in qid_index_dict: 
+            qid_index_dict[r.qID] += 1
+            r.qID += '_dup' + str(qid_index_dict[r.qID])
+        else: qid_index_dict[r.qID] += 1
 
     gene_qualifiers = {"source": "hg38", "ID": r.qID+'.gene', "Name": r.qID} # for gene record
     mRNA_qualifiers = {"source": "hg38", "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
@@ -60,9 +71,10 @@ def convert_sam_rec_to_gff3_rec(r):
     return rec
 
 def convert_sam_to_gff3(sam_filename, output_gff3, q_dict=None):
+    qid_index_dict = Counter()
     with open(output_gff3, 'w') as f:
-        recs = [convert_sam_rec_to_gff3_rec(r0) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
-        BCBio_GFF.write(recs, f)
+        recs = [convert_sam_rec_to_gff3_rec(r0, qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
+        BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
 
 def main():
     from argparse import ArgumentParser
@@ -86,7 +98,7 @@ def main():
 
     with open(output_gff3, 'w') as f:
         recs = [convert_sam_rec_to_gff3_rec(r0) for r0 in GMAPSAMReader(args.sam_filename, True, query_len_dict=q_dict)]
-        BCBio_GFF.write(recs, f)
+        BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
 
 
     print >> sys.stderr, "Output written to {0}.".format(output_gff3)
