@@ -2,7 +2,7 @@
 __author__ = 'etseng@pacb.com'
 
 """
-Demultiplex IsoSeq1/IsoSeq2 job output (without genome mapping)
+Demultiplex IsoSeq1/IsoSeq2/IsoSeq3 job output (without genome mapping)
 
 =================
 WITHOUT GENOME
@@ -20,18 +20,20 @@ OUTPUT: CSV file containing associated FL count for each isoform:primer
 HQ isoform ID format:
   (isoseq1) i0_HQ_sample3f1db2|c44/f3p0/2324
   (isoseq2) HQ_sampleAZxhBguy|cb1063_c22/f3p0/6697
+  (isoseq3) <biosample>_HQ_transcript/0
 Cluster report format:
    (isoseq1)
     cluster_id,read_id,read_type
     i0_ICE_sample3f1db2|c23,m54033_171031_152256/26476965/30_5265_CCS,FL
     i0_ICE_sample3f1db2|c43,m54033_171031_152256/32441242/25_2283_CCS,FL
-    i0_ICE_sample3f1db2|c43,m54033_171031_152256/50201527/30_2323_CCS,FL
-    i0_ICE_sample3f1db2|c44,m54033_171031_152256/49545897/2374_68_CCS,FL
    (isoseq2)
     cluster_id,read_id,read_type
     cb10063_c6,m54006_170729_232022/56361426/29_9138_CCS,FL
-    cb10407_c1,m54006_170729_232022/16712197/2080_72_CCS,FL
     cb10467_c49,m54006_170729_232022/48104064/0_2421_CCS,NonFL
+   (isoseq3)
+    cluster_id,read_id,read_type
+    transcript/16170,m54043_180729_193105/20644507/ccs,FL
+    transcript/16170,m54043_180729_193105/19595761/ccs,FL
 Classify report format:
    (isoseq1 and 2)
     id,strand,fiveseen,polyAseen,threeseen,fiveend,polyAend,threeend,primer,chimera
@@ -41,13 +43,13 @@ Classify report format:
 """
 
 import os, re, sys
-from csv import DictReader
+from csv import DictReader, DictWriter
 from collections import defaultdict, Counter
 from Bio import SeqIO
 
 hq1_id_rex = re.compile('(i\d+_HQ_\S+\|\S+)\/f\d+p\d+\/\d+')
 hq2_id_rex = re.compile('HQ_\S+\|(\S+)\/f\d+p\d+\/\d+')
-hq3_id_rex = re.compile('(transcript/\d+)')
+hq3_id_rex = re.compile('[\S_]+(transcript/\d+)')
 
 def link_files(src_dir, out_dir='./'):
     """
@@ -58,11 +60,15 @@ def link_files(src_dir, out_dir='./'):
     hq_fastq = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'hq_isoforms.fastq')
     # location for HQ fastq in IsoSeq2
     hq_fastq2 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript2tools.tasks.collect_polish-0', 'all_arrowed_hq.fastq')
-    # location for cluster report in IsoSeq1
+    # location for HQ fastq in IsoSeq3
+    hq_fastq3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.bam2fastq_transcripts-0', 'hq_transcripts.fastq')
+    # location for cluster report
     cluster_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'cluster_report.csv')
     cluster_csv2 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript2tools.tasks.collect_polish-0', 'report.csv')
+    cluster_csv3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.gather_csv-1', 'file.csv')
     # location for classify report in IsoSeq1 and 2
     primer_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.gather_csv-1', 'file.csv')
+    lima_report = os.path.join(os.path.abspath(src_dir), 'tasks', 'barcoding.tasks.lima-0', 'lima_output.lima.report')
 
     if os.path.exists(hq_fastq):
         print >> sys.stderr, "Detecting IsoSeq1 task directories..."
@@ -70,12 +76,22 @@ def link_files(src_dir, out_dir='./'):
         os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '1'
-    else:
+    elif os.path.exists(hq_fastq2):
         print >> sys.stderr, "Detecting IsoSeq2 task directories..."
         os.symlink(hq_fastq2, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv2, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '2'
+    elif os.path.exists(hq_fastq3):
+        print >> sys.stderr, "Detecting IsoSeq3 directories..."
+        os.symlink(hq_fastq3, os.path.join(out_dir, 'hq_isoforms.fastq'))
+        os.symlink(cluster_csv3, os.path.join(out_dir, 'cluster_report.csv'))
+        print >> sys.stderr, "Making classify_report.csv because not yet in job directories..."
+        make_classify_csv_from_lima_report(lima_report, os.path.join(out_dir, 'classify_report.csv'))
+        isoseq_version = '3'
+    else:
+        print >> sys.stderr, "Cannot find HQ FASTQ in job directory! Does not look like Iso-Seq1, 2, or 3 jobs!"
+        sys.exit(-1)
     return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv', 'classify_report.csv', isoseq_version
 
 def read_cluster_csv(cluster_csv, classify_info, isoseq_version):
@@ -93,6 +109,7 @@ def read_cluster_csv(cluster_csv, classify_info, isoseq_version):
                 cid = r['cluster_id']
             info[cid][p] += 1
     return dict(info)
+
 
 def read_classify_csv(classify_csv):
     """
@@ -114,10 +131,25 @@ def read_classify_csv(classify_csv):
     return primer_list, info
 
 
+def make_classify_csv_from_lima_report(report_filename, output_filename):
+
+    h = open(output_filename, 'w')
+    fout = DictWriter(h, fieldnames=['id', 'primer_index', 'primer'], delimiter=',')
+    fout.writeheader()
+    for r in DictReader(open(report_filename), delimiter='\t'):
+        assert r['IdxLowestNamed'].endswith('_5p') or r['IdxLowestNamed'].endswith('_3p')
+        assert r['IdxHighestNamed'].endswith('_5p') or r['IdxHighestNamed'].endswith('_3p')
+        if r['IdxLowestNamed'].endswith('_5p') and r['IdxHighestNamed'].endswith('_3p'):
+            newrec = {'id': r['ZMW']+'/ccs',
+                    'primer_index': "{0}--{1}".format(r['IdxLowest'], r['IdxHighest']),
+                    'primer': "{0}--{1}".format(r['IdxLowestNamed'], r['IdxHighestNamed'])}
+        fout.writerow(newrec)
+    h.close()
+
 def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
     if job_dir is not None:
         out_dir_ignore, hq_fastq, cluster_csv, classify_csv, isoseq_version = link_files(job_dir)
-        assert isoseq_version in ('1', '2')
+        assert isoseq_version in ('1', '2', '3')
     else:
         assert os.path.exists(hq_fastq)
         assert os.path.exists(cluster_csv)
