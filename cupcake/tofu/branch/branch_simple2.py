@@ -73,9 +73,29 @@ class BranchSimple:
             output['-'] = sep_by_clustertree(output['-'])
             return output
 
-        records = None # holds the current set of records that overlap in coordinates
-        iter = BioReaders.GMAPSAMReader(gmap_sam_filename, True, query_len_dict=self.transfrag_len_dict)
-        for r in iter:
+        gmap_sam_reader = BioReaders.GMAPSAMReader(gmap_sam_filename, True, query_len_dict=self.transfrag_len_dict)
+        quality_alignments = self.get_quality_alignments(gmap_sam_reader, ignored_fout)
+
+        # find first acceptably mapped read
+        try:
+            records = [next(quality_alignments)]
+        except StopIteration:
+            print >> sys.stderr, "No valid records from {0}!".format(gmap_sam_filename)
+            return
+        # go through remainder of alignments and group by subject ID
+        for r in quality_alignments:
+            if r.sID == records[0].sID and r.sStart < records[-1].sStart:
+                print >> sys.stderr, "SAM file is NOT sorted. ABORT!"
+                sys.exit(-1)
+            if r.sID != records[0].sID or r.sStart > max(x.sEnd for x in records):
+                yield sep_by_strand(records)
+                records = [r]
+            else:
+                records.append(r)
+        yield sep_by_strand(records)
+
+    def get_quality_alignments(self, gmap_sam_reader, ignored_fout):
+        for r in gmap_sam_reader:
             if r.sID == '*':
                 ignored_fout.write("{0}\tUnmapped.\n".format(r.qID))
             elif r.qCoverage < self.min_aln_coverage:
@@ -83,27 +103,7 @@ class BranchSimple:
             elif r.identity < self.min_aln_identity:
                 ignored_fout.write("{0}\tIdentity {1:.3f} too low.\n".format(r.qID, r.identity))
             else:
-                break
-        try:
-            records = [r]
-        except NameError:
-            print >> sys.stderr, "No valid records from {0}!".format(gmap_sam_filename)
-            return
-        for r in iter:
-            if r.sID == records[0].sID and r.sStart < records[-1].sStart:
-                print >> sys.stderr, "SAM file is NOT sorted. ABORT!"
-                sys.exit(-1)
-            if r.qCoverage < self.min_aln_coverage:
-                ignored_fout.write("{0}\tCoverage {1:.3f} too low.\n".format(r.qID, r.qCoverage))
-            elif r.identity < self.min_aln_identity:
-                ignored_fout.write("{0}\tIdentity {1:.3f} too low.\n".format(r.qID, r.identity))
-            elif r.sID != records[0].sID or r.sStart > max(x.sEnd for x in records):
-                yield sep_by_strand(records)
-                records = [r]
-            else:
-                records.append(r)
-        yield sep_by_strand(records)
-
+                yield r
 
     def parse_transfrag2contig(self, gmap_sam_records, skip_5_exon_alt=True):
         """
