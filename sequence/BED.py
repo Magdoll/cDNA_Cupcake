@@ -1,5 +1,5 @@
 __author__ = 'etseng@pacb.com'
-
+import sys
 """
 Faithful copy of cupcake.io.BED.py
 
@@ -50,3 +50,20 @@ class SimpleBEDReader:
         if len(raw) >= 4: name=raw[3]
         else: name=None
         return SimpleBED(raw[0], int(raw[1])-self.start_base, int(raw[2])+(1-self.end_base), name)
+
+
+class SimpleBEDWriter:
+    def __init__(self, handle):
+        self.handle = handle
+
+    def writerow(self, r):
+        if r.name is not None:
+            self.handle.write("{c}\t{s}\t{e}\t{n}\n".format(\
+                c=r.chrom, s=r.start, e=r.end, n=r.name))
+        else:
+            self.handle.write("{c}\t{s}\t{e}\n".format( \
+                c=r.chrom, s=r.start, e=r.end))
+
+    def writerows(self, rows):
+        for r in rows:
+            self.writerow(r)

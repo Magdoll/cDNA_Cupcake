@@ -5,21 +5,16 @@ import cupcake.tofu.filter_away_subset as sp
 from Bio import SeqIO
 from cupcake.io.SeqReaders import LazyFastqReader
 
-READ_STAT='hq.no5merge.collapsed.read_stat.txt'
-GFF_FILE='hq.no5merge.collapsed.filtered.gff'
-GENOME_FILE='potato_dm_v404_all_pm_un.fasta'
-MIN_LOCI_COVERAGE=80
-
 print >> sys.stderr, "Reading isoseq_flnc.fastq..."
 
 # 1. read into a dict of zmw --> lazy file pointer
 # 2. also record the zmws and record in rich_zmws
-flnc_fastq_d = LazyFastqReader('isoseq_flnc.fastq')
-rich_zmws = set()
-for k in flnc_fastq_d.keys():
-    zmw = k[:k.rfind('/')]
-    flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
-    rich_zmws.add(zmw)
+#flnc_fastq_d = LazyFastqReader('isoseq_flnc.fastq')
+#rich_zmws = set()
+#for k in flnc_fastq_d.keys():
+#    zmw = k[:k.rfind('/')]
+#    flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
+#    rich_zmws.add(zmw)
 
 print >> sys.stderr, "Finished reading isoseq_flnc.fastq."
 
@@ -28,34 +23,35 @@ from csv import DictReader
 from collections import defaultdict
 
 print >> sys.stderr, "Reading read_stat...."
-tally_by_loci = defaultdict(lambda: []) # PB.1 --> [(PB.1.1, zmw1), (PB.1.1, zmw2), (PB.1.2, zmw3)...]
-poor_zmws_not_in_rich = set()
-for r in DictReader(open(READ_STAT),delimiter='\t'):
-    if r['is_fl']=='Y' and r['stat']=='unique':    
-        k = r['pbid']
-        locus = k[:k.rfind('.')] # ex: PB.1
-        zmw = r['id'][:r['id'].rfind('/')] # <movie>/<holeNumber>
-        if zmw in rich_zmws:
-            tally_by_loci[locus].append((k, zmw))
-        else:
-            poor_zmws_not_in_rich.add(zmw)
+#tally_by_loci = defaultdict(lambda: []) # PB.1 --> [(PB.1.1, zmw1), (PB.1.1, zmw2), (PB.1.2, zmw3)...]
+#poor_zmws_not_in_rich = set()
+#for r in DictReader(open('hq.no5merge.collapsed.read_stat.txt'),delimiter='\t'):
+#    if r['is_fl']=='Y' and r['stat']=='unique':    
+#        k = r['pbid']
+#        locus = k[:k.rfind('.')] # ex: PB.1
+#        zmw = r['id'][:r['id'].rfind('/')] # <movie>/<holeNumber>
+#        if zmw in rich_zmws:
+#            tally_by_loci[locus].append((k, zmw))
+#        else:
+#            poor_zmws_not_in_rich.add(zmw)
     
 from cupcake.io.GFF import collapseGFFReader
-gff_regions = {} # loci --> chr, strand, min start, max end
-for r in collapseGFFReader(GFF_FILE):
-    locus = r.seqid[:r.seqid.rfind('.')]
-    if locus not in gff_regions:
-        gff_regions[locus] = (r.chr, r.strand, r.start, r.end)
-    else:
-        a, b, c, d = gff_regions[locus]
-        gff_regions[locus] = (r.chr, r.strand, min(c, r.start), max(d, r.end))
+#gff_regions = {} # loci --> chr, strand, min start, max end
+#for r in collapseGFFReader('hq.no5merge.collapsed.filtered.gff'):
+#    locus = r.seqid[:r.seqid.rfind('.')]
+#    if locus not in gff_regions:
+#        gff_regions[locus] = (r.chr, r.strand, r.start, r.end)
+#    else:
+#        a, b, c, d = gff_regions[locus]
+#        gff_regions[locus] = (r.chr, r.strand, min(c, r.start), max(d, r.end))
 
 import phasing.create_fake_genome as ttt        
 from Bio import SeqIO
 
 print >> sys.stderr, "Reading genome..."
-genome_d = SeqIO.to_dict(SeqIO.parse(open(GENOME_FILE),'fasta'))
-cands = filter(lambda k: len(tally_by_loci[k]) >= MIN_LOCI_COVERAGE, tally_by_loci)
+#genome_d = SeqIO.to_dict(SeqIO.parse(open('B73_RefV4.fa'),'fasta'))
+errors = []
+cands = filter(lambda k: len(tally_by_loci[k]) >= 40, tally_by_loci)
 for cand in cands:
     print >> sys.stderr, "making", cand
     d2 = os.path.join("by_loci/{0}_size{1}".format(cand, len(tally_by_loci[cand]))) 
@@ -71,10 +67,11 @@ for cand in cands:
     
     a,b,c,d=gff_regions[cand]
     try:
-        ttt.make_fake_genome(GENOME_FILE, GFF_FILE, a, c, d, b, d2+'/fake', 'fake_'+str(cand), genome_d)
+        ttt.make_fake_genome('B73_RefV4.fa', 'hq.no5merge.collapsed.filtered.gff', a, c-100,d+100,b, d2+'/fake', 'fake_'+cand, genome_d)
     except:
+        print >> sys.stderr, "Errors with {0}".format(cand)
         # possibly error because there are no spliced transcripts, all single exon
-        print >> sys.stderr, "error in making fake.fasta for {0}. check and possibly delete".format(cand)
+        errors.append(cand)
     print a, b, c, d
 
     # write ccs.fastq

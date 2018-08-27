@@ -174,7 +174,7 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
                 primer_names[k] = v
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join(primer_names.keys())))
+    f.write("id,{0}\n".format(",".join(primer_names.values())))
     print >> sys.stderr, "Reading {0}....".format(mapped_fastq)
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
         pbid = r.id.split('|')[0]
