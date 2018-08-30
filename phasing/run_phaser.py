@@ -4,7 +4,12 @@ __author__ = 'etseng@pacb.com'
 
 import os
 import sys
-import vcf
+
+try:
+    import vcf
+except ImportError:
+    print >> sys.stderr, "Cannot import vcf! Please install bio-vcf!"
+    sys.exit(-1)
 from Bio import SeqIO
 import phasing.io.SAMMPileUpReader as sp
 import phasing.io.MPileUpVariantCaller as VC

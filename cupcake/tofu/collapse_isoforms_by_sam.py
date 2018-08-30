@@ -85,11 +85,13 @@ def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_f
 
     fout.close()
 
-
 def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, internal_fuzzy_max_dist):
     def get_fl_from_id(members):
-        # ex: 13cycle_1Mag1Diff|i0HQ_SIRV_1d1m|c139597/f1p0/178
-        return sum(int(_id.split('/')[1].split('p')[0][1:]) for _id in members)
+        try:
+            # ex: 13cycle_1Mag1Diff|i0HQ_SIRV_1d1m|c139597/f1p0/178
+            return sum(int(_id.split('/')[1].split('p')[0][1:]) for _id in members)
+        except ValueError:
+            return 0
 
     def can_merge(m, r1, r2):
         if m == 'exact':
@@ -146,6 +148,7 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
         best_pbid, best_size, best_num_exons = fuzzy_match[k][0], len(group_info[fuzzy_match[k][0]]), len(d[fuzzy_match[k][0]].ref_exons)
         all_members += group_info[fuzzy_match[k][0]]
         for pbid in fuzzy_match[k][1:]:
+            # note: get_fl_from_id only works on IsoSeq1 and 2 ID formats, will return 0 if IsoSeq3 format or other
             _size = get_fl_from_id(group_info[pbid])
             _num_exons = len(d[pbid].ref_exons)
             all_members += group_info[pbid]

@@ -1172,8 +1172,77 @@ class MaizeGFFReader(collapseGFFReader):
         raise Exception, "Should not reach here!"
                 
     
-        
-    
+
+
+"""
+Because f***ing exonerate cannot generate GFF3 formats.
+
+X       exonerate:est2genome    gene    78421768        78454596        5775    -       .       gene_id 0 ; sequence lcl|NM_001001171.1_cds_NP_001001171.1_1 ; gene_orient
+ation + ; identity 99.92 ; similarity 99.92
+X       exonerate:est2genome    utr5    78454482        78454596        .       -       .
+X       exonerate:est2genome    exon    78454482        78454596        .       -       .       insertions 0 ; deletions 0 ; identity 100.00 ; similarity 100.00
+X       exonerate:est2genome    splice5 78454480        78454481        .       -       .       intron_id 1 ; splice_site "GT"
+X       exonerate:est2genome    intron  78451617        78454481        .       -       .       intron_id 1
+X       exonerate:est2genome    splice3 78451617        78451618        .       -       .       intron_id 0 ; splice_site "AG"
+
+"""
+class ExonerateGFF2Reader(collapseGFFReader):
+    def read(self):
+        """
+        PacBio-style GFF from the collapsed output, which is
+        0) chrmosome
+        1) source (PacBio)
+        2) feature (transcript|exon)
+        3) start (1-based)
+        4) end (1-based)
+        5) score (always .)
+        6) strand
+        7) frame (always .)
+        8) blurb
+
+        ex:
+        chr1    PacBio  transcript      897326  901092  .       +       .       gene_id "PB.1"; transcript_id "PB.1.1";
+        chr1    PacBio  exon    897326  897427  .       +       .       gene_id "PB.1"; transcript_id "PB.1.1";
+        """
+        cur = self.f.tell()
+        line = self.f.readline().strip()
+        if self.f.tell() == cur:
+            raise StopIteration, "EOF reached!!"
+
+        raw = line.strip().split('\t')
+        if raw[2] == 'gene': # read the gene line to get the ID and strand
+            for stuff in raw[8].split(' ; '):
+                a, b = stuff.strip().split(' ')
+                if a == 'sequence':
+                    seqid = b
+
+
+        chr = raw[0]
+        strand = raw[6]
+        assert strand in ('+', '-')
+
+        rec = gmapRecord(chr, coverage=None, identity=None, strand=strand, seqid=seqid)
+
+        while True:
+            cur = self.f.tell()
+            line = self.f.readline().strip()
+            if self.f.tell() == cur:
+                return rec
+            raw = line.split('\t')
+            if raw[2] == 'exon':
+                s, e = int(raw[3])-1, int(raw[4])
+                rec.add_exon(s, e, s, e, rstrand=strand, score=None)
+            elif raw[2] == 'CDS':
+                pass # ignore CDS annotations
+            elif raw[2] == 'intron':
+                pass # ignore intron annotations
+            elif raw[2] == 'similarity':
+                # end of the record! return
+                return rec
+            elif raw[2] in ('splice3', 'splice5', 'utr3', 'utr5'):
+                pass # ignore
+
+        raise Exception, "Should not reach here!"
             
         
         
