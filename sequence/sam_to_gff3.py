@@ -53,8 +53,8 @@ def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
             r.qID += '_dup' + str(qid_index_dict[r.qID])
         else: qid_index_dict[r.qID] += 1
 
-    gene_qualifiers = {"source": "hg38", "ID": r.qID+'.gene', "Name": r.qID} # for gene record
-    mRNA_qualifiers = {"source": "hg38", "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
+    gene_qualifiers = {"source": args.source, "ID": r.qID+'.gene', "Name": r.qID} # for gene record
+    mRNA_qualifiers = {"source": args.source, "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
                        "coverage": "{0:.2f}".format(r.qCoverage*10**2) if r.qCoverage is not None else "NA",
                        "identity": "{0:.2f}".format(r.identity*10**2),
                        "matches": matches, "mismatches": mismatches, "indels": indels}
@@ -65,7 +65,7 @@ def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
     top_feature.sub_features = [SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="mRNA", strand=strand, qualifiers=mRNA_qualifiers)]
     # exon lines, as many exons per record
     for i,e in enumerate(r.segments):
-        exon_qual = {"source": "hg38", "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
+        exon_qual = {"source": args.source, "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
         top_feature.sub_features.append(SeqFeature(FeatureLocation(e.start, e.end), type="exon", strand=strand, qualifiers=exon_qual))
     rec.features = [top_feature]
     return rec
@@ -82,6 +82,7 @@ def main():
     parser = ArgumentParser("Convert SAM to GFF3 format using BCBio GFF")
     parser.add_argument("sam_filename")
     parser.add_argument("-i", "--input_fasta", default=None, help="(Optional) input fasta. If given, coverage will be calculated.")
+	parser.add_argument("-s", "--source", required=True, help="source name (ex: hg38, mm10)")
 
     args = parser.parse_args()
 
