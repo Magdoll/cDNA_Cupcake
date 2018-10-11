@@ -37,12 +37,34 @@ class MPileUPVariant(object):
         self.call_variant()
 
 
+    def is_in_or_near_HP(self, pos, hp_size=4):
+        """
+        We define a HP region as stretches of 4 or more same nucleotides
+        :return: True/False for in/hear HP region
+        """
+        def find_hp_region_size(cur):
+            if cur not in self.record_by_pos: return 0
+            end = cur+1
+            while end in self.record_by_pos and self.record_by_pos[end].ref == self.record_by_pos[cur].ref:
+                end += 1
+            start = cur-1
+            while start in self.record_by_pos and self.record_by_pos[start].ref == self.record_by_pos[cur].ref:
+                start -= 1
+            # hp region is from start+1 to end
+            return end-(start+1)
+
+        return (find_hp_region_size(pos) >= hp_size) or \
+               (find_hp_region_size(pos-1) >= hp_size) or \
+               (find_hp_region_size(pos+1) >= hp_size)
+
+
     def get_positions_to_call(self):
         """
         Identify list of positions to try to call SNPs. Must have:
         1. minimum coverage >= min_cov
-        2. the first or second most frequent base is NOT an indel
-        3. has at least two or more keys
+        2. the first and second most frequent base are NOT an indel
+        3. not next to or inside a homopolymer region
+        4. has at least two or more keys
         """
         positions_to_call = []
         for pos in self.record_by_pos:
@@ -52,7 +74,7 @@ class MPileUPVariant(object):
                 # find the first and second most freq base in the "non-clean" counts
                 m = self.record_by_pos[pos].clean_counts.most_common()
                 # ex: m = [('a', 10), ('-ct', 20), ('+t', 10)]
-                if m[0][0][0]in ('+','-') or m[1][0][0] in ('+','-'): continue
+                if m[0][0][0]in ('+','-') or m[1][0][0] in ('+','-') or self.is_in_or_near_HP(pos): continue
                 else:
                     positions_to_call.append(pos)
         return positions_to_call

@@ -1,9 +1,3 @@
-# uncompyle6 version 3.2.1
-# Python bytecode 2.7 (62211)
-# Decompiled from: Python 2.7.14 |Anaconda custom (64-bit)| (default, Dec  7 2017, 17:05:42) 
-# [GCC 7.2.0]
-# Embedded file name: evaluate_snp_with_genome.py
-# Compiled at: 2018-01-02 12:49:59
 __author__ = 'etseng@pacb.com'
 import os, sys, glob
 from collections import defaultdict

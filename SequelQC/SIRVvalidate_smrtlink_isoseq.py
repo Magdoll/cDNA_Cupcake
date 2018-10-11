@@ -18,6 +18,7 @@ SIRV_GENOME = "/home/UNIXHOME/etseng/projects2015/Lexogen_SIRV/ground_truth/SIRV
 STAR_BIN = "python /home/UNIXHOME/etseng/GitHub/cDNA_Cupcake/sequence/STARwrapper.py"
 SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
 
+HG19_GENOME = "/pbi/dept/bifx/etseng/genomes/hg19/hg19.fa"
 HG38_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/hg38/hg38_noalt.mmi"
 MM10_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/mm10/mm10.mmi"
 

@@ -62,17 +62,19 @@ def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix):
         f2.write("{0}\t{1}\tY\tNA\tNA\n".format(fl_read_id, _len))
     f2.close()
 
-def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, isoseq_version):
+def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, isoseq_version, use_hg19_instead=False):
 
     cur_dir = os.getcwd()
     os.chdir(out_dir)
 
     if aligner_choice == 'gmap':
-        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
-            gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS)
+        ref = 'hg19' if use_hg19_instead else 'hg38'
+        cmd = "{gmap} -D {gmap_db} -d {ref} -f samse -n 0 -t {cpus} -z sense_force {hq}  > {hq}.sam 2> {hq}.sam.log".format(\
+            gmap=GMAP_BIN, gmap_db=GMAP_DB, hq=hq_fastq, cpus=GMAP_CPUS, ref=ref)
     elif aligner_choice == 'minimap2':
+        ref = smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME
         cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5  {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
-            cpus=GMAP_CPUS, ref=smrtlink.HG38_GENOME, hq=hq_fastq)
+            cpus=GMAP_CPUS, ref=ref, hq=hq_fastq)
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -103,11 +105,13 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
     rep = collapse_prefix + ".min_fl_{0}.filtered".format(min_count)
 
     if aligner_choice=='gmap':
-        cmd = "{gmap} -D {gmap_db} -d hg38 -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
-            gmap=GMAP_BIN, gmap_db=GMAP_DB, cpus=GMAP_CPUS, rep=rep)
+        ref = 'hg19' if use_hg19_instead else 'hg38'
+        cmd = "{gmap} -D {gmap_db} -d {ref} -f samse -n 0 -t {cpus} -z sense_force {rep}.rep.fq  > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
+            gmap=GMAP_BIN, gmap_db=GMAP_DB, cpus=GMAP_CPUS, rep=rep, ref=ref)
     elif aligner_choice=='minimap2':
+        ref = smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME
         cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5  {ref} {rep}.rep.fq > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
-            cpus=GMAP_CPUS, ref=smrtlink.HG38_GENOME, rep=rep)
+            cpus=GMAP_CPUS, ref=ref, rep=rep)
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -186,8 +190,9 @@ if __name__ == "__main__":
     parser.add_argument("--eval_dir", default="eval", help="eval dirname (default: eval)")
     parser.add_argument("--min_count", type=int, default=2, help="min FL count cutoff (default:2)")
     parser.add_argument("--aligner_choice", default='minimap2', choices=('gmap', 'star', 'minimap2'), help="Aligner choice (default: minimap2)")
+    parser.add_argument("--use_hg19_instead", default=False, action="store_true")
 
     args = parser.parse_args()
     o, a, b, v = smrtlink.link_files(args.smrtlink_dir, args.tmp_dir)
-    collapse_to_hg38(o, a, b, args.min_count, args.aligner_choice, v)
+    collapse_to_hg38(o, a, b, args.min_count, args.aligner_choice, v, args.use_hg19_instead)
     validate_with_Gencode(args.tmp_dir, args.eval_dir)

@@ -18,6 +18,7 @@ start with assumption of 2 allele:
 how do we find the center
 """
 import os, sys
+import itertools
 import numpy as np
 
 import networkx as nx
@@ -48,16 +49,98 @@ def calc_hap_diff(haplotype_strings, cur_hap):
     return np.array([sum(cur_hap[i]!=s for i,s in enumerate(hap_str)) for hap_str in haplotype_strings])
 
 
-def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidity, max_diff):
+def get_hap_model(haplotype_strings):
+    hap_len = len(haplotype_strings[0])
+    tally = [Counter() for pos in xrange(hap_len-1)]
+    for s in haplotype_strings:
+        for pos in xrange(hap_len-1):
+            if s[pos]!='?' and s[pos+1]!='?':
+                tally[pos][(s[pos], s[pos+1])] += 1
+    return tally
+
+
+def infer_haplotypes_via_exhaustive_diploid_only(hap_obj, variants):
+    """
+    ONLY WORKS FOR DIPLOID RIGHT NOW!!
+    This is an alternative to the more heuristic infer_haplotypes_via_min_diff()
+    Brute force search through all solutions which is 2^N (N=number of variants)
+
+    :param haplotype_obj: haplotype object to be error corrected
+    :param variants: length N list of variants which we will use to permutate
+
+    1. permute through all possible diploid pairs
+    2. calc diff of each haplotype string against the diploid hap strings
+    3. find the (hap1,hap2) pair that minimizes sum of diffs
+
+    :return: sum_of_diff array, hap_count_ordered (the counts are fake since not used later)
+    """
+    # sanity check that every position has exactly two possibilities
+    #for x in variants:
+    #    if len(x)!=2: raise Exception, "variants must be diploid!"
+
+    haplotype_strings = hap_obj.haplotypes
+    nonpartial_haps = filter(lambda s: all(x!='?' for x in s), haplotype_strings)
+    nonpartial_haps_already_tried = set()
+
+    if len(nonpartial_haps) == 0:
+        return None, None
+
+    #is_list = False
+    #hap_len = len(haplotype_strings[0])
+    #
+    #if len(nonpartial_haps) == 0: # special case! there are NO non-partial haplotype strings!
+    #    freq_model = get_hap_model(haplotype_strings)
+    #    print freq_model
+    #    nonpartial_haps = itertools.product(*variants)
+    #    is_list = True
+
+    best_diff_arr, best_sum_of_diff = None, np.inf
+    best_hap1, best_hap2 = None, None
+    for hap1 in nonpartial_haps:
+        if hap1 in nonpartial_haps_already_tried: continue
+        #if is_list:
+        #    is_likely = True
+        #    # see how likely hap1 is given the freq model
+        #    for pos in xrange(hap_len-1):
+        #        if (hap1[pos], hap1[pos+1]) not in freq_model[pos]:
+        #            print (hap1[pos], hap1[pos + 1]), "not in pos", pos
+        #            is_likely = False
+        #            break
+        #    if is_likely:
+        #        hap1 = "".join(hap1)
+        #        print >> sys.stderr, "Trying hap1: ", hap1
+        #    else:
+        #        continue
+        # hap2 is the other choice since it's diploid
+        hap2 = ''
+        for i in xrange(len(variants)):
+            if hap1[i]==variants[i][0]: hap2 += variants[i][1]
+            else: hap2 += variants[i][0]
+        # now calculate the sum diffs
+        diff_arr = np.array([calc_hap_diff(haplotype_strings, hap1),
+                             calc_hap_diff(haplotype_strings, hap2)])
+        sum_of_diff = diff_arr.min(axis=0).sum()
+        if sum_of_diff < best_sum_of_diff:
+            best_diff_arr, best_sum_of_diff = diff_arr, sum_of_diff
+            best_hap1, best_hap2 = hap1, hap2
+        nonpartial_haps_already_tried.add(hap1)
+        nonpartial_haps_already_tried.add(hap2)
+
+    best_hap1_index, msg1 = hap_obj.match_or_add_haplotype(best_hap1)
+    best_hap2_index, msg2 = hap_obj.match_or_add_haplotype(best_hap2)
+    return best_diff_arr, [(best_hap1_index,-1), (best_hap2_index,-2)]
+
+
+def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff):
     """
     :param haplotype_strings: list of haplotype strings
     :param hap_count: Counter object of hap_index --> count
-    :param ploidity: user given ploidity (max number of true haplotypes)
+    :param ploidy: user given ploidy (max number of true haplotypes)
 
     1. sort haplotypes based on counts. select hap0 to be most frequent one.
     2. calc diff of each haplotype against hap0. calc sum of diffs.
     3. add in hap1 as second most frequent, calc sum of diffs.
-    4. ...repeat until sum of diffs gets worse, or ploidity is reached.
+    4. ...repeat until sum of diffs gets worse, or ploidy is reached.
     """
     # we are to ignore all partial haps
     partial_haps = filter(lambda i: any(s=='?' for s in haplotype_strings[i]), xrange(len(haplotype_strings)))
@@ -77,7 +160,7 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidity, max_di
     diff_arr = np.array([calc_hap_diff(haplotype_strings, cur_hap)])
     sum_of_diff = diff_arr.sum()
     print sum_of_diff
-    for cur_hap_i, cur_count in hap_count_ordered[1:ploidity]:
+    for cur_hap_i, cur_count in hap_count_ordered[1:ploidy]:
         new_diff_arr = np.append(diff_arr, [calc_hap_diff(haplotype_strings, haplotype_strings[cur_hap_i])], axis=0)
         new_sum_of_diff = new_diff_arr.min(axis=0).sum()
         print new_sum_of_diff
