@@ -9,20 +9,21 @@ cluster_report.csv format in IsoSeq1:
 
 cluster_id,read_id,read_type (FL or NonFL)
 i0_ICE_sample03146a|c4,m54026_161015_230744/74318463/31_970_CCS,FL
-i0_ICE_sample03146a|c16,m54026_161015_230744/12058759/31_898_CCS,FL
-i0_ICE_sample03146a|c16,m54026_161015_230744/72614264/935_61_CCS,FL
-i0_ICE_sample03146a|c16,m54026_161015_230744/54395715/911_54_CCS,FL
 
 NOTE: in cluster_report, the sample prefix is i<bin>_ICE_<sample>, but in HQ isoforms is i<bin>_HQ_<sample>!
 Must address this :P
-
 
 cluster_report.csv format in IsoSeq2:
 
 cluster_id,read_id,read_type
 cb2729_c2,m54056_171130_193019/8388911/26_1296_CCS,FL
-cb2729_c3,m54056_171130_193019/34669415/1504_49_CCS,FL
-cb2729_c0,m54056_171130_193019/8716857/1298_46_CCS,FL
+
+
+cluster_report.csv format in IsoSeq3:
+
+cluster_id,read_id,read_type
+transcript/0,m54056_171130_193019/8388911/ccs,FL
+
 
 where .group.txt is:
 
@@ -34,9 +35,7 @@ PBfusion.2      HQ_sample0ZPg9hS7|cb7607_c16635/f3p0/810,HQ_sample0ZPg9hS7|cb760
 
 import os, sys, re
 from collections import defaultdict
-from cPickle import dump, load
 from csv import DictReader
-from Bio import SeqIO
 
 def get_roi_len(seqid):
     # before isoseq3: <movie>/<zmw>/<start>_<end>_CCS
@@ -50,7 +49,17 @@ def get_roi_len(seqid):
     s, e, junk = seqid.split('/')[2].split('_')
     return abs(int(s)-int(e))
 
-def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
+
+
+cluster_rex_sa3 = re.compile('(i\d+_ICE_\S+\|c\d+)')
+cluster_rex_sa2 = re.compile('(i\d+[HL]Q_\S+|c\d+)')
+# ex: cb100_c7,m54006_170206_215027/70189550/2661_56_CCS,FL
+cluster_rex_tofu2 = re.compile('(cb\d+_c\d+)')
+cluster_rex_isoseq3 = re.compile('(transcript/\d+)') # for isoseq3: transcript/0, transcript/1, etc
+cluster_rex_isoseq3_mapped = re.compile('\S+(transcript/\d+)') # for isoseq post SL mapping
+
+
+def read_group_filename(group_filename, is_cid=True):
     """
     Make the connection between partitioned results and final (ex: PB.1.1)
     The partitioned results could either be ICE cluster (ex: i1_c123) or RoIs
@@ -64,69 +73,54 @@ def read_group_filename(group_filename, is_cid=True, sample_prefixes=None):
     PBfusion.1      HQ_sample0ZPg9hS7|cb7607_c93041/f2p0/1713
     PBfusion.2      HQ_sample0ZPg9hS7|cb7607_c16635/f3p0/810,HQ_sample0ZPg9hS7|cb7607_c32934/f2p1/1066
 
+	For IsoSeq3, two possible flavors depending on using conda version or SL Mapping version:
+	PB.1.1	transcript/0,transcript/1
+	(or)
+	PB.1.1	Sample1_RC0_50pM_transcript/0,Sample1_RC0_50pM_transcript/1   <-- in this case we want to strip the prefix out, just keep 'transcript/0'
+
     Note: LQ/HQ isoforms use the _HQ_ or _LQ_ prefix, but in cluster_report.csv it will be _ICE_
     So we just replace _HQ_ or _LQ_ --> both to be _ICE_
 
     Return: dict of seq_or_ice_cluster --> collapsed cluster ID
+          (ex: in IsoSeq3 it is 'transcript/0' --> 'PB.1.1')
     """
     cid_info = {} # ex: i1 --> c123 --> PB.1.1, or c123 --> PB.1.1
-    if sample_prefixes is not None:
-        for sample_prefix in sample_prefixes:
-            cid_info[sample_prefix] = {}
-    else:
-        cid_info = {}
+
     for line in open(group_filename):
         pbid, members = line.strip().split('\t')
         for cid in members.split(','):
-            # ex: x is 'i1_c123/f3p0/123 or 'i0_HQ_samplexxxx|c1234/f2p30/279' or 'c123/f3p0/123'
-            # m131116_014707_42141_c100591062550000001823103405221462_s1_p0/93278/31_1189_CCS
-            # if cid starts with 'transcript/' it is from isoseq3, do not split by '/'
-            if sample_prefixes is None:
-                if not cid.startswith('transcript/') and is_cid: cid = cid.split('/')[0]
-                # replace _HQ_ or _LQ_ with _ICE_ to be compatible with cluster_report.csv later
-                if cid.find('_HQ_') > 0:  # isoseq1
-                    cid = cid.replace('_HQ_', '_ICE_')
-                elif cid.find('_LQ_') > 0:  # isoseq1
-                    cid = cid.replace('_LQ_', '_ICE_')
-                elif cid.startswith('HQ_') or cid.startswith('LQ_'): # isoseq2
-                    cid = cid.split('|')[1].split('/')[0]  # cid = cb7607_c93041, for example
-                cid_info[cid] = pbid
+            m = cluster_rex_isoseq3_mapped.match(cid)
+            if m is not None: # IsoSeq3 after mapping, strip it down to 'transcript/0'
+                cid = m.group(1)
             else:
-                if any(cid.startswith(sample_prefix + '|') for sample_prefix in sample_prefixes):
-                    sample_prefix, cid = cid.split('|', 1)
-                    if not cid.startswith('transcript/') and is_cid: cid = cid.split('/')[0]
-                    cid_info[sample_prefix][cid] = pbid
-    return cid_info
+                m = cluster_rex_isoseq3.match(cid)
+                if m is not None:
+                    pass # pass, nothing to do since the cid is correctly 'transcript/0'
+                else:
+                    if is_cid: cid = cid.split('/')[0]
+                    m = cluster_rex_tofu2.match(cid)
+                    if m is not None:
+                        cid = m.group(1)
+                    else:
+                        m = cluster_rex_sa2.match(cid)
+                        if m is not None:
+                            cid = m.group(1)
+                            # replace _HQ_ or _LQ_ with _ICE_ to be compatible with cluster_report.csv later
+                            cid = cid.replace('_HQ_', '_ICE_')
+                            cid = cid.replace('_LQ_', '_ICE_')
+                        elif cluster_rex_sa3.match(cid) is not None:
+                            pass # nothing to do, ID is good
+                        elif cid.startswith('HQ_') or cid.startswith('LQ_'): # isoseq2
+                            cid = cid.split('|')[1].split('/')[0]  # cid = cb7607_c93041, for example
+                        else:
+                            raise Exception, "Unrecognized id format {0} in {1}!".format(cid, group_filename)
+            cid_info[cid] = pbid
 
-cluster_rex_sa3 = re.compile('i\d+_ICE_\S+\|c(\d+)')
-cluster_rex_sa2 = re.compile('i\d+[HL]Q_\S+|c(\d+)')
-# ex: cb100_c7,m54006_170206_215027/70189550/2661_56_CCS,FL
-cluster_rex_tofu2 = re.compile('cb(\d+)_c(\d+)')
-cluster_rex_isoseq3 = re.compile('transcript/(\d+)') # for isoseq3: transcript/0, transcript/1, etc
+    return cid_info
 
 def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output_mode='w'):
     """
-    Given an Iso-Seq csv output file w/ format:
-
-    (SMRTLInk / SA5.x+) IsoSeq2, ToFU2
-    cluster_id,read_id,read_type
-    cb2729_c2,m54056_171130_193019/8388911/26_1296_CCS,FL
-    cb2729_c3,m54056_171130_193019/34669415/1504_49_CCS,FL
-    cb2729_c0,m54056_171130_193019/8716857/1298_46_CCS,FL
-
-    (SMRTLink / SA3.x) IsoSeq1
-    cluster_id,read_id,read_type (FL or NonFL)
-    i0_ICE_sample03146a|c4,m54026_161015_230744/74318463/31_970_CCS,FL
-
-    or
-
-    (SMRTPortal / SA2.x)
-    cluster_id,read_id,read_type
-    c524288,m150115_233910_42142_c100769831910000001823165407071560_s1_p0/78539/30_820_CCS,FL
-
-
     Turn into read_stats.txt format:
-
     id \t length \t is_fl \t stat \t pbid
     """
     mapped = {}  # nFL seq -> list of (sample_prefix, cluster) it belongs to
@@ -142,9 +136,6 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
     unmapped_holder = set()
     for r in DictReader(open(csv_filename), delimiter=','):
         cid = str(r['cluster_id'])
-        if cid=='cluster_id': continue # ignore header
-        # if starts with c<cid>, is old SMRTPortal/SA2.x
-        # if starts with i<bin>_ICE_<sample|c<cid>, is new SMRTLink/SA3.x
         m = cluster_rex_sa3.match(cid)
         if m is None:
             m = cluster_rex_sa2.match(cid)
@@ -152,7 +143,9 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
                 m = cluster_rex_tofu2.match(cid)
                 if m is None:
                     m = cluster_rex_isoseq3.match(cid)
-                    if m is None:
+                    if m is not None:
+                        cid = m.group(1) # make sure cid is transcript/0, transcript/1, without any prefix before 'transcript'
+                    else:
                         raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
 
         x = r['read_id']
@@ -300,8 +293,7 @@ def get_abundance_post_collapse(collapse_prefix, cluster_report_csv, output_pref
         print >> sys.stderr, "File {0} does not exist. Abort!".format(cluster_report_csv)
         sys.exit(-1)
 
-    cid_info = read_group_filename(collapse_prefix + ".group.txt", is_cid=True,\
-            sample_prefixes=None)
+    cid_info = read_group_filename(collapse_prefix + ".group.txt", is_cid=True)
 
     output_read_count_IsoSeq_csv(cid_info, cluster_report_csv, output_prefix + '.read_stat.txt')
     print >> sys.stderr, "Read stat file written to", output_prefix + '.read_stat.txt'
