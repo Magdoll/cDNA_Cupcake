@@ -30,7 +30,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from cupcake.io.BioReaders import  GMAPSAMReader
 
-def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
+def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
     """
     :param r: GMAPSAMRecord record
 	:param qid_seen: list of qIDs processed so far -- if redundant, we have to put a unique suffix
@@ -53,8 +53,8 @@ def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
             r.qID += '_dup' + str(qid_index_dict[r.qID])
         else: qid_index_dict[r.qID] += 1
 
-    gene_qualifiers = {"source": args.source, "ID": r.qID+'.gene', "Name": r.qID} # for gene record
-    mRNA_qualifiers = {"source": args.source, "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
+    gene_qualifiers = {"source": source, "ID": r.qID+'.gene', "Name": r.qID} # for gene record
+    mRNA_qualifiers = {"source": source, "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
                        "coverage": "{0:.2f}".format(r.qCoverage*10**2) if r.qCoverage is not None else "NA",
                        "identity": "{0:.2f}".format(r.identity*10**2),
                        "matches": matches, "mismatches": mismatches, "indels": indels}
@@ -65,15 +65,15 @@ def convert_sam_rec_to_gff3_rec(r, qid_index_dict=None):
     top_feature.sub_features = [SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="mRNA", strand=strand, qualifiers=mRNA_qualifiers)]
     # exon lines, as many exons per record
     for i,e in enumerate(r.segments):
-        exon_qual = {"source": args.source, "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
+        exon_qual = {"source": source, "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
         top_feature.sub_features.append(SeqFeature(FeatureLocation(e.start, e.end), type="exon", strand=strand, qualifiers=exon_qual))
     rec.features = [top_feature]
     return rec
 
-def convert_sam_to_gff3(sam_filename, output_gff3, q_dict=None):
+def convert_sam_to_gff3(sam_filename, output_gff3, source, q_dict=None):
     qid_index_dict = Counter()
     with open(output_gff3, 'w') as f:
-        recs = [convert_sam_rec_to_gff3_rec(r0, qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
+        recs = [convert_sam_rec_to_gff3_rec(r0, source, qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
         BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
 
 def main():
@@ -82,7 +82,7 @@ def main():
     parser = ArgumentParser("Convert SAM to GFF3 format using BCBio GFF")
     parser.add_argument("sam_filename")
     parser.add_argument("-i", "--input_fasta", default=None, help="(Optional) input fasta. If given, coverage will be calculated.")
-	parser.add_argument("-s", "--source", required=True, help="source name (ex: hg38, mm10)")
+    parser.add_argument("-s", "--source", required=True, help="source name (ex: hg38, mm10)")
 
     args = parser.parse_args()
 
@@ -98,7 +98,7 @@ def main():
         q_dict = dict((r.id, len(r.seq)) for r in SeqIO.parse(open(args.input_fasta), 'fasta'))
 
     with open(output_gff3, 'w') as f:
-        recs = [convert_sam_rec_to_gff3_rec(r0) for r0 in GMAPSAMReader(args.sam_filename, True, query_len_dict=q_dict)]
+        recs = [convert_sam_rec_to_gff3_rec(r0, args.source) for r0 in GMAPSAMReader(args.sam_filename, True, query_len_dict=q_dict)]
         BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
 
 

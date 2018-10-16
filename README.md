@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 10/12/2018
+Last Updated: 10/15/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 5.10
+Current version: 5.11
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2018.10.15 updated to v5.11. `sam_to_gff3.py` updated to allow `source` param.
 
 2018.10.12 updated to v5.10. collapse scripts further handles isoseq3 with mapping formats.
 

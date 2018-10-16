@@ -49,9 +49,11 @@ from csv import DictReader, DictWriter
 from collections import defaultdict, Counter
 from Bio import SeqIO
 
-hq1_id_rex = re.compile('i\d+_HQ_\S+\|(\S+)\/f\d+p\d+\/\d+')
-hq2_id_rex = re.compile('HQ_\S+\|(\S+)\/f\d+p\d+\/\d+')
-hq3_id_rex = re.compile('[\S_]+(transcript/\d+)')
+#hq1_id_rex = re.compile('i\d+_HQ_\S+\|(\S+)\/f\d+p\d+\/\d+')
+#hq2_id_rex = re.compile('HQ_\S+\|(\S+)\/f\d+p\d+\/\d+')
+#hq3_id_rex = re.compile('[\S_]+(transcript/\d+)')
+
+mapped_id_rex = re.compile('(PB.\d+.\d+)')
 
 def link_files(src_dir, out_dir='./'):
     """
@@ -128,6 +130,9 @@ def read_classify_csv(classify_csv):
         else: # isoseq1 or 2
             p = r['primer']
         primer_list.add(p)
+        if r['id'] in info:
+            raise Exception, "{0} listed more than once in {1}!".format(\
+                r['id'], classify_csv)
         info[r['id']] = p
     return primer_list, info
 
@@ -158,9 +163,9 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
 
     # info: dict of hq_isoform --> primer --> FL count
     print >> sys.stderr, "Reading {0}....".format(classify_csv)
-    primer_list, classify_csv = read_classify_csv(classify_csv)
+    primer_list, classify_info = read_classify_csv(classify_csv)
     print >> sys.stderr, "Reading {0}....".format(read_stat)
-    info = read_read_stat(read_stat, classify_csv)
+    info = read_read_stat(read_stat, classify_info)
 
     primer_list = list(primer_list)
     primer_list.sort()
@@ -177,7 +182,10 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
     f.write("id,{0}\n".format(",".join(primer_names.values())))
     print >> sys.stderr, "Reading {0}....".format(mapped_fastq)
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
-        pbid = r.id.split('|')[0]
+        m = mapped_id_rex.match(r.id)  # expected ID: PB.X.Y|xxxx.....
+        if m is None:
+            raise Exception, "Expected ID format PB.X.Y but found {0}!".format(r.id)
+        pbid = m.group(1)
         f.write(pbid)
         for p in primer_names:
             f.write(",{0}".format(info[pbid][p]))
