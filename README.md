@@ -4,7 +4,7 @@ Last Updated: 10/29/2018
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 6.0
+Current version: 6.1
 
 ## Python Requirements
 * Python >= 2.7
@@ -63,7 +63,9 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
-2018.10.29 upated to v6.0. added `demux_by_barcode_group.txt` for creating demultiplexed GFF (and FASTX) from demux count files.
+2018.10.29 updated to v6.1. changed confusing param name in `chain_samples.py` to `--dun-merge-5-shorter`
+
+2018.10.29 updated to v6.0. added `demux_by_barcode_group.txt` for creating demultiplexed GFF (and FASTX) from demux count files.
 
 2018.10.15 updated to v5.11. `sam_to_gff3.py` updated to allow `source` param.
 

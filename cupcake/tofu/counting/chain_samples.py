@@ -229,7 +229,7 @@ if __name__ == "__main__":
     parser.add_argument("config_file")
     parser.add_argument("field_to_use", choices=['norm_fl', 'norm_nfl', 'norm_nfl_amb', 'count_fl', 'count_nfl', 'count_nfl_amb'], default='norm_nfl', help="Which count field to use for chained sample (default: norm_nfl)")
     parser.add_argument("--fuzzy_junction", default=5, type=int, help="Max allowed distance in junction to be considered identical (default: 5 bp)")
-    parser.add_argument("--allow_5merge", action="store_true", default=False, help="Allow 5' truncated transcripts (default: off)" )
+    parser.add_argument("--dun-merge-5-shorter", action="store_true", dest="allow_5merge", default=False, help="Don't collapse shorter 5' transcripts (default: off)")
     args = parser.parse_args()
 
     sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename = read_config(args.config_file)
