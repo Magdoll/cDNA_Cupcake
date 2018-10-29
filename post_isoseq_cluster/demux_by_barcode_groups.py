@@ -11,7 +11,7 @@ from csv import DictReader
 from collections import defaultdict
 from Bio import SeqIO
 
-rex_pbid = re.compile('(PB.\d+.\d+)|\S+')
+rex_pbid = re.compile('(PB.\d+.\d+)(|\S+)')
 
 def get_type_fafq(in_filename):
     in_filename = in_filename.upper()
@@ -35,6 +35,8 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
         for k,v in r.iteritems():
             if k=='id': continue
             if int(v) > 0: in_tissue[r['id']].add(k)
+	
+    in_tissue = dict(in_tissue)
 
     handles = {}
     handles_fafq = {}
@@ -50,8 +52,14 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
             if m is not None: fafq_dict[m.group(1)] = fafq_dict[k]
     reader = GMAPSAMReader(pooled_sam, True)
     for r in reader:
+        if r.sID == '*':
+            print >> sys.stderr, "Ignore {0} because unmapped.".format(r.qID)
+            continue
+        m = rex_pbid.match(r.qID)
+        if m is not None: pbid = m.group(1)
+        else: pbid = r.qID
         # convert SAM record to GFF record type
-        r.seqid = r.qID
+        r.seqid = pbid
         r.chr = r.sID
         r.start, r.end = r.sStart, r.sEnd
         r.strand = r.flag.strand
@@ -59,13 +67,15 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
         r.cds_exons = None
 
         groups_to_write_in = set()
-        for tissue in in_tissue[r.qID]:
+        if pbid not in in_tissue:
+            print >> sys.stderr, "WARNING: {0} does not belong to any group indicated by outgroup_dict".format(pbid)
+        for tissue in in_tissue[pbid]:
             groups_to_write_in.add(out_group_dict[tissue])
 
         for g in groups_to_write_in:
             GFF.write_collapseGFF_format(handles[g], r)
             if in_fafq is not None:
-                SeqIO.write(fafq_dict[r.qID], handles_fafq[g], type_fafq)
+                SeqIO.write(fafq_dict[pbid], handles_fafq[g], type_fafq)
 
 
 if __name__ == "__main__":
@@ -80,5 +90,5 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    out_group_dict = dict(eval(args.outgroup_dict))
+    out_group_dict = dict([eval(args.outgroup_dict)])
     regroup_sam_to_gff(args.pooled_sam, args.demux_count_file, args.output_prefix, out_group_dict, args.pooled_fastx)

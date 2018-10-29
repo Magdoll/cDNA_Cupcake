@@ -122,10 +122,10 @@ def read_classify_csv(classify_csv):
     primer_list = set()
     for r in DictReader(open(classify_csv), delimiter=','):
         if r['primer']=='NA': continue # skip nFL
-        if 'primer_index' in r: # isoseq3 version
-            p = r['primer_index']
-        else: # isoseq1 or 2
-            p = r['primer']
+        #if 'primer_index' in r: # isoseq3 version
+        #    p = r['primer_index']
+        #else: # isoseq1 or 2
+        p = r['primer']
         primer_list.add(p)
         info[r['id']] = p
     return primer_list, info
@@ -143,7 +143,7 @@ def make_classify_csv_from_lima_report(report_filename, output_filename):
             newrec = {'id': r['ZMW']+'/ccs',
                     'primer_index': "{0}--{1}".format(r['IdxLowest'], r['IdxHighest']),
                     'primer': "{0}--{1}".format(r['IdxLowestNamed'], r['IdxHighestNamed'])}
-        fout.writerow(newrec)
+            fout.writerow(newrec)
     h.close()
 
 def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
