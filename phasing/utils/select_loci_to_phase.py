@@ -44,7 +44,7 @@ def read_flnc_fastq(flnc_filename):
     return flnc_fastq_d, rich_zmws
 
 
-def read_read_stat(stat_filename, rich_zmws, valid_pbids=None):
+def read_read_stat(stat_filename, rich_zmws):
     """
     Read .read_stat.txt file
     :return: tally_by_loci -- dict  of {locus -- list of (isoform, zmw)}
@@ -63,9 +63,6 @@ def read_read_stat(stat_filename, rich_zmws, valid_pbids=None):
            m = rex_pbid.match(r['pbid'])
            if m is None:
                raise Exception, "Expected PBID format PB.X.Y but saw {0}".format(r['pbid'])
-           if valid_pbids is not None and r['pbid'] not in valid_pbids:
-               print >> sys.stderr, "Ignoring {0} because not in the provided GFF pbid list".format(r['pbid'])
-               continue
            locus = m.group(1) # ex: PB.1
            m = rex_flnc.match(r['id'])
            if m is None:
@@ -85,16 +82,14 @@ def read_GFF(gff_filename, logf):
     """
     Read a GFF filename and get the gene regions
 
-    :return: dict of (PB.X) --> LocusInfo, valid list of PB.X.Y
+    :return: dict of (PB.X) --> LocusInfo
     """
     gff_info = {} # loci --> LocusInfo
     tmp = {} # loci PB.X --> list of GFF records for PB.X.Y
-    valid_pbids = set()
 
     for r in collapseGFFReader(gff_filename):
         m = rex_pbid.match(r.seqid)
         if m is None: raise Exception, "Expected PBID format PB.X.Y but saw {0}".format(r.seqid)
-        valid_pbids.add(r.seqid)
         locus = m.group(1) # ex: PB.1
         if locus not in tmp:
             tmp[locus] = [r]
@@ -121,7 +116,7 @@ def read_GFF(gff_filename, logf):
                                        regions=regions,
                                        isoforms=[r.seqid for r in records])
 
-    return gff_info, valid_pbids
+    return gff_info
 
 
 def make_fake_genome(genome_d, gff_info, locus, output_prefix, output_name):
@@ -155,12 +150,12 @@ def select_loci_to_phase(args, genome_dict):
     logf = open('warning.logs', 'w')
     print >> sys.stderr, "Reading FLNC file..."
     flnc_fastq_d, rich_zmws = read_flnc_fastq(args.flnc_filename)
-    
-    print >> sys.stderr, "Reading GFF file...."
-    gff_info, valid_pbids = read_GFF(args.gff_filename, logf)
 
     print >> sys.stderr, "Reading read_stat...."
-    tally_by_loci, poor_zmws_not_in_rich = read_read_stat(args.stat_filename, rich_zmws, valid_pbids if args.use_pbids else None)
+    tally_by_loci, poor_zmws_not_in_rich = read_read_stat(args.stat_filename, rich_zmws)
+
+    print >> sys.stderr, "Reading GFF file...."
+    gff_info = read_GFF(args.gff_filename, logf)
 
     # find all gene loci that has at least X FLNC coverage
     cand_loci = filter(lambda k: len(tally_by_loci[k]) >= args.coverage, tally_by_loci)
@@ -189,14 +184,17 @@ def select_loci_to_phase(args, genome_dict):
 
 
         # write ccs.fastq
-        f = open(os.path.join(d2, 'ccs.fastq'), 'w')
+        f1 = open(os.path.join(d2, 'ccs.fastq'), 'w')
+        f2 = open(os.path.join(d2, 'ccs.fasta'), 'w')
         h = open(os.path.join(d2, 'fake.read_stat.txt'), 'w')
         h.write("id\tlength\tis_fl\tstat\tpbid\n")
         for pbid, zmw in tally_by_loci[locus]:
             rec = flnc_fastq_d[zmw]
-            SeqIO.write(rec, f, 'fastq')
+            SeqIO.write(rec, f1, 'fastq')
+            SeqIO.write(rec, f2, 'fasta')
             h.write("{0}\t{1}\tY\tunique\t{2}\n".format(zmw, len(rec.seq), pbid))
-        f.close()
+        f1.close()
+        f2.close()
         h.close()
     logf.close()
 
@@ -204,12 +202,11 @@ def getargs():
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument("genome_fasta")
-    parser.add_argument("flnc_filename")
-    parser.add_argument("gff_filename")
-    parser.add_argument("stat_filename")
+    parser.add_argument("genome_fasta", help="Reference genome fasta")
+    parser.add_argument("flnc_filename", help="FLNC fastq file")
+    parser.add_argument("gff_filename", help="GFF file of transcripts, IDs must be PB.X.Y")
+    parser.add_argument("stat_filename", help="Tab-delimited read stat file linking FLNC to PB.X.Y")
     parser.add_argument("-c", "--coverage", type=int, default=40, help="Minimum FLNC coverage required (default: 40)")
-    parser.add_argument("--use_pbids", default=False, action="store_true", help="Use only FLNC reads associated with pbids in GFF file")
 
     return parser
 
@@ -218,6 +215,10 @@ if __name__ == "__main__":
     parser = getargs()
 
     args = parser.parse_args()
+
+    if os.path.exists("by_loci"):
+        print >> sys.stderr, "Directory by_loci/ already exists. Delete before running!"
+        sys.exit(-1)
 
     if not os.path.exists(args.genome_fasta):
         print >> sys.stderr, "Cannot find genome FASTA {0}. Abort!".format(args.genome_fasta)

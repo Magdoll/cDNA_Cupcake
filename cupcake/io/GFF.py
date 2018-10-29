@@ -435,7 +435,7 @@ class gmapGFFReader(object):
         cds_seq_end = None
         while True:
             line = self.f.readline().strip()
-            if line.startswith('###'):
+            if line.startswith('##'):
                 rec.cds_exons = cds_exons
                 rec.cds_seq_start = cds_seq_start
                 rec.cds_seq_end = cds_seq_end
@@ -459,7 +459,7 @@ class gmapGFFReader(object):
                     print >> sys.stderr, "{0} has non-colinear exons!".format(rec.seqid)
                     while True:
                         line = self.f.readline().strip()
-                        if line.startswith('###'): return rec
+                        if line.startswith('##'): return rec
                 rec.strand = rstrand
             elif type == 'CDS':
                 rstart1, rend1 = int(raw[3]), int(raw[4])

@@ -90,8 +90,8 @@ def main_maize(ki11_snps=None, dirs=None):
             ki11_snps[r.CHROM][r.POS] = r
 
     print >> sys.stderr, 'Finished reading B73Ki11.q20.vcf.'
-    out_f = open('evaled.isophase.txt', 'w')
-    out_f.write('dir\tchrom\tpos\tref\talt_g\talt_i\tin_g\tin_i\n')
+    out_f = open('evaled.isophase_SNP.txt', 'w')
+    out_f.write('dir\tchrom\tpos\tref\talt_Short\talt_PB\tin_Short\tin_PB\n')
     if dirs is None: dirs = glob.glob('by_loci/*size*/')
     for d1 in dirs:
         mpileup = os.path.join(d1, 'ccs.mpileup')

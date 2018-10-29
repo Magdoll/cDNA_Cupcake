@@ -24,7 +24,7 @@ MIN_AF_AT_ENDS = 0.10 # minimum minor allele frequency for SNPs at ends, which t
 
 from argparse import ArgumentParser
 parser = ArgumentParser()
-parser.add_argument("fasta_filename")
+parser.add_argument("fastx_filename", help="Input FLNC fasta or fastq")
 parser.add_argument("sam_filename")
 parser.add_argument("mpileup_filename")
 parser.add_argument("read_stat")
@@ -66,12 +66,12 @@ if len(vc.variant) == 0:
 
 # (2) for each CCS read, assign a haplotype (or discard if outlier)
 pp = VariantPhaser.VariantPhaser(vc)
-pp.phase_variant(args.sam_filename, args.fasta_filename, args.output_prefix, partial_ok=args.partial_ok)
+pp.phase_variant(args.sam_filename, args.fastx_filename, args.output_prefix, partial_ok=args.partial_ok)
 pp.haplotypes
 pp.haplotypes.get_haplotype_vcf_assignment()
 
 # (3) phase isoforms
-seqids = set([r.id for r in SeqIO.parse(open(args.fasta_filename), 'fasta')])
+seqids = set([r.id for r in SeqIO.parse(open(args.fastx_filename), VariantPhaser.type_fa_or_fq(args.fastx_filename))])
 isoform_tally = VariantPhaser.phase_isoforms(args.read_stat, seqids, pp)
 if len(isoform_tally) == 0:
     os.system("touch {out}.NO_HAPS_FOUND".format(out=args.output_prefix))

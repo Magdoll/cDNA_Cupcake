@@ -25,11 +25,11 @@ samtools mpileup --min-BQ $MIN_BQ -f fake.fasta -s ccs.sorted.bam > ccs.mpileup
 #samtools mpileup --min-BQ $MIN_BQ -f fake.fasta -s out.bam > ccs.mpileup
 
 # 4. run phasing
-fq2fa.py ccs.fastq
-run_phaser.py ccs.fasta ccs.sam ccs.mpileup fake.read_stat.txt fake.mapping.txt --strand $STRAND -o phased.nopartial -n $PLOIDY
-run_phaser.py ccs.fasta ccs.sam ccs.mpileup fake.read_stat.txt fake.mapping.txt --partial_ok --strand $STRAND -o phased.partial -n $PLOIDY
+run_phaser.py ccs.fastq ccs.sam ccs.mpileup fake.read_stat.txt fake.mapping.txt --strand $STRAND -o phased.nopartial -n $PLOIDY
+run_phaser.py ccs.fastq ccs.sam ccs.mpileup fake.read_stat.txt fake.mapping.txt --partial_ok --strand $STRAND -o phased.partial -n $PLOIDY
 
 # 5. create genome CCS BAM file for reference
+fq2fa.py ccs.fastq  # this can be removed in later 
 ~/bin/gmap -D ~/share/gmap_db_new/ -d maize4 -f samse -n 0 -t 4 ccs.fasta > ccs.maize4.sam
 samtools view -bS ccs.maize4.sam > ccs.maize4.bam
 samtools sort ccs.maize4.bam > ccs.maize4.sorted.bam
