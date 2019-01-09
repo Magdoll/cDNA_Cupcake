@@ -15,6 +15,7 @@ def func(r):
     fl_count = None
     exp_acc = None
     for x in r.description.split(';'):
+        if x.find('=')==-1: continue
         a,b=x.split('=')
         if a=='full_length_coverage':
             fl_count = int(b)
