@@ -5,13 +5,11 @@ import os, sys, subprocess
 from csv import DictReader
 from collections import defaultdict
 from Bio import SeqIO
-"""
-pbtranscript.tasks.combine_cluster_bins-0
-"""
+
 
 GMAP_BIN = "/home/UNIXHOME/etseng/bin/gmap"
 GMAP_DB = "/home/UNIXHOME/etseng/share/gmap_db_new/"
-GMAP_CPUS = 12
+GMAP_CPUS = 30
 SIRV_DIR = "/home/UNIXHOME/etseng/projects2016/Lexogen_SIRV/ground_truth/"
 SIRV_GENOME = "/home/UNIXHOME/etseng/projects2015/Lexogen_SIRV/ground_truth/SIRV_150601a.fasta"
 
@@ -19,8 +17,8 @@ STAR_BIN = "python /home/UNIXHOME/etseng/GitHub/cDNA_Cupcake/sequence/STARwrappe
 SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
 
 HG19_GENOME = "/pbi/dept/bifx/etseng/genomes/hg19/hg19.fa"
-HG38_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/hg38/hg38_noalt.mmi"
-MM10_GENOME = "/home/UNIXHOME/etseng/share/minimap2_db/mm10/mm10.mmi"
+HG38_GENOME = "/pbi/dept/bifx/etseng/genomes/hg38/hg38.fa"
+MM10_GENOME = "/pbi/dept/bifx/etseng/genomes/mm10/mm10.fasta"
 
 def rename_isoseq3_hq(src_dir):
     unpolished_fa = os.path.join(src_dir, 'tasks', 'isoseqs.tasks.sierra-0', 'unpolished.fasta')
@@ -101,6 +99,9 @@ def link_files(src_dir, out_dir):
     # location for cluster report in IsoSeq1
     cluster_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'cluster_report.csv')
     cluster_csv2 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript2tools.tasks.collect_polish-0', 'report.csv')
+    cluster_csv3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.gather_csv-1', 'file.csv')
+
+    class_csv3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'isoseq3.tasks.refine-0', 'flnc.report.csv')
 
     if os.path.exists(hq_fastq):
         print >> sys.stderr, "Detecting IsoSeq1 task directories..."
@@ -112,63 +113,71 @@ def link_files(src_dir, out_dir):
         os.symlink(hq_fastq2, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv2, os.path.join(out_dir, 'cluster_report.csv'))
         isoseq_version = '2'
-    else:
+    elif os.path.exists(hq_fastq3):
         print >> sys.stderr, "Detecting IsoSeq3 task directories..."
-        assert rename_isoseq3_hq(src_dir) == 'hq_isoforms.fastq'
-        assert isoseq3_cluster_report(src_dir) == 'cluster_report.csv'
-        os.symlink(os.path.join(os.path.abspath('.'), 'hq_isoforms.fastq'), os.path.join(out_dir, 'hq_isoforms.fastq'))
-        os.symlink(os.path.join(os.path.abspath('.'), 'cluster_report.csv'), os.path.join(out_dir, 'cluster_report.csv'))
+        os.symlink(hq_fastq3, os.path.join(out_dir, 'hq_isoforms.fastq'))
+        os.symlink(cluster_csv3, os.path.join(out_dir, 'cluster_report.csv'))
+        os.symlink(class_csv3, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '3'
+    else:
+        raise Exception, "No recognizable Iso-Seq1, 2, 3 directory!"
+    # else:
+    #     print >> sys.stderr, "Detecting IsoSeq3 task directories..."
+    #     assert rename_isoseq3_hq(src_dir) == 'hq_isoforms.fastq'
+    #     assert isoseq3_cluster_report(src_dir) == 'cluster_report.csv'
+    #     os.symlink(os.path.join(os.path.abspath('.'), 'hq_isoforms.fastq'), os.path.join(out_dir, 'hq_isoforms.fastq'))
+    #     os.symlink(os.path.join(os.path.abspath('.'), 'cluster_report.csv'), os.path.join(out_dir, 'cluster_report.csv'))
+    #     isoseq_version = '3'
 
     return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv', isoseq_version
-
-def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix, isoseq_version):
-    """
-    in Iso-Seq1:
-    cluster_id,read_id,read_type
-    i0_ICE_samplee5686f|c1,m54011_160718_221804/53150541/967_60_CCS,FL
-  
-    in IsoSeq2:
-    cluster_id,read_id,read_type
-    cb10060_c58,m54086_170204_081430/41025830/1758_53_CCS,FL
-    
-    (hq id example: HQ_polishOFF|cb5925_c32246/f3p0/1332)
-    """
-    fl_ass = defaultdict(lambda: set()) # (i0,c13) -> # of FL associated
-    reader = DictReader(open(cluster_csv),delimiter=',')
-    for r in reader:
-        if isoseq_version=='1':
-            a,b=r['cluster_id'].split('|')
-            cid=b
-            pre=a.split('_')[0]
-        elif isoseq_version=='2' or isoseq_version=='3':  # currently version 2 and 3 are hacked to same format
-            pre,cid = r['cluster_id'].split('_')
-        else:
-            raise Exception, "Unrecorgnized isoseq version {0}!".format(isoseq_version)
-        # current version of SMRTLink does not provide nFL information =____=
-        if r['read_type']=='FL':
-            fl_ass[(pre,cid)].add(r['read_id'])
-
-
-    f = open(collapse_prefix + '.abundance.txt', 'w')
-    for i in xrange(14): f.write("#\n")
-    f.write("pbid\tcount_fl\n")
-    for line in open(collapse_prefix + '.group.txt'):
-        pbid,members=line.strip().split('\t')
-        total = 0
-        for m in members.split(','):
-            if isoseq_version=='1':
-                raw = m.split('|')
-                cid = raw[1].split('/')[0]
-                pre = raw[0].split('_')[0]
-            elif isoseq_version=='2' or isoseq_version=='3':
-                # ex: HQ_polishOFF|cb5925_c32246/f3p0/1332
-                pre, cid = m.split('|')[1].split('/')[0].split('_')
-            else:
-                raise Exception, "Unrecorgnized isoseq version {0}!".format(isoseq_version)
-            total += len(fl_ass[(pre,cid)])
-        f.write("{0}\t{1}\n".format(pbid, total))
-    f.close()
+#
+# def make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix, isoseq_version):
+#     """
+#     in Iso-Seq1:
+#     cluster_id,read_id,read_type
+#     i0_ICE_samplee5686f|c1,m54011_160718_221804/53150541/967_60_CCS,FL
+#
+#     in IsoSeq2:
+#     cluster_id,read_id,read_type
+#     cb10060_c58,m54086_170204_081430/41025830/1758_53_CCS,FL
+#
+#     (hq id example: HQ_polishOFF|cb5925_c32246/f3p0/1332)
+#     """
+#     fl_ass = defaultdict(lambda: set()) # (i0,c13) -> # of FL associated
+#     reader = DictReader(open(cluster_csv),delimiter=',')
+#     for r in reader:
+#         if isoseq_version=='1':
+#             a,b=r['cluster_id'].split('|')
+#             cid=b
+#             pre=a.split('_')[0]
+#         elif isoseq_version=='2' or isoseq_version=='3':  # currently version 2 and 3 are hacked to same format
+#             pre,cid = r['cluster_id'].split('_')
+#         else:
+#             raise Exception, "Unrecorgnized isoseq version {0}!".format(isoseq_version)
+#         # current version of SMRTLink does not provide nFL information =____=
+#         if r['read_type']=='FL':
+#             fl_ass[(pre,cid)].add(r['read_id'])
+#
+#
+#     f = open(collapse_prefix + '.abundance.txt', 'w')
+#     for i in xrange(14): f.write("#\n")
+#     f.write("pbid\tcount_fl\n")
+#     for line in open(collapse_prefix + '.group.txt'):
+#         pbid,members=line.strip().split('\t')
+#         total = 0
+#         for m in members.split(','):
+#             if isoseq_version=='1':
+#                 raw = m.split('|')
+#                 cid = raw[1].split('/')[0]
+#                 pre = raw[0].split('_')[0]
+#             elif isoseq_version=='2' or isoseq_version=='3':
+#                 # ex: HQ_polishOFF|cb5925_c32246/f3p0/1332
+#                 pre, cid = m.split('|')[1].split('/')[0].split('_')
+#             else:
+#                 raise Exception, "Unrecorgnized isoseq version {0}!".format(isoseq_version)
+#             total += len(fl_ass[(pre,cid)])
+#         f.write("{0}\t{1}\n".format(pbid, total))
+#     f.close()
 
 def sanity_check_script_dependencies():
     if os.system("chain_samples.py -h > /dev/null")!=0:

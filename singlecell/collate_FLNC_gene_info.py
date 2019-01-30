@@ -43,6 +43,9 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
     writer.writeheader()
 
     for ccs_id, pbid in group_info.iteritems():
+        if pbid not in sqanti_info:
+            print >> sys.stderr, "ignoring ID {0} cuz not in classification file.".format(pbid)
+            continue
         rec = {'id': ccs_id, 'pbid': pbid}
         rec['category'] = sqanti_info[pbid]['structural_category']
         rec['transcript'] = sqanti_info[pbid]['associated_transcript']
