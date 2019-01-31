@@ -108,8 +108,13 @@ def scrub_ref_exons(r, tree):
 
 def read_scrubbed_junction_to_tree(junction_filename):
     tree = defaultdict(lambda: IntervalTree())
-    for line in open(junction_filename):
-        chrom, left, right, strand = line.strip().split('\t')
+    f = open(junction_filename)
+    if not f.readline().startswith('track'): f.seek(0)
+    for line in f:
+        raw = line.strip().split('\t')
+        if len(raw) == 4: chrom, left, right, strand = raw
+        elif len(raw) == 6: chrom, left, right, _name, _count, strand = raw
+        else: raise Exception, "Expects junction BED file to have either 4 or 6 columns! Saw {0}!".format(len(raw))
         left, right = int(left), int(right) # already 0-based start, 0-based end
         tree[chrom,strand].add(left, right, Interval(left, right))
     return tree

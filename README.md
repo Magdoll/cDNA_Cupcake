@@ -63,6 +63,8 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
+2019.01.31 updated to v6.4. fixed junction 6-field support in `scrub_sample_GFF_junctions.py`. 
+
 2019.01.30 updated to v6.3. fixed typo in `summarize_sample_GFF_junctions.py`.
 
 2019.01.12 updated to v6.2. added first version of IsoPhase scripts.
