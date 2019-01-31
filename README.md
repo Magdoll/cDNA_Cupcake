@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 01/12/2019
+Last Updated: 01/30/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 6.2
+Current version: 6.3
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.01.30 updated to v6.3. fixed typo in `summarize_sample_GFF_junctions.py`.
 
 2019.01.12 updated to v6.2. added first version of IsoPhase scripts.
 

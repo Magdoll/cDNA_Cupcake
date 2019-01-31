@@ -176,7 +176,7 @@ if __name__ == "__main__":
         print >> sys.stderr, "Reading genome file {0}...".format(genome_filename)
         genome_d = SeqIO.to_dict(SeqIO.parse(open(genome_filename), 'fasta'))
     else:
-        print >> sys.stder, "No genome file given. Ignore."
+        print >> sys.stderr, "No genome file given. Ignore."
         genome_d = None
 
     if junction_filename is not None:
