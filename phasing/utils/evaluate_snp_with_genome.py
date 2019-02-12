@@ -1,8 +1,11 @@
 __author__ = 'etseng@pacb.com'
 import os, sys, glob
 from collections import defaultdict
+from csv import DictReader, DictWriter
+from bx.intervals import IntervalTree
 import vcf
 import phasing.io.SAMMPileUpReader as sp
+
 
 def read_fake_mapping(fake_genome_mapping_filename):
     """
@@ -27,33 +30,73 @@ def get_positions_to_recover(fake_genome_mapping_filename, mpileup_filename, gen
     """
     fake_map = read_fake_mapping(fake_genome_mapping_filename)
     good_positions = []
+    cov_at_pos = defaultdict(lambda: 0) # dict of (chrom,pos) --> (coverage)  // this is used for reports later
     for r in sp.MPileUpReader(mpileup_filename):
+        genome_chr, genome_pos = fake_map[r.pos]
+        cov_at_pos[(genome_chr,genome_pos)] = r.nCov
         if r.nCov >= min_cov:
-            genome_chr, genome_pos = fake_map[r.pos]
             genome_chr = genome_chr.split('|')[0]
             if genome_chr in genome_snp and genome_pos in genome_snp[genome_chr] and genome_snp[genome_chr][genome_pos].is_snp:
                 good_positions.append((genome_chr, genome_pos))
 
-    return good_positions
+    return good_positions, cov_at_pos
 
 
-def eval_isophase(isophase_vcf, genome_snp, good_positions, out_f, name='NA'):
+def eval_isophase(isophase_vcf, genome_snp, good_positions, cov_at_pos, repeat_by_chrom, shortread_cov, writer_f, name='NA'):
     for r in vcf.VCFReader(open(isophase_vcf)):
-        r.CHROM = r.CHROM.split('|')[0]
-        if (r.CHROM, r.POS) not in good_positions:
-            alt_g = 'NA'
-            in_g = 'N'
-            in_i = 'Y'
-        else:
-            alt_g = genome_snp[r.CHROM][r.POS].ALT[0]
-            in_g = 'Y'
-            in_i = 'Y'
-            good_positions.remove((r.CHROM, r.POS))
-        out_f.write(('{name}\t{chrom}\t{pos}\t{ref}\t{alt_g}\t{alt_i}\t{in_g}\t{in_i}\n').format(name=name, chrom=r.CHROM, pos=r.POS, ref=r.REF, alt_g=alt_g, alt_i=r.ALT[0], in_g=in_g, in_i=in_i))
+        out = {'dir': name,
+               'chrom': 'NA',
+               'pos': r.POS,
+               'ref': r.REF,
+               'alt_Short': 'NA',
+               'alt_PB': 'NA',
+               'in_Short': 'NA',
+               'in_PB': 'NA',
+               'cov_Short': 'NA',
+               'cov_PB': 'NA',
+               'genomic_HP': 'NA'}
 
+        r.CHROM = r.CHROM.split('|')[0]
+        out['chrom'] = r.CHROM
+        out['alt_PB'] = r.ALT[0]
+
+        out['genomic_HP'] = 'Y' if (r.CHROM in repeat_by_chrom and len(repeat_by_chrom[r.CHROM].find(r.POS,r.POS))>0) else 'N'
+
+        try:
+            out['cov_Short'] = shortread_cov[r.CHROM][r.POS]
+        except KeyError:
+            out['cov_Short'] = 0
+        out['cov_PB'] = cov_at_pos[r.CHROM,r.POS-1]
+        if (r.CHROM, r.POS) not in good_positions:
+            out['alt_Short'] = 'NA'
+            out['in_Short'] = 'N'
+            out['in_PB'] = 'Y'
+        else:
+            out['alt_Short'] = genome_snp[r.CHROM][r.POS].ALT[0]
+            out['in_Short'] = 'Y'
+            out['in_PB'] = 'Y'
+            good_positions.remove((r.CHROM, r.POS))
+        writer_f.writerow(out)
+
+    # now we write out everything that is only in Shortread
     for chrom, pos in good_positions:
-        r = genome_snp[chrom][pos]
-        out_f.write(('{name}\t{chrom}\t{pos}\t{ref}\t{alt_g}\tNA\tY\tN\n').format(name=name, chrom=chrom, pos=pos, ref=r.REF, alt_g=r.ALT[0]))
+        out = {'dir': name,
+               'chrom': chrom,
+               'pos': pos,
+               'ref': r.REF,
+               'alt_Short': r.ALT[0],
+               'alt_PB': 'NA',
+               'in_Short': 'Y',
+               'in_PB': 'N',
+               'cov_Short': 'NA',
+               'cov_PB': cov_at_pos[r.CHROM,r.POS-1],
+               'genomic_HP': 'Y' if (r.CHROM in repeat_by_chrom and len(repeat_by_chrom[r.CHROM].find(r.POS,r.POS))>0) else 'N'
+               }
+        try:
+            out['cov_Short'] = shortread_cov[r.CHROM][r.POS]
+        except KeyError:
+            out['cov_Short'] = 0
+        writer_f.writerow(out)
 
 
 def main_brangus(unzip_snps=None):
@@ -86,14 +129,41 @@ def main_brangus(unzip_snps=None):
 def main_maize(ki11_snps=None, dirs=None):
     if ki11_snps is None:
         ki11_snps = defaultdict(lambda : {}) # chrom -> pos -> VCF record
+        debug_count = 0
         for r in vcf.VCFReader(open('B73Ki11.q20.vcf')):
             ki11_snps[r.CHROM][r.POS] = r
+            #if debug_count > 100000: break
+            debug_count += 1
 
     print >> sys.stderr, 'Finished reading B73Ki11.q20.vcf.'
+
+    ki11_shortread_cov = defaultdict(lambda: {}) # chrom -> pos -> short read cov
+    # read the raw Ki11 pileup to get coverage in places where no SNPs were called
+    for r in sp.MPileUpReader('Ki11.raw.mpileup'):
+        if r is not None:
+            ki11_shortread_cov[r.chr][r.pos] = r.cov
+    print >> sys.stderr, "Fnished reading Ki11.raw.mpileup."
+
+    repeat_by_chrom = {}
+    # read the Tandem Repeat Finder summary
+    for r in DictReader(open('B73_RefV4.fa.repeat_list.txt'),delimiter='\t'):
+        if r['chrom'] not in repeat_by_chrom:
+            repeat_by_chrom[r['chrom']] = IntervalTree()
+        repeat_by_chrom[r['chrom']].add(int(r['start0']), int(r['end1']))
+
+    print >> sys.stderr, 'Finished reading B73_RefV4.fa.repeat_list.txt.'
+
+
+    FIELDS = ['dir', 'chrom', 'pos', 'ref', 'alt_Short', 'alt_PB', 'in_Short', 'in_PB', 'cov_Short', 'cov_PB', 'genomic_HP']
     out_f = open('evaled.isophase_SNP.txt', 'w')
-    out_f.write('dir\tchrom\tpos\tref\talt_Short\talt_PB\tin_Short\tin_PB\n')
-    if dirs is None: dirs = glob.glob('by_loci/*size*/')
+    writer_f = DictWriter(out_f, FIELDS, delimiter='\t')
+    writer_f.writeheader()
+
+    debug_count = 0
+    #if dirs is None: dirs = glob.glob('by_loci/*size*/')
     for d1 in dirs:
+        #if debug_count > 100: break
+        debug_count += 1
         mpileup = os.path.join(d1, 'ccs.mpileup')
         mapfile = os.path.join(d1, 'fake.mapping.txt')
         vcffile = os.path.join(d1, 'phased.partial.vcf')
@@ -103,9 +173,9 @@ def main_maize(ki11_snps=None, dirs=None):
             print >> sys.stderr, ('Skipping {0} because no SNPs found.').format(d1)
         else:
             print >> sys.stderr, ('Evaluating {0}.').format(d1)
-            good_positions = get_positions_to_recover(mapfile, mpileup, ki11_snps, min_cov=30) # use lower min cov here becuz a few close cases where BQ filtering lowered cov
+            good_positions, cov_at_pos = get_positions_to_recover(mapfile, mpileup, ki11_snps, min_cov=30) # use lower min cov here becuz a few close cases where BQ filtering lowered cov
             name = d1.split('/')[1]
-            eval_isophase(vcffile, ki11_snps, good_positions, out_f, name)
+            eval_isophase(vcffile, ki11_snps, good_positions, cov_at_pos, repeat_by_chrom, ki11_shortread_cov, writer_f, name)
 
     out_f.close()
     return ki11_snps

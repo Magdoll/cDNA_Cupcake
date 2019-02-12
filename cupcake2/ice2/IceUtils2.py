@@ -1,17 +1,21 @@
 
+import os, re, sys, subprocess
 import numpy as np
-from pbtranscript.Utils import execute
-from pbtranscript.ice.IceUtils import alignment_has_large_nonmatch, HitItem, eval_blasr_alignment
-from pbtranscript.io import LA4IceReader, BLASRM5Reader
+from cupcake.io.BioReaders import GMAPSAMReader
+from cupcake.ice.find_ECE import findECE
 
 gcon2_py = "ice_pbdagcon2.py"
+
 
 def sanity_check_gcon2():
     """Sanity check gcon."""
     cmd = gcon2_py + " --help"
 
     errmsg = gcon2_py + " is not installed."
-    execute(cmd=cmd, errmsg=errmsg)
+    if subprocess.check_call(cmd, shell=True)!=0:
+        print >> sys.stderr, "ERROR RUNNING CMD:", cmd
+        print >> sys.stderr, errmsg
+        sys.exit(-1)
     return gcon2_py
 
 
@@ -26,14 +30,12 @@ def alignment_missed_start_end_less_than_threshold(r, max_missed_start, max_miss
     """
     assert max_missed_start >= full_missed_start and max_missed_end >= full_missed_end
 
-
-
     # which ever is the shorter one, must be fully mapped
     missed_start_1 = r.qStart
     missed_start_2 = r.sStart
-    missed_end_1 = (r.qLength - r.qEnd)
-    missed_end_2 = (r.sLength - r.sEnd)
-    if r.qLength > r.sLength:
+    missed_end_1 = (r.qLen - r.qEnd)
+    missed_end_2 = (r.sLen - r.sEnd)
+    if r.qLen > r.sLen:
         missed_start_1, missed_start_2 = missed_start_2, missed_start_1
         missed_end_1, missed_end_2 = missed_end_2, missed_end_1
     # the smaller one must be close to fully mapped
@@ -45,8 +47,8 @@ def alignment_missed_start_end_less_than_threshold(r, max_missed_start, max_miss
 
     return True
 
-def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
-                      qver_get_func, qvmean_get_func, qv_prob_threshold=.03,
+def minimap2_against_ref2(sam_filename, query_len_dict, ref_len_dict,
+                      is_FL, sID_starts_with_c,
                       ece_penalty=1, ece_min_len=20, same_strand_only=True,
                       max_missed_start=200, max_missed_end=50,
                       full_missed_start=50, full_missed_end=30):
@@ -55,16 +57,10 @@ def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
     (1) self hit
     (2) opposite strand hit  (should already be in the same orientation;
         can override with <same_strand_only> set to False)
-    (3) less than 90% aligned or more than 50 bp missed
-
-    qver_get_func --- should be basQV.basQVcacher.get() or
-                      .get_smoothed(), or can just pass in
-                      lambda (x, y): 1. to ignore QV
     """
-    with BLASRM5Reader(output_filename) as reader:
-        for r in reader:
-            missed_q = r.qStart + r.qLength - r.qEnd
-            missed_t = r.sStart + r.sLength - r.sEnd
+    for r in GMAPSAMReader(sam_filename, True, query_len_dict=query_len_dict, ref_len_dict=ref_len_dict):
+            missed_q = r.qStart + r.qLen - r.qEnd
+            missed_t = r.sStart + r.sLen - r.sEnd
 
             if sID_starts_with_c:
                 # because all consensus should start with
@@ -82,13 +78,13 @@ def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
 
             # self hit, useless!
             # opposite strand not allowed!
-            if (cID == r.qID or (r.strand == '-' and same_strand_only)):
+            if (cID == r.qID or (r.flag.strand == '-' and same_strand_only)):
                 yield HitItem(qID=r.qID, cID=cID)
                 continue
 
             # regardless if whether is full-length (is_FL)
             # the query MUST be mapped fully (based on full_missed_start/end)
-            if r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end:
+            if r.qStart > full_missed_start or (r.qLen-r.qEnd) > full_missed_end:
                 yield HitItem(qID=r.qID, cID=cID)
 
             # full-length case: allow up to max_missed_start bp of 5' not aligned
@@ -98,12 +94,7 @@ def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
                             max_missed_start, max_missed_end, full_missed_start, full_missed_end):
                 yield HitItem(qID=r.qID, cID=cID)
             else:
-                cigar_str, ece_arr = eval_blasr_alignment(
-                    record=r,
-                    qver_get_func=qver_get_func,
-                    qvmean_get_func=qvmean_get_func,
-                    sID_starts_with_c=sID_starts_with_c,
-                    qv_prob_threshold=qv_prob_threshold)
+                ece_arr = eval_sam_alignment(r)
 
                 if alignment_has_large_nonmatch(ece_arr,
                                                 ece_penalty, ece_min_len):
@@ -111,102 +102,11 @@ def blasr_against_ref2(output_filename, is_FL, sID_starts_with_c,
                 else:
                     yield HitItem(qID=r.qID, cID=cID,
                                   qStart=r.qStart, qEnd=r.qEnd,
-                                  missed_q=missed_q * 1. / r.qLength,
-                                  missed_t=missed_t * 1. / r.sLength,
-                                  fakecigar=cigar_str,
+                                  missed_q=missed_q * 1. / r.qLen,
+                                  missed_t=missed_t * 1. / r.sLen,
+                                  fakecigar=r.cigar,
                                   ece_arr=ece_arr)
 
-def daligner_against_ref2(query_dazz_handler, target_dazz_handler, la4ice_filename,
-                         is_FL, sID_starts_with_c,
-                         qver_get_func, qvmean_get_func, qv_prob_threshold=.03,
-                         ece_penalty=1, ece_min_len=20, same_strand_only=True, no_qv_or_aln_checking=False,
-                         max_missed_start=200, max_missed_end=50,
-                         full_missed_start=50, full_missed_end=30):
-    """
-    Excluding criteria:
-    (1) self hit
-    (2) opposite strand hit  (should already be in the same orientation;
-        can override with <same_strand_only> set to False)
-    (3) less than 90% aligned or more than 50 bp missed
-
-    Parameters:
-      query_dazz_handler - query dazz handler in DalignRunner
-      target_dazz_handler - target dazz handler in DalignRunner
-      la4ice_filename - la4ice output of DalignRunner
-      qver_get_func - returns a list of qvs of (read, qvname)
-                      e.g. basQV.basQVcacher.get() or .get_smoothed()
-      qvmean_get_func - which returns mean QV of (read, qvname)
-    """
-    for r in LA4IceReader(la4ice_filename):
-        missed_q = r.qStart + r.qLength - r.qEnd
-        missed_t = r.sStart + r.sLength - r.sEnd
-
-        r.qID = query_dazz_handler[r.qID].split(' ')[0]
-        r.sID = target_dazz_handler[r.sID].split(' ')[0]
-
-        if sID_starts_with_c:
-            # because all consensus should start with
-            # c<cluster_index>
-            assert r.sID.startswith('c')
-            if r.sID.find('/') > 0:
-                r.sID = r.sID.split('/')[0]
-            if r.sID.endswith('_ref'):
-                # probably c<cid>_ref
-                cID = int(r.sID[1:-4])
-            else:
-                cID = int(r.sID[1:])
-        else:
-            cID = r.sID
-
-        # self hit, useless!
-        # opposite strand not allowed!
-        if (cID == r.qID or (r.strand == '-' and same_strand_only)):
-            yield HitItem(qID=r.qID, cID=cID)
-            continue
-
-        # regardless if whether is full-length (is_FL)
-        # the query MUST be mapped fully (based on full_missed_start/end)
-        #print "r.qStart:", r.qID, r.sID, r.qStart, full_missed_start, (r.qLength-r.qEnd), full_missed_end, r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end
-
-        if r.qStart > full_missed_start or (r.qLength-r.qEnd) > full_missed_end:
-            yield HitItem(qID=r.qID, cID=cID)
-            continue
-
-        # this is used for partial_uc/nFL reads only
-        # simply accepts hits from daligner for the nFL partial hits
-        # testing shows that it does not affect much the Quiver consensus calling
-        if no_qv_or_aln_checking:
-            yield HitItem(qID=r.qID, cID=cID,
-                          qStart=r.qStart, qEnd=r.qEnd,
-                          missed_q=missed_q * 1. / r.qLength,
-                          missed_t=missed_t * 1. / r.sLength,
-                          fakecigar=1,
-                          ece_arr=1)
-            continue
-
-        # full-length case: allow up to 200bp of 5' not aligned
-        # and 50bp of 3' not aligned
-        if (is_FL and not alignment_missed_start_end_less_than_threshold(r, \
-             max_missed_start, max_missed_end, full_missed_start, full_missed_end)):
-            yield HitItem(qID=r.qID, cID=cID)
-        else:
-            cigar_str, ece_arr = eval_blasr_alignment(
-                record=r,
-                qver_get_func=qver_get_func,
-                sID_starts_with_c=sID_starts_with_c,
-                qv_prob_threshold=qv_prob_threshold,
-                qvmean_get_func=qvmean_get_func)
-            #else: # don't use QV, just look at alignment
-
-            if alignment_has_large_nonmatch(ece_arr, ece_penalty, ece_min_len):
-                yield HitItem(qID=r.qID, cID=cID)
-            else:
-                yield HitItem(qID=r.qID, cID=cID,
-                              qStart=r.qStart, qEnd=r.qEnd,
-                              missed_q=missed_q * 1. / r.qLength,
-                              missed_t=missed_t * 1. / r.sLength,
-                              fakecigar=cigar_str,
-                              ece_arr=ece_arr)
 
 def possible_merge2(r, ece_penalty, ece_min_len,
                    max_missed_start=200, max_missed_end=50,
@@ -270,3 +170,91 @@ def cid_with_annotation2(cid, expected_acc=None):
         annotations.append("expected_accuracy={0:.3f}".format(expected_acc))
 
     return "{cid} {annotation}".format(cid=cid, annotation=";".join(annotations))
+
+
+def eval_sam_alignment(record, debug=False):
+    """
+    Takes a GMAPSAMRecord and goes through the cigar string
+
+    ToDo: take in QV information & account homopolymer in the future
+
+    Returns: binary ECE array
+    """
+    if debug:
+        import pdb
+        pdb.set_trace()
+
+    # binary array of 0|1 where 1 is a penalty
+    aln_len = record.num_mat_or_sub + record.num_ins + record.num_del
+    ece = np.zeros(aln_len, dtype=np.int)
+
+    q_index = record.qStart
+    s_index = record.sStart
+    offset = 0
+    for _match in re.finditer('(\d+)(\S)', record.cigar):
+        _count, _type = _match.groups()
+        _count = int(_count)
+        if _type in ('M', '='):
+            q_index += _count
+            s_index += _count
+            offset += _count
+        elif _type == 'X':  # mismatch
+            ece[offset:offset+_count] = 1
+            q_index += _count
+            s_index += _count
+            offset += _count
+        elif _type == 'D':
+            ece[offset:offset+_count] = 1
+            s_index += _count
+            offset += _count
+        elif _type == 'I':
+            ece[offset:offset+_count] = 1
+            q_index += _count
+            offset += _count
+        elif _type in ('H', 'S'):
+            q_index += _count
+        else:
+            raise Exception, "Unrecognized cigar character {0}!".format(_type)
+
+
+    return ece
+
+class HitItem(object):
+
+    """
+    Simply define an object class for saving items produced by
+    blasr_against_ref or daligner_against_ref.
+    """
+
+    def __init__(self, qID, cID, qStart=None, qEnd=None,
+                 missed_q=None, missed_t=None,
+                 fakecigar=None, ece_arr=None):
+        self.qID = qID
+        self.cID = cID
+        self.qStart = qStart
+        self.qEnd = qEnd
+        self.missed_q = missed_q
+        self.missed_t = missed_t
+        self.fakecigar = fakecigar
+        self.ece_arr = ece_arr
+
+    def __str__(self):
+        return """{qID}/{qStart}_{qEnd} aligns to {cID}""".format(
+                qID=self.qID.split(' ')[0], cID=self.cID.split(' ')[0],
+                qStart=self.qStart, qEnd=self.qEnd)
+
+def alignment_has_large_nonmatch(ece_arr, penalty, min_len):
+    """
+    penalty of (-)1: 50%
+    penalty of (-)2: 66%
+    penalty of (-)4: 80%
+    penalty of (-)9: 90%
+
+    Return True when alignment has large non-matches not explained
+    by low base QVs (in other words, "reject" as an isoform hit and
+    don't put in the same cluster)
+    """
+    ece_arr = ece_arr * (penalty + 1)
+    s = [0] + list(ece_arr - penalty)
+    # fix this later to something faster & better
+    return len(findECE(s, len(s), min_len, True)) > 0

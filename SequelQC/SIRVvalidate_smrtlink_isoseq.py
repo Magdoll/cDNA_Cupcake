@@ -19,73 +19,73 @@ SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
 HG19_GENOME = "/pbi/dept/bifx/etseng/genomes/hg19/hg19.fa"
 HG38_GENOME = "/pbi/dept/bifx/etseng/genomes/hg38/hg38.fa"
 MM10_GENOME = "/pbi/dept/bifx/etseng/genomes/mm10/mm10.fasta"
-
-def rename_isoseq3_hq(src_dir):
-    unpolished_fa = os.path.join(src_dir, 'tasks', 'isoseqs.tasks.sierra-0', 'unpolished.fasta')
-    unpolished_fa2 = os.path.join(src_dir, 'tasks', 'isoseq3.tasks.cluster-0', 'unpolished.fasta')
-    polished_hq = os.path.join(src_dir, 'tasks', 'pbcoretools.tasks.bam2fastq_transcripts-0', 'hq_transcripts.fastq')
-
-    if not os.path.exists(unpolished_fa):
-        if not os.path.exists(unpolished_fa2):
-            print >> sys.stderr, "{0} or {1} does not exist. Abort!".format(unpolished_fa, unpolished_fa2)
-            sys.exit(-1)
-        else:
-            unpolished_fa = unpolished_fa2
-    if not os.path.exists(polished_hq):
-        print >> sys.stderr, "{0} does not exist. Abort!".format(polished_hq)
-        sys.exit(-1)
-
-    fl_count = {} # isoform index --> count
-    for r in SeqIO.parse(open(unpolished_fa),'fasta'):
-        # id: isoform_0 full_length_coverage=2;length=12786
-        i = r.id.split('_')[1]
-        c = int(r.description.split('full_length_coverage=')[1].split(';')[0])
-        fl_count[i] = c
-
-    h = open('hq_isoforms.fastq', 'w')
-    reader = SeqIO.parse(open(polished_hq),'fastq')
-    for r in reader:
-        acc = 1 - sum(10**(-x/10.) for x in r.letter_annotations['phred_quality'][100:-30])/len(r.seq)
-        i = r.id.split('/')[1]
-        c = fl_count[i]
-        r.id = "HQ_sampleX|cb1_c{0}/f{1}p0/{2}".format(i, c, len(r.seq))
-        r.description = "{0} full_length_coverage={1};isoform_length={2};expected_accuracy={3:.4f}".format(r.id,c,len(r.seq),acc)
-        SeqIO.write(r, h, 'fastq')
-    h.close()
-    return h.name
-
-def isoseq3_cluster_report(src_dir):
-    """
-    Temporary hack until @yli implement's cluster_report.csv in Iso-Seq3 output
-    """
-    import pysam
-    import glob
-
-    polished_bams = glob.glob(src_dir + '/tasks/isoseqs.tasks.tango-*/polished.bam')
-    polished_bams2 = glob.glob(src_dir + '//tasks/isoseq3.tasks.polish-*/polished.bam')
-
-    if len(polished_bams) == 0:
-        if len(polished_bams2) == 0:
-            print >> sys.stderr, "polished.bam does not exist. Abort!"
-            sys.exit(-1)
-        else: polished_bams = polished_bams2
-    else:
-        print >> sys.stderr, "Found {0} polished bams.".format(len(polished_bams))
-
-    h = open('cluster_report.csv', 'w')
-    h.write('cluster_id,read_id,read_type\n')
-    for file in polished_bams:
-        f = pysam.AlignmentFile(file, check_sq=False)
-        for r in f:
-            d = dict(r.tags)
-            for x in d['im'].split(','):
-                # massage ccs name into <movie>/<zmw>/<start_end_CCS>
-                _movie, _zmw, _ccs = x.split('/')
-                newid = "{0}/{1}/1_1000_CCS".format(_movie, _zmw)
-                h.write("cb1_c{0},{1},FL\n".format(r.qname.split('/')[1], newid))
-    h.close()
-    print >> sys.stderr, "Output written to: cluster_report.csv"
-    return "cluster_report.csv"
+#
+# def rename_isoseq3_hq(src_dir):
+#     unpolished_fa = os.path.join(src_dir, 'tasks', 'isoseqs.tasks.sierra-0', 'unpolished.fasta')
+#     unpolished_fa2 = os.path.join(src_dir, 'tasks', 'isoseq3.tasks.cluster-0', 'unpolished.fasta')
+#     polished_hq = os.path.join(src_dir, 'tasks', 'pbcoretools.tasks.bam2fastq_transcripts-0', 'hq_transcripts.fastq')
+#
+#     if not os.path.exists(unpolished_fa):
+#         if not os.path.exists(unpolished_fa2):
+#             print >> sys.stderr, "{0} or {1} does not exist. Abort!".format(unpolished_fa, unpolished_fa2)
+#             sys.exit(-1)
+#         else:
+#             unpolished_fa = unpolished_fa2
+#     if not os.path.exists(polished_hq):
+#         print >> sys.stderr, "{0} does not exist. Abort!".format(polished_hq)
+#         sys.exit(-1)
+#
+#     fl_count = {} # isoform index --> count
+#     for r in SeqIO.parse(open(unpolished_fa),'fasta'):
+#         # id: isoform_0 full_length_coverage=2;length=12786
+#         i = r.id.split('_')[1]
+#         c = int(r.description.split('full_length_coverage=')[1].split(';')[0])
+#         fl_count[i] = c
+#
+#     h = open('hq_isoforms.fastq', 'w')
+#     reader = SeqIO.parse(open(polished_hq),'fastq')
+#     for r in reader:
+#         acc = 1 - sum(10**(-x/10.) for x in r.letter_annotations['phred_quality'][100:-30])/len(r.seq)
+#         i = r.id.split('/')[1]
+#         c = fl_count[i]
+#         r.id = "HQ_sampleX|cb1_c{0}/f{1}p0/{2}".format(i, c, len(r.seq))
+#         r.description = "{0} full_length_coverage={1};isoform_length={2};expected_accuracy={3:.4f}".format(r.id,c,len(r.seq),acc)
+#         SeqIO.write(r, h, 'fastq')
+#     h.close()
+#     return h.name
+#
+# def isoseq3_cluster_report(src_dir):
+#     """
+#     Temporary hack until @yli implement's cluster_report.csv in Iso-Seq3 output
+#     """
+#     import pysam
+#     import glob
+#
+#     polished_bams = glob.glob(src_dir + '/tasks/isoseqs.tasks.tango-*/polished.bam')
+#     polished_bams2 = glob.glob(src_dir + '//tasks/isoseq3.tasks.polish-*/polished.bam')
+#
+#     if len(polished_bams) == 0:
+#         if len(polished_bams2) == 0:
+#             print >> sys.stderr, "polished.bam does not exist. Abort!"
+#             sys.exit(-1)
+#         else: polished_bams = polished_bams2
+#     else:
+#         print >> sys.stderr, "Found {0} polished bams.".format(len(polished_bams))
+#
+#     h = open('cluster_report.csv', 'w')
+#     h.write('cluster_id,read_id,read_type\n')
+#     for file in polished_bams:
+#         f = pysam.AlignmentFile(file, check_sq=False)
+#         for r in f:
+#             d = dict(r.tags)
+#             for x in d['im'].split(','):
+#                 # massage ccs name into <movie>/<zmw>/<start_end_CCS>
+#                 _movie, _zmw, _ccs = x.split('/')
+#                 newid = "{0}/{1}/1_1000_CCS".format(_movie, _zmw)
+#                 h.write("cb1_c{0},{1},FL\n".format(r.qname.split('/')[1], newid))
+#     h.close()
+#     print >> sys.stderr, "Output written to: cluster_report.csv"
+#     return "cluster_report.csv"
 
 
 def link_files(src_dir, out_dir):
@@ -213,11 +213,11 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
 
     ### make_abundance_from_CSV
     collapse_prefix = hq_fastq + '.no5merge.collapsed'
-    make_abundance_from_Sequel_cluster_csv(cluster_csv, collapse_prefix, isoseq_version)
+    cmd = "get_abundance_post_collapse.py " + collapse_prefix + " cluster_report.csv"
+    if subprocess.check_call(cmd, shell=True)!=0:
+        raise Exception, "ERROR CMD:", cmd
 
-
-
-    cmd = "filter_by_count.py {0} --min_count={1}".format(collapse_prefix, min_count)
+    cmd = "filter_by_count.py {0} --dun_use_group_count --min_count={1}".format(collapse_prefix, min_count)
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 

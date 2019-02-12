@@ -10,7 +10,7 @@ from cupcake.ice.find_ECE import findECE
 
 def get_ece_arr_from_alignment(record):
     """
-    A simplified version of eval_blasr_alignment that does NOT look at QV
+    A simplified version of eval_sam_alignment that does NOT look at QV
     Simply transform record.alnStr to ece_arr where 1 is error
 
     ex: |||**||||**|||*|*|

@@ -8,16 +8,6 @@ from collections import namedtuple
 from exceptions import StopIteration
 
 Interval = namedtuple('Interval', ['start', 'end'])
-       
-def iter_cigar_string(cigar_string):
-    num = cigar_string[0]
-    for s in cigar_string[1:]:
-        if str.isalpha(s):
-            yield int(num), s
-            num = ''
-        else:
-            num += s
-            
                                  
 class SimpleSAMReader:
     """
@@ -90,6 +80,8 @@ class SimpleSAMRecord:
         N - skipped (which means splice junction)
         S - soft clipped
         H - hard clipped (not shown in SEQ)
+        = - read match
+        X - read mismatch
 
         ex: 50M43N3D
 
@@ -100,11 +92,11 @@ class SimpleSAMRecord:
         """
         cur_end = start
         q_aln_len = 0
-        #for num, type in SimpleSAMRecord.cigar_rex.findall(cigar):
-        for num, type in iter_cigar_string(cigar):
+        for (num, type) in re.findall('(\d+)(\S)', cigar):
+            num = int(num)
             if type == 'I':
                 q_aln_len += num
-            elif type == 'M':
+            elif type in ('M', '=', 'X'):
                 cur_end += num
                 q_aln_len += num
             elif type == 'D':
@@ -279,6 +271,8 @@ class SAMRecord:
         N - skipped (which means splice junction)
         S - soft clipped
         H - hard clipped (not shown in SEQ)
+        = - read match
+        X - read mismatch
 
         ex: 50M43N3D
 
@@ -294,14 +288,15 @@ class SAMRecord:
         self.num_del = 0
         self.num_ins = 0
         self.num_mat_or_sub = 0
-        for num, type in iter_cigar_string(cigar):
+        for (num, type) in re.findall('(\d+)(\S)', cigar):
+            num = int(num)
             if type == 'H' or type == 'S':
                 if first_thing:
                     self.qStart += num
             elif type == 'I':
                 q_aln_len += num
                 self.num_ins += num
-            elif type == 'M':
+            elif type in ('M','=','X'):
                 cur_end += num
                 q_aln_len += num
                 self.num_mat_or_sub += num
@@ -312,6 +307,8 @@ class SAMRecord:
                 segments.append(Interval(cur_start, cur_end))
                 cur_start = cur_end + num
                 cur_end = cur_start
+            else:
+                raise Exception, "Unrecognized cigar character {0}!".format(type)
             first_thing = False
         if cur_start != cur_end:
             segments.append(Interval(cur_start, cur_end))

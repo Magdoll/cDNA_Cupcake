@@ -139,14 +139,16 @@ class MPileUpReader(object):
 
     def parseLine(self, line):
         raw = line.strip().split('\t')
-        if len(raw)==7:
-            return MPileUpRecord(chr=raw[0],\
-                             pos=int(raw[1])-1,\
-                             ref=raw[2],
-                             cov=int(raw[3]),
-                             readBase=raw[4],
-                             baseQuals=raw[5],
-                             alnQuals=raw[6])
+        if (len(raw)==7 or len(raw)==15):
+            cov = int(raw[3])
+            if cov > 0:
+                return MPileUpRecord(chr=raw[0],\
+                                pos=int(raw[1])-1,\
+                                ref=raw[2],
+                                cov=int(raw[3]),
+                                readBase=raw[4],
+                                baseQuals=raw[5],
+                                alnQuals=raw[6])
         elif len(raw)==4:
             # only way to have only 4 columns is because after --min-BQ filtering there are no bases
             # ex:

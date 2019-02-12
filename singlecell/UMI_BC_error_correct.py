@@ -2,6 +2,7 @@
 import os, sys
 from csv import DictReader, DictWriter
 from collections import Counter, defaultdict
+from Bio.Seq import Seq
 
 def edit_distance(seq1, seq2):
     assert len(seq1)==len(seq2)
@@ -40,12 +41,12 @@ def error_correct_BC_or_UMI(records, key, threshold=1):
     return merge_map
 
 
-def main(csv_filename, output_filename):
+def main(csv_filename, output_filename, shortread_bc={}):
 
     recs_by_gene = defaultdict(lambda: [])
     reader = DictReader(open(csv_filename), delimiter='\t')
 
-    FIELDS = reader.fieldnames + ['BC_ed', 'UMI_ed']
+    FIELDS = reader.fieldnames + ['BC_ed', 'UMI_ed', 'BC_match', 'BC_top_rank']
     f = open(output_filename, 'w')
     writer = DictWriter(f, FIELDS, delimiter='\t')
     writer.writeheader()
@@ -71,12 +72,30 @@ def main(csv_filename, output_filename):
                     r['UMI_ed'] = umi_merge_map[r['UMI']]
                 else:
                     r['UMI_ed'] = r['UMI']
+
+                BC_ed_rev = str(Seq(r['BC_ed']).reverse_complement())
+
+                r['BC_match'] = 'Y' if BC_ed_rev in shortread_bc else 'N'
+                r['BC_top_rank'] = 'Y' if (r['BC_match']=='Y' and shortread_bc[BC_ed_rev]=='Y') else 'N'
+
                 writer.writerow(r)
 
 
 
-main(sys.argv[1], sys.argv[2])
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("input_csv", help="Input CSV")
+    parser.add_argument("output_csv", help="Output CSV")
+    parser.add_argument("--bc_rank_file", help="(Optional) cell barcode rank file from short read data")
 
+    args = parser.parse_args()
 
+    # ToDo: figure out later how to do top ranked barcodes for 10X data
+    shortread_bc = {}  # dict of cell barcode -> "Y" for top ranked
+    if args.bc_rank_file is not None:
+        reader = DictReader(open(args.bc_rank_file), delimiter='\t')
+        for r in reader:
+            shortread_bc[r['cell_barcode']] = r['top_ranked']
 
-
+    main(args.input_csv, args.output_csv, shortread_bc)

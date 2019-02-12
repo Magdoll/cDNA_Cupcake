@@ -3,7 +3,7 @@ __author__ = 'etseng@pacb.com'
 import os.path as op
 import logging
 import numpy as np
-from pbtranscript.io.ContigSetReaderWrapper import ContigSetReaderWrapper
+from Bio import SeqIO
 
 class SgeOptions2(object):
 
@@ -105,8 +105,6 @@ class SgeOptions2(object):
 class IceOptions2(object):
     """
     Define ICE related options.
-
-    aligner_choice: daligner, blasr
     """
 
     def __init__(self, cDNA_size="under1k", flnc_reads_per_split=20000,
@@ -117,15 +115,13 @@ class IceOptions2(object):
                  quiver=False,
                  use_finer_qv=False, targeted_isoseq=False,
                  nfl_reads_per_split=30000,
-                 num_clusters_per_bin=100,
-                 aligner_choice='daligner'):
+                 num_clusters_per_bin=100):
 
         self.cDNA_size = str(cDNA_size)
 
         self.low_cDNA_size = None
         self.high_cDNA_size = None
 
-        self.aligner_choice = aligner_choice
 
         # (user-set) maximum allowed missed/start to be considered an "isoform"
         # setting this allows for 5' degradation and some slight 3' differences
@@ -210,7 +206,7 @@ class IceOptions2(object):
 
     def _write_config(self, fasta_filename):
         """Write daligner sensitive config to fasta_filename.sensitive.config."""
-        lens = [len(r.sequence) for r in ContigSetReaderWrapper(fasta_filename)]
+        lens = [len(r.seq) for r in SeqIO.parse(open(fasta_filename), 'fasta')]
         self.low_cDNA_size, self.high_cDNA_size = 0, 0
         if len(lens) == 1:
             self.low_cDNA_size, self.high_cDNA_size = lens[0], lens[0]
@@ -266,7 +262,6 @@ class IceOptions2(object):
                "ece_penalty={ep}\n".format(ep=self.ece_penalty) + \
                "ece_min_len={eml}\n".format(eml=self.ece_min_len) + \
                "bestn={bsn}\n".format(bsn=self.bestn) + \
-               "aligner_choice={0}\n".format(self.aligner_choice) + \
                "max_missed_start={0}\n".format(self.max_missed_start) + \
                "max_missed_end={0}\n".format(self.max_missed_end) + \
                "quiver={quiver}\n".format(quiver=self.quiver) + \
