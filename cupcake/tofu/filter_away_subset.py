@@ -86,16 +86,22 @@ def can_merge(m, r1, r2, internal_fuzzy_max_dist):
     if m == 'super' or m == 'subset':
         n2 = len(r2.ref_exons)
         if r1.strand == '+':
-            return abs(r1.ref_exons[-1].start - r2.ref_exons[-1].start) <= internal_fuzzy_max_dist and \
-                r1.ref_exons[-n2].start <= r2.ref_exons[0].start < r1.ref_exons[-n2].end
+            # if r2 is monoexonic, it can start after the last exon of r1's last exon
+            # if r2 is multiexonic, the last start must be pretty close (fuzzy allowed)
+            if n2==1: # r2 is mono-exonic
+                return r1.ref_exons[-1].start - r2.ref_exons[-1].start <= internal_fuzzy_max_dist 
+            else: return abs(r1.ref_exons[-1].start - r2.ref_exons[-1].start) <= internal_fuzzy_max_dist and \
+                    r1.ref_exons[-n2].start <= r2.ref_exons[0].start < r1.ref_exons[-n2].end
         else:
-            return abs(r1.ref_exons[0].end - r2.ref_exons[0].end) <= internal_fuzzy_max_dist and \
+            if n2==1: return r1.ref_exons[0].end - r2.ref_exons[0].end >= -internal_fuzzy_max_dist
+            else: return abs(r1.ref_exons[0].end - r2.ref_exons[0].end) <= internal_fuzzy_max_dist and \
                     r1.ref_exons[n2-1].start <= r2.ref_exons[-1].end < r1.ref_exons[n2].end
 
 def filter_out_subsets(recs, internal_fuzzy_max_dist):
     # recs must be sorted by start becuz that's the order they are written
     i = 0
     while i < len(recs)-1:
+        no_change = True
         j = i + 1
         while j < len(recs):
             if recs[j].start > recs[i].end: 
@@ -108,10 +114,10 @@ def filter_out_subsets(recs, internal_fuzzy_max_dist):
                     recs.pop(j)
                 else:
                     recs.pop(i)
-                    j += 1
+                    no_change = False
             else:
                 j += 1
-        i += 1
+        if no_change: i += 1
 
 
 def main():

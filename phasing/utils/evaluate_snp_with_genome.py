@@ -31,10 +31,12 @@ def get_positions_to_recover(fake_genome_mapping_filename, mpileup_filename, gen
     fake_map = read_fake_mapping(fake_genome_mapping_filename)
     good_positions = []
     cov_at_pos = defaultdict(lambda: 0) # dict of (chrom,pos) --> (coverage)  // this is used for reports later
-    for r in sp.MPileUpReader(mpileup_filename):
-        genome_chr, genome_pos = fake_map[r.pos]
-        cov_at_pos[(genome_chr,genome_pos)] = r.nCov
-        if r.nCov >= min_cov:
+    for rec in sp.MPileUpReader(mpileup_filename):
+        if rec is None: # means coverage zero, ignore
+            continue
+        genome_chr, genome_pos = fake_map[rec.pos]
+        cov_at_pos[(genome_chr,genome_pos)] = rec.nCov
+        if rec.nCov >= min_cov:
             genome_chr = genome_chr.split('|')[0]
             if genome_chr in genome_snp and genome_pos in genome_snp[genome_chr] and genome_snp[genome_chr][genome_pos].is_snp:
                 good_positions.append((genome_chr, genome_pos))
@@ -160,7 +162,7 @@ def main_maize(ki11_snps=None, dirs=None):
     writer_f.writeheader()
 
     debug_count = 0
-    #if dirs is None: dirs = glob.glob('by_loci/*size*/')
+    if dirs is None: dirs = glob.glob('by_loci/*size*/')
     for d1 in dirs:
         #if debug_count > 100: break
         debug_count += 1
