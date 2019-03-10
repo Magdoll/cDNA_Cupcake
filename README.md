@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 02/25/2019
+Last Updated: 03/11/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 6.5
+Current version: 6.6
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.03.11 updated to v6.6. temp support of lazy  BED reader in BED.py
 
 2019.02.25 updated to v6.5. fixed `filter_away_subset.py` to handle edge case where the shorter one is monoexonic.
 
