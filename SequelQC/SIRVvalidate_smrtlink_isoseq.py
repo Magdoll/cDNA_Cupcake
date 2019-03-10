@@ -17,7 +17,7 @@ STAR_BIN = "python /home/UNIXHOME/etseng/GitHub/cDNA_Cupcake/sequence/STARwrappe
 SIRV_STAR_DB = "/home/UNIXHOME/etseng/share/star_db/SIRV_with_annotation/"
 
 HG19_GENOME = "/pbi/dept/bifx/etseng/genomes/hg19/hg19.fa"
-HG38_GENOME = "/pbi/dept/bifx/etseng/genomes/hg38/hg38.fa"
+HG38_GENOME = "/pbi/dept/bifx/etseng/genomes/hg38/hg38_noalt.fa"
 MM10_GENOME = "/pbi/dept/bifx/etseng/genomes/mm10/mm10.fasta"
 #
 # def rename_isoseq3_hq(src_dir):

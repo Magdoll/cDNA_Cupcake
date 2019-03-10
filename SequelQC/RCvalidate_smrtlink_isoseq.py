@@ -6,7 +6,10 @@ from csv import DictReader
 from collections import defaultdict
 import SIRVvalidate_smrtlink_isoseq as smrtlink
 
-GENCODE_GTF = '/home/UNIXHOME/etseng/share/gencode/gencode.v28.annotation.gtf'
+GENCODE_GTF = '/home/UNIXHOME/etseng/share/gencode/gencode.v29.annotation.gtf'
+CAGE_BED = '/home/UNIXHOME/etseng/share/FANTOM/hg38.cage_peak_phase1and2combined_coord.bed'
+INTRONPOLIS = '/pbi/dept/bifx/customer_data/Public_Intronpolis/*min_count_10.modified'
+
 SQANTI_QC = '/home/UNIXHOME/etseng/GitHub/SQANTI2/sqanti_qc2.py'
 SQANTI_FILTER = '/home/UNIXHOME/etseng/GitHub/SQANTI2/sqanti_filter2.py'
 
@@ -139,9 +142,10 @@ def validate_with_Gencode(out_dir, eval_dir, use_hg19_instead=False):
     os.symlink(os.path.join(out_dir, 'touse.rep.fq.sorted.sam'), 'touse.rep.fq.sorted.sam')
     os.symlink(os.path.join(out_dir, 'touse.rep.fq'), 'touse.rep.fq')
 
-    cmd = "python {sqanti} -t {cpus} touse.rep.fq {gtf} {genome}".format(\
+    cmd = "python {sqanti} -t {cpus} {extra} touse.rep.fq {gtf} {genome}".format(\
         sqanti=SQANTI_QC, cpus=smrtlink.GMAP_CPUS, gtf=GENCODE_GTF, \
-        genome=smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME)
+        genome=smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME,
+		extra="--cage_peak " + CAGE_BED + " -c " + INTRONPOLIS if not use_hg19_instead else '')
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
@@ -152,9 +156,10 @@ def validate_with_Gencode(out_dir, eval_dir, use_hg19_instead=False):
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
-    cmd = "python {sqanti} -t {cpus} touse.rep_classification.filtered_lite.fasta {gtf} {genome}".format(\
+    cmd = "python {sqanti} -t {cpus} {extra} touse.rep_classification.filtered_lite.fasta {gtf} {genome}".format(\
         sqanti=SQANTI_QC, cpus=smrtlink.GMAP_CPUS, gtf=GENCODE_GTF, \
-        genome=smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME)
+        genome=smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME,
+		extra="--cage_peak " + CAGE_BED + " -c " + INTRONPOLIS if not use_hg19_instead else '')
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
