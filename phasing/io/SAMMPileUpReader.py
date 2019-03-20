@@ -141,8 +141,8 @@ class MPileUpReader(object):
         raw = line.strip().split('\t')
         if (len(raw)==7 or len(raw)==15):
             cov = int(raw[3])
-            if cov > 0:
-                return MPileUpRecord(chr=raw[0],\
+            #if cov > 0:
+            return MPileUpRecord(chr=raw[0],\
                                 pos=int(raw[1])-1,\
                                 ref=raw[2],
                                 cov=int(raw[3]),

@@ -150,16 +150,8 @@ def validate_with_Gencode(out_dir, eval_dir, use_hg19_instead=False):
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd
 
-    cmd = "python {sqanti_filter} touse.rep_classification.txt touse.rep.renamed.fasta".format(\
+    cmd = "python {sqanti_filter} touse.rep_classification.txt touse.rep.renamed.fasta touse.rep.renamed_corrected.sam".format(\
         sqanti_filter=SQANTI_FILTER)
-
-    if subprocess.check_call(cmd, shell=True)!=0:
-        raise Exception, "ERROR CMD:", cmd
-
-    cmd = "python {sqanti} -t {cpus} {extra} touse.rep_classification.filtered_lite.fasta {gtf} {genome}".format(\
-        sqanti=SQANTI_QC, cpus=smrtlink.GMAP_CPUS, gtf=GENCODE_GTF, \
-        genome=smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME,
-		extra="--cage_peak " + CAGE_BED + " -c " + INTRONPOLIS if not use_hg19_instead else '')
 
     if subprocess.check_call(cmd, shell=True)!=0:
         raise Exception, "ERROR CMD:", cmd

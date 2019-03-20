@@ -68,10 +68,16 @@ def make_file_for_subsample(input_prefix, output_filename, matchAnnot_parsed=Non
         if not include_single_exons and r['pbid'] not in good_ids:
             print >> sys.stderr, "Exclude {0} because single exon.".format(r['pbid'])
             continue
-        h.write("{0}\t{1}\t{2}\t".format(r['pbid'], r['pbid'].split('.')[1], seqlen_dict[r['pbid']]))
+
         if matchAnnot_parsed is not None or sqanti_class is not None:
+            if r['pbid'] not in match_dict:
+                print >> sys.stdout, "Ignoring {0} because not on annotation (SQANTI/MatchAnnot) file.".format(r['pbid'])
+                continue
             m = match_dict[r['pbid']]
+            h.write("{0}\t{1}\t{2}\t".format(r['pbid'], r['pbid'].split('.')[1], seqlen_dict[r['pbid']]))
             h.write("{0}\t{1}\t".format(m['refisoform'], m['refgene']))
+        else:
+            h.write("{0}\t{1}\t{2}\t".format(r['pbid'], r['pbid'].split('.')[1], seqlen_dict[r['pbid']]))
         h.write("{0}\n".format(r['count_fl']))
     h.close()
 
