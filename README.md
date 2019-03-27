@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 03/19/2019
+Last Updated: 03/27/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 6.8
+Current version: 6.9
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.03.27 updated to v6.9. fixed `clip_out_UMI_cellBC.py` to properly handle 0-length UMIs or BCs (but not both).
 
 2019.03.19 updated to v6.8. fixed `phasing.io.SAMMPileUpReader.py` for cov 0 returns
 
