@@ -1,3 +1,4 @@
+import os, sys
 from Bio import SeqIO
 from Bio.Seq import Seq
 from csv import DictReader, DictWriter
@@ -91,8 +92,18 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                 seq_extra = 'NA'
                 if diff > 0: seq_extra = seq2[:diff]
 
-                seq_bc = seq2[-bc_len:]
-                seq_umi = seq2[-(bc_len+umi_len):-bc_len]
+                if bc_len == 0:
+                    seq_bc = ''
+                else:
+                    seq_bc = seq2[-bc_len:]
+
+                if umi_len == 0:
+                    seq_umi = ''
+                else:
+                    if bc_len == 0:
+                        seq_umi = seq2[-umi_len:]
+                    else:
+                        seq_umi = seq2[-(bc_len+umi_len):-bc_len]
 
 
                 # reverse complement BC because it's always listed in rev comp in short read data
@@ -185,6 +196,16 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+
+    if args.bc_len < 0:
+        print >> sys.stderr, "bc_len can't be a negative number!"
+        sys.exit(-1)
+    if args.umi_len < 0:
+        print >> sys.stderr, "umi_len can't be a negative number!"
+        sys.exit(-1)
+    if args.umi_len + args.bc_len <= 0:
+        print >> sys.stderr, "umi_len + bc_len must be at least 1 bp long!"
+        sys.exit(-1)
 
     # ToDo: figure out later how to do top ranked barcodes for 10X data
     shortread_bc = {}  # dict of cell barcode -> "Y" for top ranked
