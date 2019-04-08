@@ -54,7 +54,8 @@ def read_probe_bed(bed_filename, start_base=0, end_base=1):
 
 def calc_ontarget_rate(tree, gene_info, input_fasta, sam_filename, output_filename=None):
 
-    query_len_dict = dict((r.id, len(r.seq)) for r in SeqIO.parse(open(input_fasta),'fasta'))
+    type = 'fasta' if input_fasta.upper().endswith('.FA') or input_fasta.upper().endswith('.FASTA') else 'fastq'
+    query_len_dict = dict((r.id, len(r.seq)) for r in SeqIO.parse(open(input_fasta),type))
 
     if output_filename is None:
         f = sys.stdout
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("Calculate Probe Hit from SAM alignment + probe BED")
     parser.add_argument("bed_filename")
-    parser.add_argument("input_fasta")
+    parser.add_argument("input_fasta_or_fastq")
     parser.add_argument("sam_filename")
     parser.add_argument("--start_base", choices=['0', '1'], required=True, help="Start base is 0 or 1-based index")
     parser.add_argument("--end_base", choices=['0', '1'], required=True, help="End base is 0 or 1-based index")
@@ -83,4 +84,4 @@ if __name__ == "__main__":
 
     tree, gene_info = read_probe_bed(args.bed_filename, int(args.start_base), int(args.end_base))
 
-    calc_ontarget_rate(tree, gene_info, args.input_fasta, args.sam_filename, args.output)
+    calc_ontarget_rate(tree, gene_info, args.input_fasta_or_fastq, args.sam_filename, args.output)

@@ -12,6 +12,7 @@ Suggested process is:
 """
 import os, sys
 from collections import defaultdict
+from csv import DictReader, DictWriter
 import cupcake.io.GFF as GFF
 import numpy as np
 from Bio.Seq import Seq
@@ -116,8 +117,13 @@ def summarize_junctions(sample_dirs, sample_names, gff_filename, output_prefix, 
     # write junction report
     f1 = open(output_prefix+'.junction.bed', 'w')
     f1.write("track name=junctions description=\"{0}\" useScore=1\n".format(output_prefix))
+
+    JUNC_DETAIL_FIELDS = ['chr', 'left', 'right', 'strand', 'num_transcript', 'num_sample', 'genome', 'annotation', 'label']
+
+
     with open(output_prefix+'.junction_detail.txt', 'w') as f:
-        f.write("chr\tleft\tright\tstrand\tnum_transcript\tnum_sample\tgenome\tannotation\tlabel\n")
+        writer = DictWriter(f, JUNC_DETAIL_FIELDS, delimiter='\t')
+        writer.writeheader()
         keys = junc_by_chr_strand.keys()
         keys.sort()
         for _chr, _strand in keys:
@@ -126,26 +132,40 @@ def summarize_junctions(sample_dirs, sample_names, gff_filename, output_prefix, 
             v_keys.sort()
             labels = cluster_junctions(v_keys)
             for i,(_donor, _accep) in enumerate(v_keys):
-                f.write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t".format(_chr, _donor, _accep, _strand, len(v[_donor,_accep]), len(set(v[_donor,_accep]))))
+                rec = {'chr': _chr,
+                       'left': _donor,
+                       'right': _accep,
+                       'strand': _strand,
+                       'num_transcript': len(v[_donor,_accep]),
+                       'num_sample': len(set(v[_donor,_accep]))}
+                #f.write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t".format(_chr, _donor, _accep, _strand, len(v[_donor,_accep]), len(set(v[_donor,_accep]))))
                 f1.write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n".format(_chr, _donor, _accep+1, output_prefix, len(v[_donor,_accep]), _strand))
                 # if genome is given, write acceptor-donor site
                 if genome_d is None or _chr not in genome_d:
-                    f.write("NA\t")
+                    rec['genome'] = 'NA'
+                    #f.write("NA\t")
                 else:
                     up, down = genome_d[_chr][_donor+1:_donor+3], genome_d[_chr][_accep-2:_accep]
                     if _strand == '+':
-                        f.write("{0}-{1}\t".format(str(up.seq).upper(), str(down.seq).upper()))
+                        rec['genome'] = "{0}-{1}".format(str(up.seq).upper(), str(down.seq).upper())
+                        #f.write("{0}-{1}\t".format(str(up.seq).upper(), str(down.seq).upper()))
                     else:
-                        f.write("{0}-{1}\t".format(str(down.reverse_complement().seq).upper(), str(up.reverse_complement().seq).upper()))
+                        rec['genome'] = "{0}-{1}".format(str(down.reverse_complement().seq).upper(), str(up.reverse_complement().seq).upper())
+                        #f.write("{0}-{1}\t".format(str(down.reverse_complement().seq).upper(), str(up.reverse_complement().seq).upper()))
                 # if annotation is given, check if matches with annotation
                 if junction_known is None:
-                    f.write("NA\n")
+                    rec['annotation'] = 'NA'
+                    #f.write("NA\n")
                 else:
                     if (_chr, _strand) in junction_known and (_donor, _accep) in junction_known[_chr, _strand]:
-                        f.write("Y\t")
+                        rec['annotation'] = 'Y'
+                        #f.write("Y\t")
                     else:
-                        f.write("N\t")
-                f.write("{c}_{s}_{lab}\n".format(c=_chr, s=_strand, lab=labels[i]))
+                        rec['annotation'] = 'N'
+                        #f.write("N\t")
+                rec['label'] = "{c}_{s}_{lab}".format(c=_chr, s=_strand, lab=labels[i])
+                writer.writerow(rec)
+                #f.write("{c}_{s}_{lab}\n".format(c=_chr, s=_strand, lab=labels[i]))
     f1.close()
 
     return junc_by_chr_strand
