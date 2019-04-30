@@ -44,11 +44,12 @@ def get_positions_to_recover(fake_genome_mapping_filename, mpileup_filename, gen
     return good_positions, cov_at_pos
 
 
-def eval_isophase(isophase_vcf, genome_snp, good_positions, cov_at_pos, repeat_by_chrom, shortread_cov, writer_f, name='NA'):
+def eval_isophase(isophase_vcf, genome_snp, good_positions, cov_at_pos, repeat_by_chrom, shortread_cov, writer_f, name='NA', strand='NA'):
     for r in vcf.VCFReader(open(isophase_vcf)):
         out = {'dir': name,
                'chrom': 'NA',
                'pos': r.POS,
+               'strand': strand,
                'ref': r.REF,
                'alt_Short': 'NA',
                'alt_PB': 'NA',
@@ -63,7 +64,6 @@ def eval_isophase(isophase_vcf, genome_snp, good_positions, cov_at_pos, repeat_b
         out['alt_PB'] = r.ALT[0]
 
         out['genomic_HP'] = 'Y' if (r.CHROM in repeat_by_chrom and len(repeat_by_chrom[r.CHROM].find(r.POS,r.POS))>0) else 'N'
-
         try:
             out['cov_Short'] = shortread_cov[r.CHROM][r.POS]
         except KeyError:
@@ -85,45 +85,53 @@ def eval_isophase(isophase_vcf, genome_snp, good_positions, cov_at_pos, repeat_b
         out = {'dir': name,
                'chrom': chrom,
                'pos': pos,
-               'ref': r.REF,
-               'alt_Short': r.ALT[0],
+               'strand': strand,
+               'ref': genome_snp[chrom][pos].REF,
+               'alt_Short': genome_snp[chrom][pos].ALT[0],
                'alt_PB': 'NA',
                'in_Short': 'Y',
                'in_PB': 'N',
                'cov_Short': 'NA',
-               'cov_PB': cov_at_pos[r.CHROM,r.POS-1],
-               'genomic_HP': 'Y' if (r.CHROM in repeat_by_chrom and len(repeat_by_chrom[r.CHROM].find(r.POS,r.POS))>0) else 'N'
+               'cov_PB': cov_at_pos[chrom,pos-1],
+               'genomic_HP': 'Y' if (chrom in repeat_by_chrom and len(repeat_by_chrom[chrom].find(pos,pos))>0) else 'N'
                }
         try:
-            out['cov_Short'] = shortread_cov[r.CHROM][r.POS]
+            out['cov_Short'] = shortread_cov[chrom][pos]
         except KeyError:
             out['cov_Short'] = 0
         writer_f.writerow(out)
 
 
-def main_brangus(unzip_snps=None):
+def main_brangus(vcf_filename, out_filename, unzip_snps=None):
     if unzip_snps is None:
         unzip_snps = defaultdict(lambda : {})
-        for r in vcf.VCFReader(open('Brangus.unzip.vcf')):
+        for r in vcf.VCFReader(open(vcf_filename)):
             unzip_snps[r.CHROM][r.POS] = r
 
-    print >> sys.stderr, 'Finished reading Brangus.unzip.vcf.'
-    out_f = open('evaled.isophase.txt', 'w')
-    out_f.write('dir\tchrom\tpos\tref\talt_g\talt_i\tin_g\tin_i\n')
+    print >> sys.stderr, 'Finished reading ' + vcf_filename
+    out_f = open(out_filename, 'w')
+    FIELDS = ['dir', 'chrom', 'pos', 'strand', 'ref', 'alt_Short', 'alt_PB', 'in_Short', 'in_PB', 'cov_Short', 'cov_PB', 'genomic_HP']
+    writer = DictWriter(out_f, FIELDS, delimiter='\t')
+    writer.writeheader()
     dirs = glob.glob('by_loci/*size*/')
     for d1 in dirs:
         mpileup = os.path.join(d1, 'ccs.mpileup')
         mapfile = os.path.join(d1, 'fake.mapping.txt')
         vcffile = os.path.join(d1, 'phased.partial.vcf')
+        config  = os.path.join(d1, 'config')
         nosnp = os.path.join(d1, 'phased.partial.NO_SNPS_FOUND')
         if not os.path.exists(vcffile):
             assert os.path.exists(nosnp)
             print >> sys.stderr, ('Skipping {0} because no SNPs found.').format(d1)
         else:
             print >> sys.stderr, ('Evaluating {0}.').format(d1)
-            good_positions = get_positions_to_recover(mapfile, mpileup, unzip_snps, min_cov=40)
+            strand = 'NA' 
+            if os.path.exists(config): # find the strand this gene family is on
+                for line in open(config):
+                    if line.startswith('ref_strand='): strand = line.strip().split('=')[1]
+            good_positions, cov_at_pos = get_positions_to_recover(mapfile, mpileup, unzip_snps, min_cov=30)
             name = d1.split('/')[1]
-            eval_isophase(vcffile, unzip_snps, good_positions, out_f, name)
+            eval_isophase(vcffile, unzip_snps, good_positions, cov_at_pos, {}, {}, writer, name, strand)
 
     out_f.close()
     return
@@ -184,5 +192,6 @@ def main_maize(ki11_snps=None, dirs=None):
 
 if __name__ == "__main__":
     from csv import DictReader
-    dirs = ['by_loci/'+r['locus'] for r in DictReader(open('evaled_isophase.demux_hap_count.txt'),delimiter='\t')]
-    main_maize(None, dirs)
+    main_brangus(sys.argv[1], sys.argv[2]) #main_brangus('combined_97_1modi.vcf', 'evaled.isophase.combined_97_1modi.txt')
+    #dirs = ['by_loci/'+r['locus'] for r in DictReader(open('evaled_isophase.demux_hap_count.txt'),delimiter='\t')]
+    #main_maize(None, dirs)

@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 04/08/2019
+Last Updated: 04/30/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 7.0
+Current version: 7.1
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.04.30 updated to v7.1. added `group_ORF_sequences.py` for grouping ORF predictions.
 
 2019.04.08 updated to v7.0. fixed `summarize_sample_GFF_junctions.py` for newline error.
 
