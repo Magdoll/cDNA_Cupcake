@@ -24,17 +24,17 @@ def func(r):
     return fl_count, exp_acc
 
 
-def main(fastq_filename, output_filename, min_fl_count, min_exp_acc):
+def main(fastq_filename, output_filename, min_fl_count, min_exp_acc, is_flnc):
     f = open(output_filename, 'w')
     for r in SeqIO.parse(open(fastq_filename), 'fastq'):
         fl_count, exp_acc = func(r)
-        if fl_count is None:
+        if not is_flnc and fl_count is None:
             print >> sys.stderr, "Sequence header does not include field `full_length_coverage=`. Abort!"
             sys.exit(-1)
         if exp_acc is None:
             print >> sys.stderr, "Sequence header does not include field `expected_accuracy=`. Please run calc_expected_accuracy_from_fastq.py script first!"
             sys.exit(-1)
-        if fl_count >= min_fl_count and exp_acc >= min_exp_acc:
+        if (is_flnc or fl_count >= min_fl_count) and exp_acc >= min_exp_acc:
             print >> sys.stderr, "Including {0} into output file (FL: {1}, acc: {2}).".format(r.id, fl_count, exp_acc)
             SeqIO.write(r, f, 'fastq')
     f.close()
@@ -46,7 +46,8 @@ if __name__ == "__main__":
     parser.add_argument("output_filename", help="Output FASTQ filename")
     parser.add_argument("--min_fl_count", default=2, type=int, help="Minimum FL count (default: 2).")
     parser.add_argument("--min_exp_acc", type=float, default=0.99, help="Minimum predicted accuracy (default: 0.99).")
+    parser.add_argument("--is_flnc", action="store_true", default=False, help="Input FASTQ is FLNC, not LQ")
 
     args = parser.parse_args()
     assert 0 <= args.min_exp_acc <= 1
-    main(args.fastq_filename, args.output_filename, args.min_fl_count, args.min_exp_acc)
+    main(args.fastq_filename, args.output_filename, args.min_fl_count, args.min_exp_acc, args.is_flnc)

@@ -19,6 +19,7 @@ from phasing.io import VariantPhaseCleaner
 MIN_COVERAGE = 10     # minimum number of FL reads for a gene to do SNP calling and phasing
 ERR_SUB = 0.005
 MAX_DIFF_ALLOWED = 3  # maximum difference in bases allowed for two haplotype strings
+MIN_PERC_ALLOWED = .25  # minimum percent of total count for an allele
 PVAL_CUTOFF = 0.01
 MIN_AF_AT_ENDS = 0.10 # minimum minor allele frequency for SNPs at ends, which tend to have unreliable alignments
 
@@ -90,7 +91,7 @@ variants = [ [base.upper() for base,count in vc.variant[pos]] for pos in pp.acce
 if args.ploidy == 2 and all(len(vars)==2 for vars in variants):
     diff_arr, hap_count_ordered = VariantPhaseCleaner.infer_haplotypes_via_exhaustive_diploid_only(pp.haplotypes, variants)
 else:
-    diff_arr, hap_count_ordered = VariantPhaseCleaner.infer_haplotypes_via_min_diff(pp.haplotypes.haplotypes, hap_count, args.ploidy, MAX_DIFF_ALLOWED)
+    diff_arr, hap_count_ordered = VariantPhaseCleaner.infer_haplotypes_via_min_diff(pp.haplotypes.haplotypes, hap_count, args.ploidy, MAX_DIFF_ALLOWED, MIN_PERC_ALLOWED)
 
 if diff_arr is None:
     os.system("touch {out}.cleaned.NO_HAPS_FOUND".format(out=args.output_prefix))

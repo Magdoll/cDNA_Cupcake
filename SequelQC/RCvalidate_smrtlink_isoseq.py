@@ -108,7 +108,7 @@ def collapse_to_hg38(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
             gmap=smrtlink.GMAP_BIN, gmap_db=smrtlink.GMAP_DB, cpus=smrtlink.GMAP_CPUS, rep=rep, ref=ref)
     elif aligner_choice=='minimap2':
         ref = smrtlink.HG19_GENOME if use_hg19_instead else smrtlink.HG38_GENOME
-        cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5  {ref} {rep}.rep.fq > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
+        cmd = "minimap2 -t {cpus} -ax splice -uf --secondary=no -C5 -O6,24 -B4 {ref} {rep}.rep.fq > {rep}.rep.fq.sam 2> {rep}.rep.fq.sam.log".format(\
             cpus=smrtlink.GMAP_CPUS, ref=ref, rep=rep)
 
     if subprocess.check_call(cmd, shell=True)!=0:

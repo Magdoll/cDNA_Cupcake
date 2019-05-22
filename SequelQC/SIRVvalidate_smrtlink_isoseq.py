@@ -196,7 +196,7 @@ def collapse_to_SIRV(out_dir, hq_fastq, cluster_csv, min_count, aligner_choice, 
         cmd = "{star} {db} {hq} {hq}.sam --cpus {cpus}".format(\
             star=STAR_BIN, db=SIRV_STAR_DB, hq=hq_fastq, cpus=GMAP_CPUS)
     elif aligner_choice=='minimap2':
-        cmd = "minimap2 -ax splice -uf --secondary=no --splice-flank=no -C5 -t {cpus} {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
+        cmd = "minimap2 -ax splice -uf --secondary=no --splice-flank=no -C5 -O6,24 -B4 -t {cpus} {ref} {hq} > {hq}.sam 2> {hq}.sam.log".format(\
             cpus=GMAP_CPUS, ref=SIRV_GENOME, hq=hq_fastq) 
 
     if subprocess.check_call(cmd, shell=True)!=0:

@@ -25,7 +25,10 @@ def calc_exp_acc(r, qv_trim_5, qv_trim_3):
     qv = r.letter_annotations['phred_quality']
     qv_len = len(qv)
     q = [phred_to_qv(x) for x in qv]
-    err_sum = sum(q[qv_trim_5:-qv_trim_3])
+    if qv_trim_3 == 0:
+        err_sum = sum(q[qv_trim_5:])
+    else:
+        err_sum = sum(q[qv_trim_5:-qv_trim_3])
     return 1.0 - (err_sum / float(qv_len))
 
 def main(fastq_filename, output_filename, qv_trim_5, qv_trim_3):

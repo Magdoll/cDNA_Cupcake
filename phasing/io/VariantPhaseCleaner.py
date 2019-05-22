@@ -131,7 +131,7 @@ def infer_haplotypes_via_exhaustive_diploid_only(hap_obj, variants):
     return best_diff_arr, [(best_hap1_index,-1), (best_hap2_index,-2)]
 
 
-def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff):
+def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff, min_percent):
     """
     :param haplotype_strings: list of haplotype strings
     :param hap_count: Counter object of hap_index --> count
@@ -140,7 +140,7 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff
     1. sort haplotypes based on counts. select hap0 to be most frequent one.
     2. calc diff of each haplotype against hap0. calc sum of diffs.
     3. add in hap1 as second most frequent, calc sum of diffs.
-    4. ...repeat until sum of diffs gets worse, or ploidy is reached.
+    4. ...repeat until sum of diffs gets worse, or ploidy reached, or the next haplotype is less than <min_percent> reads .
     """
     # we are to ignore all partial haps
     partial_haps = filter(lambda i: any(s=='?' for s in haplotype_strings[i]), xrange(len(haplotype_strings)))
@@ -151,6 +151,7 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff
         return None, None
 
     hap_count_ordered = hap_count.most_common() # now sorted in desc (hap_index, count)
+    hap_count_total = sum([count for hap_index,count in hap_count_ordered])
     cur_hap = haplotype_strings[hap_count_ordered[0][0]]
     len_hap = len(cur_hap)
 
@@ -159,11 +160,13 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff
 
     diff_arr = np.array([calc_hap_diff(haplotype_strings, cur_hap)])
     sum_of_diff = diff_arr.sum()
-    print sum_of_diff
+    #print sum_of_diff
     for cur_hap_i, cur_count in hap_count_ordered[1:ploidy]:
         new_diff_arr = np.append(diff_arr, [calc_hap_diff(haplotype_strings, haplotype_strings[cur_hap_i])], axis=0)
         new_sum_of_diff = new_diff_arr.min(axis=0).sum()
-        print new_sum_of_diff
+        #print new_sum_of_diff
+        if cur_count < hap_count_total * min_percent:
+            break
         if (sum_of_diff - new_sum_of_diff) < max_diff:
             break
         else:

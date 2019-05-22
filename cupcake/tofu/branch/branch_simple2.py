@@ -95,6 +95,13 @@ class BranchSimple:
         yield sep_by_strand(records)
 
     def get_quality_alignments(self, gmap_sam_reader, ignored_fout):
+        """
+        Exclude SAM alignments that
+        (1) fail minimum coverage
+        (2) fail minimum identity
+        (3) unmapped
+        (4) has 0-bp exons (damn you minimap2)
+        """
         for r in gmap_sam_reader:
             if r.sID == '*':
                 ignored_fout.write("{0}\tUnmapped.\n".format(r.qID))
@@ -102,6 +109,8 @@ class BranchSimple:
                 ignored_fout.write("{0}\tCoverage {1:.3f} too low.\n".format(r.qID, r.qCoverage))
             elif r.identity < self.min_aln_identity:
                 ignored_fout.write("{0}\tIdentity {1:.3f} too low.\n".format(r.qID, r.identity))
+            elif any((e-s==0) for s,e in r.segments):
+                ignored_fout.write("{0}\t0bp exons.\n".format(r.qID))
             else:
                 yield r
 
