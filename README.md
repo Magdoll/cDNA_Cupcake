@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 05/22/2019
+Last Updated: 05/28/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 7.3
+Current version: 7.4
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.05.28 updated to v7.4. fixed `select_loci_to_phase.py` to work for short genomes.
 
 2019.05.22 updated to v7.3. made `calc_expected_accuracy_from_fastq.py` and `filter_lq_isoforms.py` work for FLNC. Also added 0-bp exon filter for collapse script.
 

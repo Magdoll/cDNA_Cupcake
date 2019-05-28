@@ -131,8 +131,7 @@ def read_classify_csv(classify_csv):
         p = r['primer']
         primer_list.add(p)
         if r['id'] in info:
-            raise Exception, "{0} listed more than once in {1}!".format(\
-                r['id'], classify_csv)
+            raise Exception("{0} listed more than once in {1}!".format(r['id'], classify_csv))
         info[r['id']] = p
     return primer_list, info
 

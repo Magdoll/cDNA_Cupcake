@@ -114,11 +114,11 @@ def read_GFF(gff_filename, logf):
         c = ClusterTree(0, 0)
         for r in records:
             for e in r.ref_exons:
-                c.insert(e.start-extra_bp_around_junctions, e.end+extra_bp_around_junctions, 1)
+                c.insert(max(0,e.start-extra_bp_around_junctions), e.end+extra_bp_around_junctions, 1)
 
         regions = [(a,b) for (a,b,junk) in c.getregions()]
-        regions[0] = (regions[0][0]-__padding_before_after__, regions[0][1])
-        regions[-1] = (regions[-1][0], regions[-1][1]+__padding_before_after__)
+        regions[0] = (max(0,regions[0][0]-__padding_before_after__), regions[0][1])
+        regions[-1] = (max(0,regions[-1][0]), regions[-1][1]+__padding_before_after__)
         gff_info[locus] = LocusInfo(chrom=gff_info[locus].chrom,
                                        strand=gff_info[locus].strand,
                                        regions=regions,
@@ -178,13 +178,20 @@ def select_loci_to_phase(args, genome_dict):
         print >> sys.stderr, "making", locus
         d2 = os.path.join("by_loci/{0}_size{1}".format(locus, len(tally_by_loci[locus])))
         os.makedirs(d2)
+
+        chrom_len = dict((k, len(v)) for k,v in genome_dict.iteritems())
+
         with open(os.path.join(d2, 'config'), 'w') as f:
+            ref_start = max(0, gff_info[locus].regions[0][0])   # ref start must be >= 0
+            # ref end must be at most chrom length
+            ref_end = min(chrom_len[gff_info[locus].chrom], gff_info[locus].regions[-1][-1])
+
             #_chr, _strand, _start, _end = gff_info[locus]
             f.write("pbid={0}\n".format(locus))
             f.write("ref_chr={0}\n".format(gff_info[locus].chrom))
             f.write("ref_strand={0}\n".format(gff_info[locus].strand))
-            f.write("ref_start={0}\n".format(gff_info[locus].regions[0][0]))
-            f.write("ref_end={0}\n".format(gff_info[locus].regions[-1][-1]))
+            f.write("ref_start={0}\n".format(ref_start))
+            f.write("ref_end={0}\n".format(ref_end))
 
         make_fake_genome(genome_dict, gff_info, locus,
                          d2 + '/fake',
