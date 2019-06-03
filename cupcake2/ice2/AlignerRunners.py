@@ -7,7 +7,7 @@ import os, sys, subprocess
 """
 
 CMD_MINIMAP = \
-"/usr/bin/time -v minimap2 {a} -H -f 0.00001 -N 2000000 -m 20 --eqx --MD -t {c} {t} {q} > {o} 2> {o}.log"
+"/usr/bin/time -v minimap2 {a} -H -f 0.00001 -N 2000000 -m 20 -X -c -t {c} {t} {q} > {o} 2> {o}.log"
 OUTPUT_MINIMAP = "{q}.{t}.f00001.minimap"
 
 def run_minimap(query_filename, target_filename, cpus, sam_output=False):

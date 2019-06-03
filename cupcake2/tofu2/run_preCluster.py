@@ -132,7 +132,8 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False, num_seqs_per_batch=10
         for x in chimeras: f.write("{0},chimera\n".format(x))
 
     # Liz: currently not using tucked...
-    #FileIO.write_seqids_to_fasta(tucked_seqids, "preCluster_out.tucked.fasta", d)
+    if len(tucked_seqids) > 0:
+        FileIO.write_seqids_to_fasta(tucked_seqids, "preCluster_out.tucked.fasta", d)
 
     infof = open('preCluster.cluster_info.csv', 'w')
     infof.write("cluster,size\n")

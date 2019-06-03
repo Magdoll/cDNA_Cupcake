@@ -18,13 +18,35 @@ Output format:
 10. Number bases, including gaps, in the mapping
 11. Mapping quality (0–255 with 255 missing unavailable)
 """
-
+import re
 from cupcake.io.BLASRRecord import BLASRReaderBase
+
+cigar_rex = re.compile('(\d+)(\S)')
+def parse_cigar_to_identity(cigar):
+    """
+    :param cigar: cigar string (ex: 37M1D)
+    :return: identity based on parsed identity
+    """
+
+    aln_len, count_match = 0, 0
+
+    for x in cigar_rex.finditer(cigar):
+        _num, _type = x.groups()
+        _num = int(_num)
+        if _type in ('H', 'S', 'N', 'P'): continue
+        elif _type in ('I', 'D', 'X'): aln_len += _num
+        elif _type in ('=', 'M'):
+            count_match += _num
+            aln_len += _num
+
+    return count_match*1./aln_len
+
+
 
 class MiniRecord:
     def __init__(self, qID, qLength, qStart, qEnd, strand,
                  sID, sLength, sStart, sEnd,
-                 nMatch=None, nBase=None):
+                 nMatch=None, nBase=None, identity=None):
         self.qID = qID
         self.qLength = qLength
         self.qStart = qStart # 0-based
@@ -36,6 +58,7 @@ class MiniRecord:
         self.sEnd = sEnd
         self.nMatch = nMatch
         self.nBase = nBase
+        self.identity = identity # parsed from cigar string, if exists
 
         #self.status = None # unassigned
 
@@ -50,23 +73,30 @@ class MiniRecord:
 
 
     @classmethod
-    def fromPAF(cls, line):
+    def fromPAF(cls, line, has_cigar=False):
         """
         parsing Heng Li's Pairwise mapping format (PAF), Table 2 in paper
         """
         raw = line.strip().split('\t')
         try:
             assert raw[4] in ('+', '-')
+            identity = None
+            if has_cigar:
+                for x in raw:
+                    if x.startswith('cg:Z:'):
+                        identity = parse_cigar_to_identity(x[5:])
+                        break
+
             return MiniRecord(qID=raw[0], qLength=int(raw[1]), qStart=int(raw[2]), qEnd=int(raw[3])+1,
                               strand=raw[4],
                               sID=raw[5], sLength=int(raw[6]), sStart=int(raw[7]), sEnd=int(raw[8])+1,
-                              nMatch=int(raw[9]), nBase=int(raw[10]))
+                              nMatch=int(raw[9]), nBase=int(raw[10]), identity=identity)
         except:
             raise ValueError, "String not recognized as a valid PAF record: {0}".format(line)
 
 
     def characterize(self, max_missed_5_len, max_missed_5_ratio, max_missed_3_len, max_missed_3_ratio, \
-                     max_contained_len_diff, max_contained_len_diff_ratio):
+                     max_contained_len_diff, max_contained_len_diff_ratio, min_identity):
         """
         q_contained: query is fully contained in subject
         s_contained: subject is fully contained in query
@@ -99,7 +129,7 @@ class MiniRecord:
                 # q fully mapped, s is not, check if query is fully contained in subject
                 # this means subject is not allowed to have too much unmapped 3' but 5' is ok
                 if s_3_mapped:
-                    if q_s_len_match:
+                    if q_s_len_match and (self.identity is not None and self.identity >= min_identity):
                         return "q_contained"
                     else:
                         return "partial"
@@ -109,7 +139,7 @@ class MiniRecord:
                 # s is fully mapped, q is not, check if subject is fully contained in query
                 # this means query is not allowed to have too much unmapped 3' but 5' is ok
                 if q_3_mapped:
-                    if q_s_len_match:
+                    if q_s_len_match and (self.identity is not None and self.identity >= min_identity):
                         return "s_contained"
                     else:
                         return "partial"
@@ -133,5 +163,5 @@ class MiniReader(BLASRReaderBase):
         if self.infile.tell() == cur:
             raise StopIteration, "EOF reached!!"
 
-        return MiniRecord.fromPAF(line)
+        return MiniRecord.fromPAF(line, has_cigar=True)
 
