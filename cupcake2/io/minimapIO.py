@@ -127,23 +127,17 @@ class MiniRecord:
                     return "partial"
             else:
                 # q fully mapped, s is not, check if query is fully contained in subject
-                # this means subject is not allowed to have too much unmapped 3' but 5' is ok
-                if s_3_mapped:
-                    if q_s_len_match and (self.identity is not None and self.identity >= min_identity):
-                        return "q_contained"
-                    else:
-                        return "partial"
-                else: return "partial"
+                if not q_s_len_match and self.identity is not None and self.identity >= min_identity:
+                    return "q_contained"
+                else:
+                    return "partial"
         else:
             if s_fully_mapped:
                 # s is fully mapped, q is not, check if subject is fully contained in query
-                # this means query is not allowed to have too much unmapped 3' but 5' is ok
-                if q_3_mapped:
-                    if q_s_len_match and (self.identity is not None and self.identity >= min_identity):
-                        return "s_contained"
-                    else:
-                        return "partial"
-                else: return "partial"
+                if not q_s_len_match and self.identity is not None and self.identity >= min_identity:
+                    return "s_contained"
+                else:
+                    return "partial"
             else: # neither is fully mapped, so partial!
                 return "partial"
 
