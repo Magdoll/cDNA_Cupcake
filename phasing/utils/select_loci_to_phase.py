@@ -18,7 +18,7 @@ from bx.intervals.cluster import ClusterTree
 from cupcake.io.SeqReaders import LazyFastqReader
 from cupcake.io.GFF import collapseGFFReader
 
-rex_flnc = re.compile('(m\d+_\d+_\d+\/\d+)\/ccs') # Sequel/Iso-Seq 3 format
+rex_flnc = re.compile('(m\S+_\d+_\d+\/\d+)\/ccs') # Sequel/Iso-Seq 3 format
 rex_flnc2 = re.compile('(m\d+_\d+_\d+_\w+_s1_p0\/\d+)\/ccs') # ex: m160920_210440_42165_c101101052550000001823258304261787_s1_p0/83826/ccs
 rex_flnc3 = re.compile('(m\d+_\d+_\d+_\w+_s1_p0\/\d+)\/\d+_\d+_CCS') # ex: m160918_184656_42165_c101101052550000001823258304261782_s1_p0/121477/5106_57_CCS
 rex_pbid = re.compile('(PB.\d+).\d+')

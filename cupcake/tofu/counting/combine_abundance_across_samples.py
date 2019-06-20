@@ -238,6 +238,7 @@ class MegaPBTreeFusion(MegaPBTree):
         1. there could be multiple matches!
         2. no 5merge allowed
         3. additionally checks if the 5'/3' ends don't disagree too much (fusion_max_dist). this is used for fusion junctions.
+        4. need to take care that fusions can be multi-chromosome! write output correctly!!!
         """
         matches = self.tree[r.chr][r.strand].find(r.start, r.end)
         result = []
@@ -320,8 +321,6 @@ class MegaPBTreeFusion(MegaPBTree):
         for seqid in unmatched_recs:
             combined.append((self.record_d_fusion[seqid], None))
 
-        #return combined
-
         # create a ClusterTree to re-calc the loci/transcripts
         final_tree = defaultdict(lambda: {'+': ClusterTree(0, 0), '-':ClusterTree(0, 0)})
         for i,(r1s,r2s) in enumerate(combined):
@@ -350,7 +349,7 @@ class MegaPBTreeFusion(MegaPBTree):
         fusion_index = 0
         chroms = cluster_tree.keys()
         chroms.sort()
-        for k in chroms:
+        for k in chroms:  # IMPORTANT: for fusion, this is *just* the chrom of the first record! Fusions can be multi-chrom
             for strand in ('+', '-'):
                 for _s, _e, rec_indices in cluster_tree[k][strand].getregions():
                     for i in rec_indices:
@@ -396,10 +395,10 @@ class MegaPBTreeFusion(MegaPBTree):
                         # now write out the fusion transcript
                         for j,r in enumerate(recs):
                             f_out.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{gid}.{j}\";\n".format(\
-                                chr=k, s=r.start+1, e=r.end, strand=strand, gid=tID, j=j+1))
+                                chr=r.chr, s=r.start+1, e=r.end, strand=strand, gid=tID, j=j+1))
                             for exon in r.ref_exons:
                                 f_out.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{gid}.{j}\";\n".format(\
-                                    chr=k, s=exon.start+1, e=exon.end, strand=strand, gid=tID, j=j+1))
+                                    chr=r.chr, s=exon.start+1, e=exon.end, strand=strand, gid=tID, j=j+1))
         f_out.close()
         f_group.close()
         f_mgroup.close()
