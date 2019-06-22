@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 06/20/2019
+Last Updated: 06/21/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 7.7
+Current version: 7.8
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.06.21 updated to v7.8. fixed `demux_by_barcode_groups.py` tab/space mixing issue.
 
 2019.06.20 updated to v7.7. fixed chromosome output error in `chain_fusion_samples.py`.
 

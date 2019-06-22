@@ -18,7 +18,7 @@ def get_type_fafq(in_filename):
     if in_filename.endswith('.FA') or in_filename.endswith('FASTA'): return 'fasta'
     elif in_filename.endswith('.FQ') or in_filename.endswith('FASTQ'): return 'fastq'
     else:
-		raise Exception, "Unrecognized file suffix .{0}! Must end with .fasta or .fastq!".format(in_filename[in_filename.find('.'):])
+        raise Exception, "Unrecognized file suffix .{0}! Must end with .fasta or .fastq!".format(in_filename[in_filename.find('.'):])
 
 def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_dict, in_fafq=None):
     """
@@ -35,7 +35,7 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
         for k,v in r.iteritems():
             if k=='id': continue
             if int(v) > 0: in_tissue[r['id']].add(k)
-	
+
     in_tissue = dict(in_tissue)
 
     handles = {}
