@@ -91,5 +91,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     tmp = eval(args.outgroup_dict)
-    out_group_dict = dict([tmp]) if len(tmp)==2 else dict(tmp)
+    out_group_dict = dict([tmp]) if len(tmp)==1 else dict(tmp)
     regroup_sam_to_gff(args.pooled_sam, args.demux_count_file, args.output_prefix, out_group_dict, args.pooled_fastx)

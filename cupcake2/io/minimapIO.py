@@ -127,7 +127,7 @@ class MiniRecord:
                     return "partial"
             else:
                 # q fully mapped, s is not, check if query is fully contained in subject
-                if not q_s_len_match and (self.sLength-self.qLength>500) and self.identity is not None and self.identity >= min_identity:
+                if (self.sLength-self.qLength>500) and self.identity is not None and self.identity >= min_identity:
                     #print "q_contained:", self.qLength, self.sLength
                     return "q_contained"
                 else:
@@ -135,7 +135,7 @@ class MiniRecord:
         else:
             if s_fully_mapped:
                 # s is fully mapped, q is not, check if subject is fully contained in query
-                if not q_s_len_match and (self.qLength-self.sLength>500) and self.identity is not None and self.identity >= min_identity:
+                if (self.qLength-self.sLength>500) and self.identity is not None and self.identity >= min_identity:
                     #print "s_contained:", self.qLength, self.sLength
                     return "s_contained"
                 else:
