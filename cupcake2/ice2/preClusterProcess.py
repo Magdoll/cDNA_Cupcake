@@ -113,6 +113,7 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class, dun_use_part
     return pCS, orphans
 
 
+bug_ids = [line.strip() for line in open('ids_for_NitrateReductase_gene.txt')]
 
 def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_class, dun_use_partial=False):
     """
@@ -134,9 +135,14 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
             pCS.add_seqid_match(r.qID, r.sID)
         elif s == 'q_contained':
             pCS.add_seqid_contained(r.qID, r.sID)
+            if r.qID in bug_ids or r.sID in bug_ids:
+                print "tucking {0} into {1}".format(r.qID, r.sID)
+                print pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 's_contained':
             pCS.add_seqid_contained(r.sID, r.qID)
-
+            if r.qID in bug_ids or r.sID in bug_ids:
+                print "tucking {0} into {1}".format(r.sID, r.qID)
+                print pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         try:
             orphans.remove(r.sID)
         except:
