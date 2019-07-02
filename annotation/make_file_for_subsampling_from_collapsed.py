@@ -3,8 +3,17 @@ import os, sys
 from csv import DictReader
 from Bio import SeqIO
 
+def read_demux_fl_count_file(filename):
+    d = {}
+    reader = DictReader(open(filename), delimiter=',')
+    assert 'id' in reader.fieldnames
+    for r in reader:
+        d[r['id']] = r
+    samples = reader.fieldnames
+    samples.remove('id')
+    return d, samples
 
-def make_file_for_subsample(input_prefix, output_filename, matchAnnot_parsed=None, sqanti_class=None, include_single_exons=False):
+def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchAnnot_parsed=None, sqanti_class=None, include_single_exons=False):
     """
     Two files must exist: .abundance.txt and .rep.fq so we can make the length
     """
@@ -20,7 +29,7 @@ def make_file_for_subsample(input_prefix, output_filename, matchAnnot_parsed=Non
             if len(r.ref_exons) >= 2:
                 good_ids.append(r.seqid)
 
-    if not os.path.exists(count_filename):
+    if demux_file is None and not os.path.exists(count_filename):
         print >> sys.stderr, "Cannot find {0}. Abort!".format(count_filename)
         sys.exit(-1)
 
@@ -52,48 +61,60 @@ def make_file_for_subsample(input_prefix, output_filename, matchAnnot_parsed=Non
         match_dict = None
 
     seqlen_dict = dict((r.id.split('|')[0],len(r.seq)) for r in SeqIO.parse(open(fq_filename),'fastq'))
-    
-    h = open(output_filename, 'w')
-    if matchAnnot_parsed is None and sqanti_class is None:
-        h.write("pbid\tpbgene\tlength\tfl_count\n")
-    else:
-        h.write("pbid\tpbgene\tlength\trefisoform\trefgene\tfl_count\n")
-    f = open(count_filename)
-    while True:
-        cur = f.tell()
-        if not f.readline().startswith('#'):
-            f.seek(cur)
-            break
-    for r in DictReader(f, delimiter='\t'):
-        if not include_single_exons and r['pbid'] not in good_ids:
-            print >> sys.stderr, "Exclude {0} because single exon.".format(r['pbid'])
-            continue
 
-        if matchAnnot_parsed is not None or sqanti_class is not None:
-            if r['pbid'] not in match_dict:
-                print >> sys.stdout, "Ignoring {0} because not on annotation (SQANTI/MatchAnnot) file.".format(r['pbid'])
+    to_write = {}
+    if demux_file is None:
+        to_write['all'] = {}
+        f = open(count_filename)
+        while True:
+            cur = f.tell()
+            if not f.readline().startswith('#'):
+                f.seek(cur)
+                break
+        for r in DictReader(f, delimiter='\t'):
+            if not include_single_exons and r['pbid'] not in good_ids:
+                #print >> sys.stderr, "Exclude {0} because single exon.".format(r['pbid'])
                 continue
-            m = match_dict[r['pbid']]
-            h.write("{0}\t{1}\t{2}\t".format(r['pbid'], r['pbid'].split('.')[1], seqlen_dict[r['pbid']]))
-            h.write("{0}\t{1}\t".format(m['refisoform'], m['refgene']))
-        else:
-            h.write("{0}\t{1}\t{2}\t".format(r['pbid'], r['pbid'].split('.')[1], seqlen_dict[r['pbid']]))
-        h.write("{0}\n".format(r['count_fl']))
-    h.close()
+            to_write['all'][r['pbid']] = r['count_fl']
+    else:
+        d, samples = read_demux_fl_count_file(demux_file)
+        for s in samples: to_write[s] = {}
+        for pbid, d2 in d.iteritems():
+            for s in samples:
+                to_write[s][pbid] = d2[s]
 
-    print >> sys.stderr, "Output written to {0}.".format(output_filename)
+    for sample in to_write:
+        h = open(output_prefix+'.'+sample+'.txt', 'w')
+        if matchAnnot_parsed is None and sqanti_class is None:
+            h.write("pbid\tpbgene\tlength\tfl_count\n")
+        else:
+            h.write("pbid\tpbgene\tlength\trefisoform\trefgene\tfl_count\n")
+        for pbid in to_write[sample]:
+            if matchAnnot_parsed is not None or sqanti_class is not None:
+                if pbid not in match_dict:
+                    print >> sys.stdout, "Ignoring {0} because not on annotation (SQANTI/MatchAnnot) file.".format(pbid)
+                    continue
+                m = match_dict[pbid]
+                h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
+                h.write("{0}\t{1}\t".format(m['refisoform'], m['refgene']))
+            else:
+                h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
+            h.write("{0}\n".format(to_write[sample][pbid]))
+        h.close()
+        print >> sys.stderr, "Output written to {0}.".format(h.name)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
-    parser = ArgumentParser("Make subsample-ready file from ToFU/Iso-Seq collapsed output")
+    parser = ArgumentParser("Make subsample-ready file from Iso-Seq collapsed output")
     parser.add_argument("-i", "--input_prefix", default="hq_isoforms.fastq.no5merge.collapsed.min_fl_2.filtered", help="Collapsed prefix (default: hq_isoforms.fastq.no5merge.collapsed.min_fl_2.filtered)")
-    parser.add_argument("-o", "--output_filename", default="hq_isoforms.fastq.no5merge.collapsed.min_fl_2.filtered.for_subsampling.txt", help="Output filename (default: hq_isoforms.fastq.no5merge.collapsed.min_fl_2.filtered.for_subsampling.txt")
+    parser.add_argument("-o", "--output_prefix", default="output.for_subsampling", help="Output prefix (default: output.for_subsampling")
     parser.add_argument("-m1", "--matchAnnot_parsed", default=None, help="MatchAnnot parsed output (default: None)")
     parser.add_argument("-m2", "--sqanti_class", default=None, help="SQANTI classification file (default: None)")
+    parser.add_argument("--demux", default=None, help="Demuxed FL count file - if provided, will be used instead of the <input_prefix>.abundance.txt file")
     parser.add_argument("--include_single_exons", default=False, action="store_true", help="Include single exons (default: OFF)")
 
     args = parser.parse_args()
-    make_file_for_subsample(args.input_prefix, args.output_filename, args.matchAnnot_parsed, args.sqanti_class, args.include_single_exons)
+    make_file_for_subsample(args.input_prefix, args.output_prefix, args.demux, args.matchAnnot_parsed, args.sqanti_class, args.include_single_exons)
 
 
 

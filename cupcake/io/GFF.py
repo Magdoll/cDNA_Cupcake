@@ -39,6 +39,7 @@ class GTF:
             start0, end1 = int(raw[3])-1, int(raw[4])
             gtype, gstat = 'NA', 'NA'
             gName = 'NA'
+            tName = 'NA'
             tSupportLevel = 'NA'
             gtags = []
             for stuff in raw[8].split('; '):

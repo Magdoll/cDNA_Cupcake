@@ -18,6 +18,10 @@ class preCluster(object):
         self.size += 1
         self.members.append(seqid)
 
+    def remove_member(self, seqid):
+        self.size -= 1
+        self.members.remove(seqid)
+
     def add_members(self, seqids):
         self.size += len(seqids)
         self.members += seqids
@@ -240,14 +244,8 @@ class preClusterSet2:
         3. neither in clusters --> create new cluster
         """
         if self.seq_stat[seqid] == 'T':
-            # seqid is tucked
-            # case 1: match is tucked, do nothing
-            # case 2: match is in 'c', tuck 'c'
-            # case 3: match is unmatched, mark match as tucked
-            if self.seq_stat[match] == 'M':
-                self.tuck_cluster(self.seq_map[match])
-            elif self.seq_stat[match] is None:
-                self.seq_stat[match] = 'T'
+            # seqid is tucked --> do nothing for the match
+            pass
         elif self.seq_stat[seqid] == 'M':
             # seqid is in 'c'
             # case 1: match is tucked, tuck 'c'
@@ -255,7 +253,7 @@ class preClusterSet2:
             # case 3: match is unmatched, add to 'c'
             cid1 = self.seq_map[seqid]
             if self.seq_stat[match] == 'T':
-                self.tuck_cluster(cid1)
+                pass
             elif self.seq_stat[match] == 'M':
                 cid2 = self.seq_map[match]
                 if cid1!=cid2:
@@ -268,7 +266,47 @@ class preClusterSet2:
             # case 2: match is in 'c', add seqid to 'c'
             # case 3: match is unmatched, make a new cluster
             if self.seq_stat[match] == 'T':
-                self.seq_stat[seqid] = 'T'
+                pass
+            elif self.seq_stat[match] == 'M':
+                self.add_seqid_to_cluster_by_cid(seqid, self.seq_map[match])
+            else:
+                self.add_new_cluster([seqid, match])
+
+
+    def add_seqid_partial(self, seqid, match):
+        """
+        seqid could already be in a cluster or tucked
+        match could already be in a cluster or tucked
+        so must handle this properly
+
+        1. both in clusters --> combine
+        2. one in cluster, other is not --> add other to the cluster
+        3. neither in clusters --> create new cluster
+        """
+        if self.seq_stat[seqid] == 'T':
+            # if seqid is tucked, do nothing since this is a partial match
+            pass
+        elif self.seq_stat[seqid] == 'M':
+            # seqid is in 'c'
+            # case 1: match is tucked, do nothing
+            # case 2: match is in 'd', if c!='d':combine
+            # case 3: match is unmatched, add to 'c'
+            cid1 = self.seq_map[seqid]
+            if self.seq_stat[match] == 'T':
+                pass
+            elif self.seq_stat[match] == 'M':
+                cid2 = self.seq_map[match]
+                if cid1!=cid2:
+                    self.combine_cluster(cid1, cid2)
+            else:
+                self.add_seqid_to_cluster_by_cid(match, cid1)
+        else:
+            # seqid is unmatched
+            # case 1: match is tucked, do nothing
+            # case 2: match is in 'c', add seqid to 'c'
+            # case 3: match is unmatched, make a new cluster
+            if self.seq_stat[match] == 'T':
+                pass
             elif self.seq_stat[match] == 'M':
                 self.add_seqid_to_cluster_by_cid(seqid, self.seq_map[match])
             else:
@@ -292,6 +330,14 @@ class preClusterSet2:
             self.seq_stat[x] = 'T'
         del self.S[cid]
 
+    def tuck_seqid(self, seqid):
+        cid = self.seq_map[seqid]
+        del self.seq_map[seqid]
+        self.seq_stat[seqid] = 'T'
+        self.S[cid].remove_member(seqid)
+        if self.S[cid].size == 0:
+            del self.S[cid]
+
     def add_seqid_contained(self, seqid, match):
         """
         seqid is contained in match
@@ -312,18 +358,17 @@ class preClusterSet2:
         elif self.seq_stat[seqid] == 'M':
             # if seqid is in 'c',
             # case 1: match is tucked, mark everything 'c' as tucked, delete 'c'
-            # case 2: match is in 'd', if c==d, ignore (weird case!); if c!=d, delete 'c'
+            # case 2: match is in 'd', tuck seqid
             # case 3: match is unmatched, make it a cluster and delete 'c'
             cid1 = self.seq_map[seqid]
             if self.seq_stat[match] == 'T':
-                self.tuck_cluster(cid1)
+                self.tuck_seqid(seqid)
             elif self.seq_stat[match] == 'M':
                 cid2 = self.seq_map[match]
-                if cid1!=cid2:
-                    self.tuck_cluster(cid1)
+                self.tuck_seqid(seqid)
             else:
                 self.add_new_cluster([match])
-                self.tuck_cluster(cid1)
+                self.tuck_seqid(seqid)
         else:
             # seqid is unmatched
             # case 1: match is tucked, mark seqid as tucked

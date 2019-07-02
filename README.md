@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 06/25/2019
+Last Updated: 07/02/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 7.9
+Current version: 8.0
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.07.02 updated to v8.0. `cupcake.io.GFF.GTF` now can handle missing transcript_name field
 
 2019.06.25 updated to v7.9. fixed minor dict issue with `demux_by_barcode_groups.py`
 
