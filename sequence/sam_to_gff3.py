@@ -39,7 +39,8 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
     if r.sID == '*':
         print >> sys.stderr, "Skipping {0} because unmapped.".format(r.qID)
         return None
-    seq = Seq("AAAA")  # DO NOT CARE since sequence is not written in GFF3
+    t_len = sum(e.end-e.start for e in r.segments)
+    seq = Seq('A'*t_len)  # DO NOT CARE since sequence is not written in GFF3
     rec = SeqRecord(seq, r.sID)
     strand = 1 if r.flag.strand == '+' else -1
 
@@ -53,19 +54,21 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
             r.qID += '_dup' + str(qid_index_dict[r.qID])
         else: qid_index_dict[r.qID] += 1
 
-    gene_qualifiers = {"source": source, "ID": r.qID+'.gene', "Name": r.qID} # for gene record
-    mRNA_qualifiers = {"source": source, "ID": r.qID, "Name": r.qID, "Parent": r.qID+'.gene',
-                       "coverage": "{0:.2f}".format(r.qCoverage*10**2) if r.qCoverage is not None else "NA",
-                       "identity": "{0:.2f}".format(r.identity*10**2),
-                       "matches": matches, "mismatches": mismatches, "indels": indels}
+    gene_qualifiers = {"source": source, "ID": r.qID, "Name": r.qID} # for gene record
+#    mRNA_qualifiers = {"source": source, "ID": r.qID+'.mRNA', "Name": r.qID+'.mRNA', "Parent": r.qID,
+#                       "coverage": "{0:.2f}".format(r.qCoverage*10**2) if r.qCoverage is not None else "NA",
+#                       "identity": "{0:.2f}".format(r.identity*10**2),
+#                       "matches": matches, "mismatches": mismatches, "indels": indels}
 
     # gene line, one per record
     top_feature = SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="gene", strand=strand, qualifiers=gene_qualifiers)
     # mRNA line, one per record
-    top_feature.sub_features = [SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="mRNA", strand=strand, qualifiers=mRNA_qualifiers)]
+    top_feature.sub_features = [] #top_feature.sub_features = [SeqFeature(FeatureLocation(r.sStart, r.sEnd), type="mRNA", strand=strand, qualifiers=mRNA_qualifiers)]
+
     # exon lines, as many exons per record
     for i,e in enumerate(r.segments):
-        exon_qual = {"source": source, "ID": "{0}.exon{1}".format(r.qID,i+1), "Name": r.qID, "Parent": r.qID}
+        _id = "{0}.exon{1}".format(r.qID,i+1)
+        exon_qual = {"source": source, "ID": _id, "Name": _id}
         top_feature.sub_features.append(SeqFeature(FeatureLocation(e.start, e.end), type="exon", strand=strand, qualifiers=exon_qual))
     rec.features = [top_feature]
     return rec
@@ -73,7 +76,7 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
 def convert_sam_to_gff3(sam_filename, output_gff3, source, q_dict=None):
     qid_index_dict = Counter()
     with open(output_gff3, 'w') as f:
-        recs = [convert_sam_rec_to_gff3_rec(r0, source, qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
+        recs = [convert_sam_rec_to_gff3_rec(r0, source,qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
         BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
 
 def main():

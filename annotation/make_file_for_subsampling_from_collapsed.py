@@ -72,16 +72,15 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
                 f.seek(cur)
                 break
         for r in DictReader(f, delimiter='\t'):
-            if not include_single_exons and r['pbid'] not in good_ids:
-                #print >> sys.stderr, "Exclude {0} because single exon.".format(r['pbid'])
-                continue
-            to_write['all'][r['pbid']] = r['count_fl']
+            if r['pbid'] in good_ids or include_single_exons:
+                to_write['all'][r['pbid']] = r['count_fl']
     else:
         d, samples = read_demux_fl_count_file(demux_file)
         for s in samples: to_write[s] = {}
         for pbid, d2 in d.iteritems():
             for s in samples:
-                to_write[s][pbid] = d2[s]
+                if pbid in good_ids or include_single_exons:
+                    to_write[s][pbid] = d2[s]
 
     for sample in to_write:
         h = open(output_prefix+'.'+sample+'.txt', 'w')
