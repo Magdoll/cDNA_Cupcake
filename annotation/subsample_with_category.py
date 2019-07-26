@@ -13,7 +13,7 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
         if max_len is not None and _len > max_len: continue
         c = int(r['fl_count'])
         if c >= min_fl_count:
-            count_d[r[key]] += c
+            count_d[r[key]+'---'+r['match_category']] += c
             total += c
     
     counts = []
@@ -22,21 +22,28 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
     
     return total, counts
 
+from collections import defaultdict
 def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
-    sizes = range(0, total+1, step)
+    sizes = range(100, total+1, step)
     print "min fl count:", min_fl_count
-    print "size", "min", "max", "mean", "sd"
+    print "size", "category", "min", "max", "mean", "sd"
     for s in sizes:
-        tmp = []
+        tmp = defaultdict(lambda: []) # category --> N iterations
         for i in xrange(iter):
             tally = defaultdict(lambda: 0)
+            uniq_id_count = defaultdict(lambda: set()) # category -> unique ids
             for k in random.sample(counts, s):
                 tally[k] += 1
-            tmp.append(len(tally)) #tmp.append(len(filter(lambda k: tally[k]>=min_fl_count, tally)))
-        #tmp = [len(set(random.sample(counts, s))) for i in xrange(iter)]
-        _mean = sum(tmp)*1./len(tmp)
-        _std = math.sqrt(sum((x-_mean)**2 for x in tmp)*1./len(tmp))
-        print s, min(tmp), max(tmp), _mean, _std
+            for k in tally:
+                _id, _cat = k.split('---')
+                uniq_id_count[_cat].add(_id) #if tally[k] >= min_fl_count: uniq_id_count[_cat].add(_id)
+            for _cat in uniq_id_count:
+                tmp[_cat].append(len(uniq_id_count[_cat]))
+
+        for _cat in tmp:
+            _mean = sum(tmp[_cat])*1./len(tmp[_cat])
+            _std = math.sqrt(sum((x-_mean)**2 for x in tmp[_cat])*1./len(tmp[_cat]))
+            print s, _cat, min(tmp[_cat]), max(tmp[_cat]), _mean, _std
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
