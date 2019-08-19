@@ -13,7 +13,7 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
         if max_len is not None and _len > max_len: continue
         c = int(r['fl_count'])
         if c >= min_fl_count:
-            count_d[r[key]+'---'+r['match_category']] += c
+            count_d[r[key]+'---'+r['category']] += c
             total += c
     
     counts = []

@@ -47,6 +47,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
 
     if matchAnnot_parsed is not None:
         match_dict = dict((r['pbid'],r) for r in DictReader(open(matchAnnot_parsed), delimiter='\t'))
+        for k in match_dict: match_dict[k]['category'] = match_dict[k]['score']
     elif sqanti_class is not None:
         print >> sys.stderr, "Reading {0} to get gene/isoform assignment...".format(sqanti_class)
         match_dict = {}
@@ -56,7 +57,8 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
             else:
                 refisoform = r['associated_transcript']
             match_dict[r['isoform']] = {'refgene': r['associated_gene'],
-                                     'refisoform': refisoform}
+                                        'refisoform': refisoform,
+                                        'category': r['structural_category']}
     else:
         match_dict = None
 
@@ -87,7 +89,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
         if matchAnnot_parsed is None and sqanti_class is None:
             h.write("pbid\tpbgene\tlength\tfl_count\n")
         else:
-            h.write("pbid\tpbgene\tlength\trefisoform\trefgene\tfl_count\n")
+            h.write("pbid\tpbgene\tlength\trefisoform\trefgene\tcategory\tfl_count\n")
         for pbid in to_write[sample]:
             if matchAnnot_parsed is not None or sqanti_class is not None:
                 if pbid not in match_dict:
@@ -95,7 +97,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
                     continue
                 m = match_dict[pbid]
                 h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
-                h.write("{0}\t{1}\t".format(m['refisoform'], m['refgene']))
+                h.write("{0}\t{1}\t{2}\t".format(m['refisoform'], m['refgene'], m['category']))
             else:
                 h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
             h.write("{0}\n".format(to_write[sample][pbid]))

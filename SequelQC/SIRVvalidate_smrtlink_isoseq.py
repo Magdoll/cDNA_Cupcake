@@ -96,12 +96,16 @@ def link_files(src_dir, out_dir):
     hq_fastq2 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript2tools.tasks.collect_polish-0', 'all_arrowed_hq.fastq')
     # location for HQ fastq in IsoSeq3
     hq_fastq3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.bam2fastq_transcripts-0', 'hq_transcripts.fastq')
+    # location for HQ fastq in IsoSeq3, cromwell
+    hq_fastq4 = os.path.join(os.path.abspath(src_dir), 'outputs', 'hq_transcripts.fastq')
     # location for cluster report in IsoSeq1
     cluster_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript.tasks.combine_cluster_bins-0', 'cluster_report.csv')
     cluster_csv2 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbtranscript2tools.tasks.collect_polish-0', 'report.csv')
     cluster_csv3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.gather_csv-1', 'file.csv')
+    cluster_csv4 = os.path.join(os.path.abspath(src_dir), 'outputs', 'polished.cluster_report.csv')
 
     class_csv3 = os.path.join(os.path.abspath(src_dir), 'tasks', 'isoseq3.tasks.refine-0', 'flnc.report.csv')
+    class_csv4 = os.path.join(os.path.abspath(src_dir), 'outputs', 'flnc.report.csv')
 
     if os.path.exists(hq_fastq):
         print >> sys.stderr, "Detecting IsoSeq1 task directories..."
@@ -118,6 +122,12 @@ def link_files(src_dir, out_dir):
         os.symlink(hq_fastq3, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv3, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(class_csv3, os.path.join(out_dir, 'classify_report.csv'))
+        isoseq_version = '3'
+    elif os.path.exists(hq_fastq4):
+        print >> sys.stderr, "Detecting IsoSeq3 cromwell directories..."
+        os.symlink(hq_fastq4, os.path.join(out_dir, 'hq_isoforms.fastq'))
+        os.symlink(cluster_csv4, os.path.join(out_dir, 'cluster_report.csv'))
+        os.symlink(class_csv4, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '3'
     else:
         raise Exception, "No recognizable Iso-Seq1, 2, 3 directory!"

@@ -108,9 +108,9 @@ def get_donor_acceptor(genome_d, chrom, strand, pos1, pos2):
     seq1 = genome_d[chrom][pos1+1:pos1+3].seq
     seq2 = genome_d[chrom][pos2-2:pos2].seq
     if strand == '+':
-        return seq1.tostring().upper(), seq2.tostring().upper()
+        return str(seq1).upper(), str(seq2).upper()
     else:
-        return seq2.reverse_complement().tostring().upper(), seq1.reverse_complement().tostring().upper()
+        return str(seq2.reverse_complement()).upper(), str(seq1.reverse_complement()).upper()
 
 def evaluate_alignment_sam(input_fa_or_fq, sam_filename, genome_d, output_prefix, junction_info=None):
 

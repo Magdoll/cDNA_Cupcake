@@ -56,28 +56,12 @@ def process_self_align_into_seed(align_filename, seqids, reader_class, pCS=None,
 
         if s == 'match':
             pCS.add_seqid_match(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "match:", r.qID, r.sID
-                print "after match:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 'partial':
             pCS.add_seqid_partial(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "partial:", r.qID, r.sID
-                print "after partial:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 'q_contained':
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.qID, r.sID)
-                print "before:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
             pCS.add_seqid_contained(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 's_contained':
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.sID, r.qID)
-                print "before:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
             pCS.add_seqid_contained(r.sID, r.qID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
         try:
             orphans.remove(r.qID)
         except:
@@ -113,30 +97,14 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class, dun_use_part
         # Liz note: currently, just add all to match because minimap sensitivity not enough to do "tuck" properly
         if s == 'match':
             pCS.add_seqid_match(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "match:", r.qID, r.sID
-                print "after match:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 'partial':
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "partial:", r.qID, r.sID
-                print "after partial:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
             pCS.add_seqid_partial(r.qID, r.sID)
         elif s == 'q_contained':
             # sID must be in cluster, so just call pCS to handle the tucking
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.qID, r.sID)
-                print "before:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
             pCS.add_seqid_contained(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 's_contained':
             # sID must be in cluster
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.sID, r.qID)
-                print "before:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
             pCS.add_seqid_contained(r.sID, r.qID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
         try:
             orphans.remove(r.qID)
         except:
@@ -144,8 +112,6 @@ def process_align_to_pCS(align_filename, seqids, pCS, reader_class, dun_use_part
 
     return pCS, orphans
 
-
-bug_ids = [line.strip() for line in open('ids_for_NitrateReductase_gene.txt')]
 
 def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_class, dun_use_partial=False):
     """
@@ -165,26 +131,12 @@ def process_align_to_orphan(align_filename, remaining, orphans, pCS, reader_clas
         if dun_use_partial and s == 'partial': continue
         if s == 'match':
             pCS.add_seqid_match(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after match:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 'partial':
             pCS.add_seqid_partial(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after partial:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 'q_contained':
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.qID, r.sID)
-                print "before:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
             pCS.add_seqid_contained(r.qID, r.sID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.qID], pCS.seq_stat[r.sID]
         elif s == 's_contained':
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "tucking {0} into {1}".format(r.sID, r.qID)
-                print "before:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
             pCS.add_seqid_contained(r.sID, r.qID)
-            if r.qID in bug_ids or r.sID in bug_ids:
-                print "after:", pCS.seq_stat[r.sID], pCS.seq_stat[r.qID]
         try:
             orphans.remove(r.sID)
         except:
