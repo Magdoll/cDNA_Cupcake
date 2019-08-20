@@ -8,7 +8,7 @@ import sys
 try:
     import vcf
 except ImportError:
-    print >> sys.stderr, "Cannot import vcf! Please install bio-vcf!"
+    print >> sys.stderr, "Cannot import vcf! Please install pyvcf!"
     sys.exit(-1)
 from Bio import SeqIO
 import phasing.io.SAMMPileUpReader as sp

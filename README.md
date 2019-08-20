@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 08/10/2019
+Last Updated: 08/20/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 8.3
+Current version: 8.4
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.08.20 updated to v8.4. `run_phaser.py` dependncy is pyvcf, not bio-vcf.
 
 2019.08.19 updated to v8.3. removed bug testing code in cupcake preclustering.
 
