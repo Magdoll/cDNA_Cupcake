@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 08/20/2019
+Last Updated: 09/16/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 8.4
+Current version: 8.5
 
 ## Python Requirements
 * Python >= 2.7
@@ -36,7 +36,7 @@ A brief list of currently listed scripts are:
 ### Annotation and Rarefaction
 * `parse_matchAnnot.py`: Parse matchAnnot results into summary format.
 * `make_file_for_subsampling_from_collapsed.py`: Prepare file for running subsampling (rarefaction curve).
-* `subsample.py`: Running subsamping. Results can be plotted with Excel graphics and R, etc.
+* `subsample.py` and `subsample_with_category.py`: Running subsamping. Results can be plotted with Excel graphics and R, etc.
 
 ### Sequence Manipulation
 * `get_seq_stats.py`: Summarize length distribution of a FASTA/FASTQ file.
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.09.16 updated to v8.5. fixed `collapse_isoforms_by_sam.py` incorrect behavior in fuzzy chain
 
 2019.08.20 updated to v8.4. `run_phaser.py` dependncy is pyvcf, not bio-vcf.
 
