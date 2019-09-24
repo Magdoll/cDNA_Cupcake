@@ -26,11 +26,11 @@ def read_group_info(group_filename):
             d[m] = pbid
     return d
 
-def collate_gene_info(group_filename, csv_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None):
+def collate_gene_info(group_filename, csv_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None, no_extra_base=False):
     """
-    <id>, <pbid>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <ORFgroup NA|NoORF|groupID>, <UMI>, <BC>
+    <id>, <pbid>, <length>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <ORFgroup NA|NoORF|groupID>, <UMI>, <BC>
     """
-    FIELDS = ['id', 'pbid', 'transcript', 'gene', 'category', 'ontarget', 'ORFgroup', 'UMI', 'BC']
+    FIELDS = ['id', 'pbid', 'length', 'transcript', 'gene', 'category', 'ontarget', 'ORFgroup', 'UMI', 'BC']
 
     group_info = read_group_info(group_filename)
     umi_bc_info = dict((r['id'], r) for r in DictReader(open(csv_filename), delimiter='\t'))
@@ -53,7 +53,11 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
         if pbid not in sqanti_info:
             print >> sys.stderr, "ignoring ID {0} cuz not in classification file.".format(pbid)
             continue
+        if no_extra_base and  umi_bc_info[ccs_id]['extra']!='NA':
+            print >> sys.stderr, "ignoring ID {0} cuz extra bases.".format(pbid)
+            continue
         rec = {'id': ccs_id, 'pbid': pbid}
+        rec['length'] = sqanti_info[pbid]['length']
         rec['category'] = sqanti_info[pbid]['structural_category']
         rec['transcript'] = sqanti_info[pbid]['associated_transcript']
         rec['gene'] = sqanti_info[pbid]['associated_gene']
@@ -86,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("output_filename", help="Output filename")
     parser.add_argument("-i", "--ontarget_filename", help="(Optional) on target information text")
     parser.add_argument("-p", "--dedup_ORF_prefix", help="(Optional) dedup-ed ORF group prefix, must have <pre>.faa and <pre>.group.txt")
+    parser.add_argument("--no-extra-base", dest='no_extra_base', action="store_true", default=False, help="Drop all reads where there are extra bases")
 
     args = parser.parse_args()
 
@@ -117,4 +122,4 @@ if __name__ == "__main__":
             print >> sys.stderr, "Dedup {0}.faa not found. Abort!".format(args.dedup_ORF_prefix)
             sys.exit(-1)
 
-    collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix)
+    collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base)

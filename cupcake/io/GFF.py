@@ -312,7 +312,7 @@ class btabBlockReader(btabReader):
         return recs[:-1]
 
 class gmapRecord:
-    def __init__(self, chr, coverage, identity, strand, seqid):
+    def __init__(self, chr, coverage, identity, strand, seqid, geneid=None):
         """
         Record keeping for GMAP output:
         chr, coverage, identity, seqid, exons
@@ -325,6 +325,7 @@ class gmapRecord:
         self.identity = identity
         self.strand = strand
         self.seqid = seqid
+        self.geneid = geneid if geneid is not None else self.seqid.split('.')[0]
         self.ref_exons = []
         self.seq_exons = []
         self.cds_exons = []
@@ -337,10 +338,11 @@ class gmapRecord:
         coverage: {2}
         identity: {3}
         seqid: {4}
+        geneid: {8}
         ref exons: {5}
         seq exons: {6}
         scores: {7}
-        """.format(self.chr, self.strand, self.coverage, self.identity, self.seqid, self.ref_exons, self.seq_exons, self.scores)
+        """.format(self.chr, self.strand, self.coverage, self.identity, self.seqid, self.ref_exons, self.seq_exons, self.scores, self.geneid)
         
     def __getattr__(self, key):
         if key == 'rstart' or key == 'start':
@@ -515,12 +517,12 @@ class pasaGFFReader(gmapGFFReader):
                 rec.add_exon(start1-1, end1, -2, -1, None)
 
 def write_collapseGFF_format(f, r):
-    f.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=r.start+1, e=r.end, strand=r.strand,gid=r.seqid[:r.seqid.rfind('.')], tid=r.seqid))
+    f.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=r.start+1, e=r.end, strand=r.strand,gid=r.geneid, tid=r.seqid))
     for exon in r.ref_exons:
-        f.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.seqid[:r.seqid.rfind('.')], tid=r.seqid))
+        f.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
     if r.cds_exons is not None:
         for exon in r.cds_exons:
-            f.write("{chr}\tPacBio\tCDS\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.seqid[:r.seqid.rfind('.')], tid=r.seqid))
+            f.write("{chr}\tPacBio\tCDS\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
     
 
 class collapseGFFReader(gmapGFFReader):

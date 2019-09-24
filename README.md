@@ -1,10 +1,10 @@
 # cDNA_Cupcake
 
-Last Updated: 09/16/2019
+Last Updated: 09/24/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 8.5
+Current version: 8.6
 
 ## Python Requirements
 * Python >= 2.7
@@ -62,6 +62,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.09.24 updated to v8.6. `cupcake.io.GFF.py` now supports `gene_id` write out.
 
 2019.09.16 updated to v8.5. fixed `collapse_isoforms_by_sam.py` incorrect behavior in fuzzy chain
 
