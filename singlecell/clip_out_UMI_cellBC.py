@@ -4,7 +4,7 @@ from Bio.Seq import Seq
 from csv import DictReader, DictWriter
 import pysam
 from pbcore.io import BamIO
-
+import pdb
 
 def find_Aend(seq, min_a_len=8):
     """
@@ -35,7 +35,7 @@ def find_Gstart(seq, min_g_len=3):
     """
     len_seq = len(seq)
     i = seq.find('G'*min_g_len)
-    if i > 0:
+    if i >= 0:
         # now find the end
         j = i + 3
         while j < len_seq and seq[j]=='G':
@@ -46,17 +46,23 @@ def find_Gstart(seq, min_g_len=3):
 
 
 
-def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_bc={}):
+def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_bc={}, tso_len=0):
     """
     :param bam_filename: BAM of post-LIMA (primer-trimmed) CCS sequences
-    :param UMI_type: either 'A3' or 'G5'
+    :param UMI_type: either 'A3' or 'G5' or 'G5-10X'
     :param shortread_bc: a dict of barcode -> "Y|N" for top-ranked. If given, came from short read data.
-    """
-    assert UMI_type in ('A3', 'G5')
 
+    --------
+    G5-10X
+    --------
+    5' primer -- BC --- UMI -- TSO --- GGG --- transcript --- polyA
+
+    """
+    assert UMI_type in ('A3', 'G5', 'G5-10X')
     umi_bc_len = umi_len + bc_len
 
     FIELDS = ['id', 'clip_len', 'extra', 'UMI', 'BC', 'BC_rev', 'BC_match', 'BC_top_rank']
+    if tso_len > 0: FIELDS += ['TSO']
 
     f1 = open(output_prefix + '.trimmed.csv', 'w')
     writer1 = DictWriter(f1, FIELDS, delimiter='\t')
@@ -179,6 +185,70 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                 d['tags'] = new_tags
                 x = pysam.AlignedSegment.from_dict(d, r.peer.header)
                 f2.write(x)
+        elif UMI_type == 'G5-10X':
+            # need to first invert the sequence so polyA is at the end
+            d['seq'] = str(Seq(d['seq']).reverse_complement())
+            d['qual'] = d['qual'][::-1]
+            # now it is BC -- UMI -- TSO -- GGG -- transcript -- polyA
+            umi_bc_tso_len = bc_len + umi_len + tso_len
+            G_start, G_end = find_Gstart(d['seq'][umi_bc_tso_len:umi_bc_tso_len+10])
+
+            #pdb.set_trace()
+
+            if G_start >= 0:
+                G_start += umi_bc_tso_len
+                G_end   += umi_bc_tso_len
+
+                seq2 = d['seq'][:G_start]  # this is BC - UMI - TSO
+                seq_tso = seq2[-tso_len:] + d['seq'][G_start:G_end]
+
+                diff = len(seq2) - umi_bc_tso_len
+                if diff > 0: # beginning may have included untrimmed primers
+                    seq_extra = seq2[:diff]
+                    seq2 = seq2[diff:]
+                    seq_bc = seq2[:bc_len]
+                    seq_umi = seq2[bc_len:umi_bc_len]
+                elif diff == 0:
+                    seq_extra = 'NA'
+                    seq_bc = seq2[:bc_len]
+                    seq_umi = seq2[bc_len:umi_bc_len]
+                elif diff < 0: # we may have accidentally trimmed away some bases for BC, can't do anything
+                    seq_extra = 'NA'
+                    seq_bc = seq2[:bc_len+diff]
+                    seq_umi = seq2[bc_len+diff:umi_bc_len+diff]
+
+                # reverse complement BC because it's always listed in rev comp in short read data
+                seq_bc_rev = str(Seq(seq_bc).reverse_complement())
+                match = 'Y' if seq_bc_rev in shortread_bc else 'N'
+                match_top = 'Y' if (match=='Y' and shortread_bc[seq_bc_rev]=='Y') else 'N'
+
+                rec = {'id': r.peer.qname,
+                       'clip_len': len(seq2)+(G_end-G_start),
+                       'extra': seq_extra,
+                       'UMI': seq_umi,
+                       'BC': seq_bc,
+                       'TSO': seq_tso,
+                       'BC_rev': seq_bc_rev,
+                       'BC_match': match,
+                       'BC_top_rank': match_top}
+                writer1.writerow(rec)
+
+                # subset the sequence to remove the UMIs and "G"s
+                d['seq'] = d['seq'][G_end:]
+                d['qual'] = d['qual'][G_end:]
+                assert len(d['seq'])==len(d['qual'])
+                new_tags = []
+                for tag in d['tags']:
+                    if tag.startswith('zs:B'):  # defunct CCS tag, don't use
+                        pass
+                    elif tag.startswith('dq:i:') or tag.startswith('iq:i:') or tag.startswith('sq:i:'):
+                        tag = tag[:5] + tag[5+G_end:]
+                        new_tags.append(tag)
+                    else:
+                        new_tags.append(tag)
+                d['tags'] = new_tags
+                x = pysam.AlignedSegment.from_dict(d, r.peer.header)
+                f2.write(x)
 
     f1.close()
     f2.close()
@@ -191,7 +261,8 @@ if __name__ == "__main__":
     parser.add_argument("output_prefix", help="Output prefix")
     parser.add_argument("-u", "--umi_len", type=int, help="Length of UMI")
     parser.add_argument("-b", "--bc_len", type=int, help="Length of cell barcode")
-    parser.add_argument("--umi_type", choices=['A3', 'G5'], help="Location of the UMI")
+    parser.add_argument("-t", "--tso_len", type=int, help="Length of TSO (for G5-10X only)")
+    parser.add_argument("--umi_type", choices=['A3', 'G5', 'G5-10X'], help="Location of the UMI")
     parser.add_argument("--bc_rank_file", help="(Optional) cell barcode rank file from short read data")
 
 
@@ -214,4 +285,4 @@ if __name__ == "__main__":
         for r in reader:
             shortread_bc[r['cell_barcode']] = r['top_ranked']
 
-    clip_out(args.bam_filename, args.umi_len, args.bc_len, args.output_prefix, args.umi_type, shortread_bc)
+    clip_out(args.bam_filename, args.umi_len, args.bc_len, args.output_prefix, args.umi_type, shortread_bc, args.tso_len)
