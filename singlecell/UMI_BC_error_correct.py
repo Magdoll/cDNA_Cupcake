@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 def edit_distance(seq1, seq2):
     assert len(seq1)==len(seq2)
     diff = 0
-    for i in xrange(len(seq1)):
+    for i in range(len(seq1)):
         diff += seq1[i]!=seq2[i]
     return diff
 
@@ -41,7 +41,7 @@ def error_correct_BC_or_UMI(records, key, threshold=1):
     return merge_map
 
 
-def main(csv_filename, output_filename, shortread_bc={}):
+def main(csv_filename, output_filename, shortread_bc={}, only_top_ranked=False):
 
     recs_by_gene = defaultdict(lambda: [])
     reader = DictReader(open(csv_filename), delimiter='\t')
@@ -78,8 +78,8 @@ def main(csv_filename, output_filename, shortread_bc={}):
                 r['BC_match'] = 'Y' if BC_ed_rev in shortread_bc else 'N'
                 r['BC_top_rank'] = 'Y' if (r['BC_match']=='Y' and shortread_bc[BC_ed_rev]=='Y') else 'N'
 
-                writer.writerow(r)
-
+                if (not only_top_ranked or r['BC_top_rank']=='Y'):
+                    writer.writerow(r)
 
 
 if __name__ == "__main__":
@@ -88,14 +88,18 @@ if __name__ == "__main__":
     parser.add_argument("input_csv", help="Input CSV")
     parser.add_argument("output_csv", help="Output CSV")
     parser.add_argument("--bc_rank_file", help="(Optional) cell barcode rank file from short read data")
+    parser.add_argument("--only_top_ranked", action="store_true", default=False, help="(Optional) only output those that are top-ranked. Must have --bc_rank_file.")
 
     args = parser.parse_args()
 
-    # ToDo: figure out later how to do top ranked barcodes for 10X data
     shortread_bc = {}  # dict of cell barcode -> "Y" for top ranked
     if args.bc_rank_file is not None:
         reader = DictReader(open(args.bc_rank_file), delimiter='\t')
         for r in reader:
             shortread_bc[r['cell_barcode']] = r['top_ranked']
+    else:
+        if args.only_top_ranked:
+            print("--bc_rank_file must be given if using --only_top_ranked!", file=sys.stderr)
+            sys.exit(-1)
 
-    main(args.input_csv, args.output_csv, shortread_bc)
+    main(args.input_csv, args.output_csv, shortread_bc, args.only_top_ranked)

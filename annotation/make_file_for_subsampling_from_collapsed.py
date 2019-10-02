@@ -23,33 +23,33 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
     if not include_single_exons:
         from cupcake.io.GFF import collapseGFFReader
         gff_filename = input_prefix + '.gff'
-        print >> sys.stderr, "Reading {0} to exclude single exons...".format(gff_filename)
+        print("Reading {0} to exclude single exons...".format(gff_filename), file=sys.stderr)
         good_ids = []
         for r in collapseGFFReader(gff_filename):
             if len(r.ref_exons) >= 2:
                 good_ids.append(r.seqid)
 
     if demux_file is None and not os.path.exists(count_filename):
-        print >> sys.stderr, "Cannot find {0}. Abort!".format(count_filename)
+        print("Cannot find {0}. Abort!".format(count_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(fq_filename):
-        print >> sys.stderr, "Cannot find {0}. Abort!".format(fq_filename)
+        print("Cannot find {0}. Abort!".format(fq_filename), file=sys.stderr)
         sys.exit(-1)
 
     if matchAnnot_parsed is not None and not os.path.exists(matchAnnot_parsed):
-        print >> sys.stderr, "Cannot find {0}. Abort!".format(matchAnnot_parsed)
+        print("Cannot find {0}. Abort!".format(matchAnnot_parsed), file=sys.stderr)
         sys.exit(-1)
 
     if sqanti_class is not None and not os.path.exists(sqanti_class):
-        print >> sys.stderr, "Cannot find {0}. Abort!".format(sqanti_class)
+        print("Cannot find {0}. Abort!".format(sqanti_class), file=sys.stderr)
         sys.exit(-1)
 
     if matchAnnot_parsed is not None:
         match_dict = dict((r['pbid'],r) for r in DictReader(open(matchAnnot_parsed), delimiter='\t'))
         for k in match_dict: match_dict[k]['category'] = match_dict[k]['score']
     elif sqanti_class is not None:
-        print >> sys.stderr, "Reading {0} to get gene/isoform assignment...".format(sqanti_class)
+        print("Reading {0} to get gene/isoform assignment...".format(sqanti_class), file=sys.stderr)
         match_dict = {}
         for r in DictReader(open(sqanti_class), delimiter='\t'):
             if r['associated_transcript'] == 'novel':
@@ -79,7 +79,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
     else:
         d, samples = read_demux_fl_count_file(demux_file)
         for s in samples: to_write[s] = {}
-        for pbid, d2 in d.iteritems():
+        for pbid, d2 in d.items():
             for s in samples:
                 if pbid in good_ids or include_single_exons:
                     to_write[s][pbid] = d2[s]
@@ -93,7 +93,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
         for pbid in to_write[sample]:
             if matchAnnot_parsed is not None or sqanti_class is not None:
                 if pbid not in match_dict:
-                    print >> sys.stdout, "Ignoring {0} because not on annotation (SQANTI/MatchAnnot) file.".format(pbid)
+                    print("Ignoring {0} because not on annotation (SQANTI/MatchAnnot) file.".format(pbid), file=sys.stdout)
                     continue
                 m = match_dict[pbid]
                 h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
@@ -102,7 +102,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
                 h.write("{0}\t{1}\t{2}\t".format(pbid, pbid.split('.')[1], seqlen_dict[pbid]))
             h.write("{0}\n".format(to_write[sample][pbid]))
         h.close()
-        print >> sys.stderr, "Output written to {0}.".format(h.name)
+        print("Output written to {0}.".format(h.name), file=sys.stderr)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

@@ -8,7 +8,7 @@ icec.run()
 """
 
 import random
-from cPickle import load
+from pickle import load
 
 from cupcake2.tofu2.ToFuOptions2 import add_ice_arguments, add_sge_arguments,\
     add_cluster_root_dir_as_positional_argument

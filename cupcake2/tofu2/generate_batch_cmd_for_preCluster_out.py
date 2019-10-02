@@ -27,7 +27,7 @@ def fa2fq(input):
     try:
         assert input.lower().endswith('.fasta') or input.lower().endswith('.fa')
     except AssertionError:
-        print >> sys.stderr, "Input {0} does not end with .fasta or .fa! Abort".format(input)
+        print("Input {0} does not end with .fasta or .fa! Abort".format(input), file=sys.stderr)
         sys.exit(-1)
     output = input[:input.rfind('.')] + '.fastq'
 
@@ -37,7 +37,7 @@ def fa2fq(input):
         SeqIO.write(r, f, 'fastq')
     f.close()
 
-    print >> sys.stderr, "Output written to", f.name
+    print("Output written to", f.name, file=sys.stderr)
     return f.name
 
 
@@ -67,7 +67,7 @@ def generate_batch_cmds(csv_filename, dirname, cmd_filename, cpus):
         cid = r['cluster']
         d2 = os.path.join(dirname, cid)
         if not os.path.exists(d2):
-            print >> sys.stderr, "Directory {0} does not exist! Abort!".format(d2)
+            print("Directory {0} does not exist! Abort!".format(d2), file=sys.stderr)
             sys.exit(-1)
 
         cmd_f.write("cd {0}\n".format(real_upath(d2)))

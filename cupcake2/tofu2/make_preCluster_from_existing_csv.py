@@ -27,7 +27,7 @@ def read_seq_csv(csv_filename):
     for r in DictReader(open(csv_filename), delimiter=','):
         if not header_checked:
             if 'seqid' not in r or 'stat' not in r:
-                print >> sys.stderr, "{0} must have the fields 'seqid' and 'stat'! Abort".format(csv_filename)
+                print("{0} must have the fields 'seqid' and 'stat'! Abort".format(csv_filename), file=sys.stderr)
                 sys.exit(-1)
         header_checked = True
         if r['stat']=='orphan':

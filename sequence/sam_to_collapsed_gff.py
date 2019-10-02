@@ -12,7 +12,7 @@ def main():
     args = parser.parse_args()
 
     if not args.sam_filename.endswith('.sam'):
-        print >> sys.stderr, "Only accepts files ending in .sam. Abort!"
+        print("Only accepts files ending in .sam. Abort!", file=sys.stderr)
         sys.exit(-1)
 
     prefix = args.sam_filename[:-4]
@@ -31,7 +31,7 @@ def main():
             r.cds_exons = None
             write_collapseGFF_format(f, r)
 
-    print >> sys.stderr, "Output written to {0}.".format(output_gff)
+    print("Output written to {0}.".format(output_gff), file=sys.stderr)
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,7 @@
 import os, sys
-from Bio import SeqIO
 from Bio.Seq import Seq
 from csv import DictReader, DictWriter
 import pysam
-from pbcore.io import BamIO
 import pdb
 
 def find_Aend(seq, min_a_len=8):
@@ -68,15 +66,17 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
     writer1 = DictWriter(f1, FIELDS, delimiter='\t')
     writer1.writeheader()
 
-    reader = BamIO.IndexedBamReader(bam_filename)
-    f2 = pysam.AlignmentFile(output_prefix+'.trimmed.bam', 'wb', template=reader.peer)
+    reader = pysam.AlignmentFile(bam_filename, 'rb', check_sq=False)
+    #reader = BamIO.IndexedBamReader(bam_filename)
+    f2 = pysam.AlignmentFile(output_prefix+'.trimmed.bam', 'wb', header=reader.header)
 
     for r in reader:
-        d = r.peer.to_dict()
+        d = r.to_dict()
 
-        if not r.isForwardStrand: # need to revcomp the seq and qual
-            d['seq'] = str(Seq(d['seq']).reverse_complement())
-            d['qual'] = d['qual'][::-1]
+        #is_rev_strand = r.flag >> 4 & 1
+        if (r.flag >> 4 & 1):
+            d['seq'] = str(Seq(r.seq).reverse_complement())
+            d['qual'] = r.qual[::-1]
             new_tags = []
             for tag in d['tags']:
                 if tag.startswith('dq:i:') or tag.startswith('iq:i:') or tag.startswith('sq:i:'):
@@ -118,7 +118,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                 match = 'Y' if seq_bc_rev in shortread_bc else 'N'
                 match_top = 'Y' if (match=='Y' and shortread_bc[seq_bc_rev]=='Y') else 'N'
 
-                rec = {'id': r.peer.qname,
+                rec = {'id': r.qname,
                        'clip_len': len(seq2),
                        'extra': seq_extra,
                        'UMI': seq_umi,
@@ -127,7 +127,6 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                        'BC_match': match,
                        'BC_top_rank': match_top}
                 writer1.writerow(rec)
-
 
                 # subset the sequence to include only the polyAs
                 d['seq'] = d['seq'][:A_end]
@@ -143,7 +142,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                     else:
                         new_tags.append(tag)
                 d['tags'] = new_tags
-                x = pysam.AlignedSegment.from_dict(d, r.peer.header)
+                x = pysam.AlignedSegment.from_dict(d, r.header)
                 f2.write(x)
         elif UMI_type == 'G5':
             G_start, G_end = find_Gstart(d['seq'])
@@ -159,7 +158,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                     seq_extra = seq2[:diff]
                     seq2 = seq2[diff:]
 
-                rec = {'id': r.peer.qname,
+                rec = {'id': r.qname,
                        'clip_len': len(seq2),
                        'extra': seq_extra,
                        'UMI': seq2,
@@ -183,7 +182,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                     else:
                         new_tags.append(tag)
                 d['tags'] = new_tags
-                x = pysam.AlignedSegment.from_dict(d, r.peer.header)
+                x = pysam.AlignedSegment.from_dict(d, r.header)
                 f2.write(x)
         elif UMI_type == 'G5-10X':
             # need to first invert the sequence so polyA is at the end
@@ -222,7 +221,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                 match = 'Y' if seq_bc_rev in shortread_bc else 'N'
                 match_top = 'Y' if (match=='Y' and shortread_bc[seq_bc_rev]=='Y') else 'N'
 
-                rec = {'id': r.peer.qname,
+                rec = {'id': r.qname,
                        'clip_len': len(seq2)+(G_end-G_start),
                        'extra': seq_extra,
                        'UMI': seq_umi,
@@ -247,7 +246,7 @@ def clip_out(bam_filename, umi_len, bc_len, output_prefix, UMI_type, shortread_b
                     else:
                         new_tags.append(tag)
                 d['tags'] = new_tags
-                x = pysam.AlignedSegment.from_dict(d, r.peer.header)
+                x = pysam.AlignedSegment.from_dict(d, r.header)
                 f2.write(x)
 
     f1.close()
@@ -261,7 +260,7 @@ if __name__ == "__main__":
     parser.add_argument("output_prefix", help="Output prefix")
     parser.add_argument("-u", "--umi_len", type=int, help="Length of UMI")
     parser.add_argument("-b", "--bc_len", type=int, help="Length of cell barcode")
-    parser.add_argument("-t", "--tso_len", type=int, help="Length of TSO (for G5-10X only)")
+    parser.add_argument("-t", "--tso_len", type=int, default=0, help="Length of TSO (for G5-10X only)")
     parser.add_argument("--umi_type", choices=['A3', 'G5', 'G5-10X'], help="Location of the UMI")
     parser.add_argument("--bc_rank_file", help="(Optional) cell barcode rank file from short read data")
 
@@ -269,13 +268,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.bc_len < 0:
-        print >> sys.stderr, "bc_len can't be a negative number!"
+        print("bc_len can't be a negative number!", file=sys.stderr)
         sys.exit(-1)
     if args.umi_len < 0:
-        print >> sys.stderr, "umi_len can't be a negative number!"
+        print("umi_len can't be a negative number!", file=sys.stderr)
         sys.exit(-1)
     if args.umi_len + args.bc_len <= 0:
-        print >> sys.stderr, "umi_len + bc_len must be at least 1 bp long!"
+        print("umi_len + bc_len must be at least 1 bp long!", file=sys.stderr)
         sys.exit(-1)
 
     # ToDo: figure out later how to do top ranked barcodes for 10X data

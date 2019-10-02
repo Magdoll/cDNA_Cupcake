@@ -49,12 +49,12 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
     writer = DictWriter(f, FIELDS, delimiter='\t')
     writer.writeheader()
 
-    for ccs_id, pbid in group_info.iteritems():
+    for ccs_id, pbid in group_info.items():
         if pbid not in sqanti_info:
-            print >> sys.stderr, "ignoring ID {0} cuz not in classification file.".format(pbid)
+            print("ignoring ID {0} cuz not in classification file.".format(pbid), file=sys.stderr)
             continue
         if no_extra_base and  umi_bc_info[ccs_id]['extra']!='NA':
-            print >> sys.stderr, "ignoring ID {0} cuz extra bases.".format(pbid)
+            print("ignoring ID {0} cuz extra bases.".format(pbid), file=sys.stderr)
             continue
         rec = {'id': ccs_id, 'pbid': pbid}
         rec['length'] = sqanti_info[pbid]['length']
@@ -95,31 +95,31 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if os.path.exists(args.output_filename):
-        print >> sys.stderr, "Output file {0} already exists. Abort!".format(args.output_filename)
+        print("Output file {0} already exists. Abort!".format(args.output_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.group_filename):
-        print >> sys.stderr, "Group file {0} not found. Abort!".format(args.group_filename)
+        print("Group file {0} not found. Abort!".format(args.group_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.csv_filename):
-        print >> sys.stderr, "CSV file {0} not found. Abort!".format(args.csv_filename)
+        print("CSV file {0} not found. Abort!".format(args.csv_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.class_filename):
-        print >> sys.stderr, "Class file {0} not found. Abort!".format(args.class_filename)
+        print("Class file {0} not found. Abort!".format(args.class_filename), file=sys.stderr)
         sys.exit(-1)
 
     if args.ontarget_filename is not None and not os.path.exists(args.ontarget_filename):
-        print >> sys.stderr, "Ontarget file {0} given but not found. Abort!".format(args.ontarget_filename)
+        print("Ontarget file {0} given but not found. Abort!".format(args.ontarget_filename), file=sys.stderr)
         sys.exit(-1)
 
     if args.dedup_ORF_prefix is not None:
         if not os.path.exists(args.dedup_ORF_prefix+'.group.txt'):
-            print >> sys.stderr, "Dedup {0}.group.txt not found. Abort!".format(args.dedup_ORF_prefix)
+            print("Dedup {0}.group.txt not found. Abort!".format(args.dedup_ORF_prefix), file=sys.stderr)
             sys.exit(-1)
         if not os.path.exists(args.dedup_ORF_prefix+'.faa'):
-            print >> sys.stderr, "Dedup {0}.faa not found. Abort!".format(args.dedup_ORF_prefix)
+            print("Dedup {0}.faa not found. Abort!".format(args.dedup_ORF_prefix), file=sys.stderr)
             sys.exit(-1)
 
     collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base)

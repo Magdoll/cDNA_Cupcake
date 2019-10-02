@@ -21,7 +21,7 @@ def run_STAR(args):
     os.chdir(tmp_dir)
     cmd = CMD_STAR2_format.format(c=args.cpus, d=args.genome_dir, i=in_fasta)
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "ERROR RUNNING CMD:", cmd
+        print("ERROR RUNNING CMD:", cmd, file=sys.stderr)
         sys.exit(-1)
 
     os.chdir(cur_dir)

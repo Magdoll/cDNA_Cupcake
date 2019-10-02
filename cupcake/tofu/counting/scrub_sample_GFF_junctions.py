@@ -32,7 +32,7 @@ def read_junction_report(filename):
     return: dict of label --> records with that label
     """
     reader = DictReader(open(filename), delimiter='\t')
-    r = reader.next()
+    r = next(reader)
 
     cur_label, cur = r['label'], [r]
     for r in reader:
@@ -92,13 +92,13 @@ def scrub_ref_exons(r, tree):
     n = len(r.ref_exons)
     new_ref_exons = []
     cur_start = r.ref_exons[0].start
-    for i in xrange(n-1):
+    for i in range(n-1):
         donor = r.ref_exons[i].end-1 # make it 0-based
         accep = r.ref_exons[i+1].start # start is already 0-based
         match = find_best_match_junction(tree[r.chr, r.strand], donor, accep)
         if match is None:
-            print >> sys.stderr, "donor-acceptor site {0},{1},{2}-{3} has no hit in tree!".format(\
-                r.chr, r.strand, donor, accep)
+            print("donor-acceptor site {0},{1},{2}-{3} has no hit in tree!".format(\
+                r.chr, r.strand, donor, accep), file=sys.stderr)
             return None
 
         new_ref_exons.append(Interval(cur_start, match.start+1))
@@ -114,7 +114,7 @@ def read_scrubbed_junction_to_tree(junction_filename):
         raw = line.strip().split('\t')
         if len(raw) == 4: chrom, left, right, strand = raw
         elif len(raw) == 6: chrom, left, right, _name, _count, strand = raw
-        else: raise Exception, "Expects junction BED file to have either 4 or 6 columns! Saw {0}!".format(len(raw))
+        else: raise Exception("Expects junction BED file to have either 4 or 6 columns! Saw {0}!".format(len(raw)))
         left, right = int(left), int(right) # already 0-based start, 0-based end
         tree[chrom,strand].add(left, right, Interval(left, right))
     return tree
@@ -134,7 +134,7 @@ def scrub_junctions(report_filename, output_filename, min_sample, min_transcript
 
 def scrub_sample_GFFs(sample_dirs, gff_filename, count_filename, group_filename, fastq_filename, output_prefix, tree):
 
-    for sample_name, d in sample_dirs.iteritems():
+    for sample_name, d in sample_dirs.items():
         outf = open(os.path.join(d, output_prefix+'.gff.tmp'), 'w')
         for r in GFF.collapseGFFReader(os.path.join(d, gff_filename)):
             n = len(r.ref_exons)
@@ -143,7 +143,7 @@ def scrub_sample_GFFs(sample_dirs, gff_filename, count_filename, group_filename,
 
             new_ref_exons = scrub_ref_exons(r, tree)
             if new_ref_exons is None:
-                print >> sys.stderr, "No changes made due to error:", r.seqid
+                print("No changes made due to error:", r.seqid, file=sys.stderr)
             else:
                 #print "before:", r.ref_exons
                 #print "after :", new_ref_exons
@@ -188,17 +188,17 @@ def cleanup_scrubbed_files_redundancy(gff_filename, group_filename, count_filena
             junc_str = str(r.start)+','+str(r.end)
             junction_seen[r.chr, r.strand][junc_str] = [r]
         else:
-            junc_str = ",".join(str(r.ref_exons[i].end)+','+str(r.ref_exons[i+1].start) for i in xrange(n-1))
+            junc_str = ",".join(str(r.ref_exons[i].end)+','+str(r.ref_exons[i+1].start) for i in range(n-1))
             junction_seen[r.chr, r.strand][junc_str].append(r)
 
     # write out cleaned GFF
     outf = open(output_prefix+'.gff', 'w')
     outf2 = open(output_prefix+'.merged_ids.txt', 'w')
     merged = {}
-    keys = junction_seen.keys()
+    keys = list(junction_seen.keys())
     keys.sort()
     for k in keys:
-        for bunch in junction_seen[k].itervalues():
+        for bunch in junction_seen[k].values():
             if len(bunch) == 1: # just one record, write it out
                 r = bunch[0]
                 GFF.write_collapseGFF_format(outf, r)
@@ -222,7 +222,7 @@ def cleanup_scrubbed_files_redundancy(gff_filename, group_filename, count_filena
     writer = DictWriter(outf, fieldnames=['pbid','count_fl','count_nfl','count_nfl_amb','norm_fl','norm_nfl','norm_nfl_amb'], \
                         delimiter='\t', lineterminator='\n')
     writer.writeheader()
-    for pbid, bunch in merged.iteritems():
+    for pbid, bunch in merged.items():
         # combine the counts
         r = count_d[bunch[0]]
         r['pbid'] = pbid
@@ -237,7 +237,7 @@ def cleanup_scrubbed_files_redundancy(gff_filename, group_filename, count_filena
     group_info = read_group_file(group_filename)
     # write out group file
     outf = open(output_prefix + '.group.txt', 'w')
-    for pbid, bunch in merged.iteritems():
+    for pbid, bunch in merged.items():
         # combine the groups
         g = [group_info[bunch[0]]]
         for _id in bunch[1:]:
@@ -253,7 +253,7 @@ def cleanup_scrubbed_files_redundancy(gff_filename, group_filename, count_filena
                 SeqIO.write(r, outf, 'fastq')
         outf.close()
 
-    print >> sys.stderr, "scrubbed files written: {0}.gff, {0}.group.txt, {0}.abundance.txt, {0}.merged_ids.txt".format(output_prefix)
+    print("scrubbed files written: {0}.gff, {0}.group.txt, {0}.abundance.txt, {0}.merged_ids.txt".format(output_prefix), file=sys.stderr)
 
 
 
@@ -277,10 +277,10 @@ if __name__=="__main__":
     if args.scrubbed_junction_file is None:
         output_filename = args.output_prefix  + ".scrubbed.junction.bed"
         tree = scrub_junctions(report_filename, output_filename, args.min_sample, args.min_transcript, True)
-        print >> sys.stderr, "Scrubbed junction written to: ", output_filename
+        print("Scrubbed junction written to: ", output_filename, file=sys.stderr)
     else:
         output_filename = args.scrubbed_junction_file
-        print >> sys.stderr, "Reading scrubbed junction file: ", output_filename
+        print("Reading scrubbed junction file: ", output_filename, file=sys.stderr)
         tree = read_scrubbed_junction_to_tree(output_filename)
 
     scrub_sample_GFFs(sample_dirs, gff_filename, count_filename, group_filename, fastq_filename, args.output_prefix, tree)

@@ -16,7 +16,7 @@ def summarize_GMAP_sam(input_fa_or_fq, input_sam):
     map_count = defaultdict(lambda: 0)
     for r in BioReaders.GMAPSAMReader(input_sam, True):
         map_count[r.qID] += 1
-    multi = filter(lambda x: map_count[x]>1, map_count)
+    multi = [x for x in map_count if map_count[x]>1]
 
     f = open(input_sam + '.summary.txt', 'w')
     f.write("id\tqLength\tqCoverage\tidentity\tunique\n")
@@ -27,7 +27,7 @@ def summarize_GMAP_sam(input_fa_or_fq, input_sam):
         f.write("{0}\t{1}\t{2:.4f}\t{3:.4f}\t{4}\n".format(r.qID, d[r.qID], r.qCoverage, r.identity, uni))
     f.close()
 
-    print >> sys.stderr, "Output written to:", f.name
+    print("Output written to:", f.name, file=sys.stderr)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

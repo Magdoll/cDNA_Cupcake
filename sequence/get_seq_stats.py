@@ -12,7 +12,7 @@ def type_fa_or_fq(file):
     else: return 'fastq'
 
 def get_seq_stats(file, binwidth):
-    print "file type is:", type_fa_or_fq(file)
+    print("file type is:", type_fa_or_fq(file))
 
     f = open(file + '.seqlengths.txt', 'w')
     lens = []
@@ -22,25 +22,25 @@ def get_seq_stats(file, binwidth):
     f.close()
 
 
-    print "{0} sequences".format(len(lens))
-    print "min:", min(lens)
-    print "max:", max(lens)
-    print "avg:", sum(lens)*1./len(lens)
+    print("{0} sequences".format(len(lens)))
+    print("min:", min(lens))
+    print("max:", max(lens))
+    print("avg:", sum(lens)*1./len(lens))
 
     # print by 1 kb bins
-    print "Length Breakdown by kb range:"
+    print("Length Breakdown by kb range:")
 
     _max = max(lens)/binwidth+1
     bin = [0]*_max
     for x in lens: bin[x/binwidth] += 1
 
-    for i in xrange(0, _max):
+    for i in range(0, _max):
         if binwidth == 1000:
-            print "{0}-{1} kb: {2}".format(i, i+1, bin[i])
+            print("{0}-{1} kb: {2}".format(i, i+1, bin[i]))
         else:
-            print "{0}-{1}: {2}".format(i*binwidth, (i+1)*binwidth, bin[i])
+            print("{0}-{1}: {2}".format(i*binwidth, (i+1)*binwidth, bin[i]))
 
-    print "5-95% percentile:", np.percentile(lens, 5), np.percentile(lens, 95)
+    print("5-95% percentile:", np.percentile(lens, 5), np.percentile(lens, 95))
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

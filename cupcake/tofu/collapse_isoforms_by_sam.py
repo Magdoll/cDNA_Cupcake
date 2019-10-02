@@ -59,7 +59,7 @@ def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_f
 
     for line in open(group_filename):
         pb_id, members = line.strip().split('\t')
-        print >> sys.stderr, "Picking representative sequence for", pb_id
+        print("Picking representative sequence for {0}".format(pb_id), file=sys.stdout)
         best_rec = None
         #best_id = None
         #best_seq = None
@@ -132,8 +132,8 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
             group_info[pbid] = [x for x in members.split(',')]
 
     # pick for each fuzzy group the one that has the most exons
-    keys = fuzzy_match.keys()
-    keys.sort(key=lambda x: map(int, x.split('.')[1:]))
+    keys = list(fuzzy_match.keys())
+    keys.sort(key=lambda x: int(x.split('.')[1]))
     f_gff = open(gff_filename+'.fuzzy', 'w')
     f_group = open(group_filename+'.fuzzy', 'w')
     for k in keys:
@@ -158,11 +158,11 @@ def main(args):
 
     ### sanity check that input file and input SAM exists
     if not os.path.exists(args.input):
-        print >> sys.stderr, "Input file {0} does not exist. Abort.".format(args.fasta)
+        print("Input file {0} does not exist. Abort.".format(args.fasta), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.sam):
-        print >> sys.stderr, "SAM file {0} does not exist. Abort.".format(args.sam)
+        print("SAM file {0} does not exist. Abort.".format(args.sam), file=sys.stderr)
         sys.exit(-1)
 
     # check for duplicate IDs
@@ -183,7 +183,7 @@ def main(args):
     b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
     iter = b.iter_gmap_sam(args.sam, ignored_fout)
     for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
-        for v in recs.itervalues():
+        for v in recs.values():
             for v2 in v:
                 if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
 
@@ -211,13 +211,8 @@ def main(args):
     else:
         pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=True, bad_gff_filename=f_bad.name)
 
-    print >> sys.stderr, "Ignored IDs written to:", ignored_fout.name
-    print >> sys.stderr, "Output written to:"
-    print >> sys.stderr, f_good.name
-    print >> sys.stderr, f_txt.name
-    print >> sys.stderr, outfile
-    print >> sys.stderr, args
-
+    print("Ignored IDs written to: {0}".format(ignored_fout.name), file=sys.stdout)
+    print("Output written to: {0}\n{1}\n{2}\n{3}\n".format(f_good.name, f_txt.name, outfile, args), file=sys.stdout)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

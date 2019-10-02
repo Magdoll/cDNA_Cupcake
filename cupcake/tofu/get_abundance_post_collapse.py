@@ -41,10 +41,10 @@ def get_roi_len(seqid):
     # before isoseq3: <movie>/<zmw>/<start>_<end>_CCS
     # for isoseq3: <movie>/<zmw>/ccs
     if seqid.endswith('/ccs'):
-        print >> sys.stderr, "WARNING: isoseq3 format detected. Output `length` column will be `NA`."
+        print("WARNING: isoseq3 format detected. Output `length` column will be `NA`.", file=sys.stderr)
         return "NA"
     elif not seqid.endswith('_CCS'):
-        print >> sys.stderr, "Sequence ID format must be <movie>/<zmw>/<start>_<end>_CCS or <movie>/<zmw>/ccs! Abort!"
+        print("Sequence ID format must be <movie>/<zmw>/<start>_<end>_CCS or <movie>/<zmw>/ccs! Abort!", file=sys.stderr)
         sys.exit(-1)
     s, e, junk = seqid.split('/')[2].split('_')
     return abs(int(s)-int(e))
@@ -113,7 +113,7 @@ def read_group_filename(group_filename, is_cid=True):
                         elif cid.startswith('HQ_') or cid.startswith('LQ_'): # isoseq2
                             cid = cid.split('|')[1].split('/')[0]  # cid = cb7607_c93041, for example
                         else:
-                            raise Exception, "Unrecognized id format {0} in {1}!".format(cid, group_filename)
+                            raise Exception("Unrecognized id format {0} in {1}!".format(cid, group_filename))
             cid_info[cid] = pbid
 
     return cid_info
@@ -131,7 +131,7 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
     elif output_mode == 'a':
         f = open(output_filename, 'a')
     else:
-        raise Exception, "Output mode {0} not valid!".format(output_mode)
+        raise Exception("Output mode {0} not valid!".format(output_mode))
 
     unmapped_holder = set()
     for r in DictReader(open(csv_filename), delimiter=','):
@@ -146,7 +146,7 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
                     if m is not None:
                         cid = m.group(1) # make sure cid is transcript/0, transcript/1, without any prefix before 'transcript'
                     else:
-                        raise Exception, "cluster_id {0} is not a valid cluster ID!".format(cid)
+                        raise Exception("cluster_id {0} is not a valid cluster ID!".format(cid))
 
         x = r['read_id']
         if cid in cid_info:
@@ -172,7 +172,7 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
                 unmapped_holder.add(x)
 
     # now we can go through the list of mapped/unmapped to see which are uniquely mapped which are not
-    for seqid, pbids in mapped.iteritems():
+    for seqid, pbids in mapped.items():
         if len(pbids) == 1: # unique
             stat = 'unique'
         else:
@@ -228,7 +228,7 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
 
 
     # put the ambiguous back in tally weighted
-    for seqid, pbids in amb_count.iteritems():
+    for seqid, pbids in amb_count.items():
         weight = 1. / len(pbids)
         for pbid in pbids:
              tally[pbid]['nfl_amb'] += weight
@@ -261,8 +261,8 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
         f.write("#\n")
     f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl\tnorm_nfl\tnorm_nfl_amb\n")
 
-    keys = tally.keys()
-    keys.sort(key=lambda x: map(int, x.split('.')[1:])) # sort by PB.1, PB.2....
+    keys = list(tally.keys())
+    keys.sort(key=lambda x: list(map(int, x.split('.')[1:]))) # sort by PB.1, PB.2....
     for k in keys:
         v = tally[k]
         a = v['fl']
@@ -286,19 +286,19 @@ def get_abundance_post_collapse(collapse_prefix, cluster_report_csv, output_pref
     """
     group_filename = collapse_prefix + ".group.txt"
     if not os.path.exists(group_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(group_filename)
+        print("File {0} does not exist. Abort!".format(group_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(cluster_report_csv):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(cluster_report_csv)
+        print("File {0} does not exist. Abort!".format(cluster_report_csv), file=sys.stderr)
         sys.exit(-1)
 
     cid_info = read_group_filename(collapse_prefix + ".group.txt", is_cid=True)
 
     output_read_count_IsoSeq_csv(cid_info, cluster_report_csv, output_prefix + '.read_stat.txt')
-    print >> sys.stderr, "Read stat file written to", output_prefix + '.read_stat.txt'
+    print("Read stat file written to", output_prefix + '.read_stat.txt', file=sys.stderr)
     make_abundance_file(output_prefix + '.read_stat.txt', output_prefix + '.abundance.txt', restricted_movies=restricted_movies)
-    print >> sys.stderr, "Abundance file written to", output_prefix + '.abundance.txt'
+    print("Abundance file written to", output_prefix + '.abundance.txt', file=sys.stderr)
 
 
 if __name__ == "__main__":

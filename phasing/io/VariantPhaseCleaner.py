@@ -33,8 +33,8 @@ def make_haplotype_counts(isoform_tally):
     :return: Counter of haplotype index --> total count (of FL reads)
     """
     hap_count = Counter() # haplotype index --> total count
-    for tally in isoform_tally.itervalues():
-        for hap_index, count in tally.iteritems():
+    for tally in isoform_tally.values():
+        for hap_index, count in tally.items():
             hap_count[hap_index] += count
     return hap_count
 
@@ -51,9 +51,9 @@ def calc_hap_diff(haplotype_strings, cur_hap):
 
 def get_hap_model(haplotype_strings):
     hap_len = len(haplotype_strings[0])
-    tally = [Counter() for pos in xrange(hap_len-1)]
+    tally = [Counter() for pos in range(hap_len-1)]
     for s in haplotype_strings:
-        for pos in xrange(hap_len-1):
+        for pos in range(hap_len-1):
             if s[pos]!='?' and s[pos+1]!='?':
                 tally[pos][(s[pos], s[pos+1])] += 1
     return tally
@@ -79,7 +79,7 @@ def infer_haplotypes_via_exhaustive_diploid_only(hap_obj, variants):
     #    if len(x)!=2: raise Exception, "variants must be diploid!"
 
     haplotype_strings = hap_obj.haplotypes
-    nonpartial_haps = filter(lambda s: all(x!='?' for x in s), haplotype_strings)
+    nonpartial_haps = [s for s in haplotype_strings if all(x!='?' for x in s)]
     nonpartial_haps_already_tried = set()
 
     if len(nonpartial_haps) == 0:
@@ -113,7 +113,7 @@ def infer_haplotypes_via_exhaustive_diploid_only(hap_obj, variants):
         #        continue
         # hap2 is the other choice since it's diploid
         hap2 = ''
-        for i in xrange(len(variants)):
+        for i in range(len(variants)):
             if hap1[i]==variants[i][0]: hap2 += variants[i][1]
             else: hap2 += variants[i][0]
         # now calculate the sum diffs
@@ -143,7 +143,7 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff
     4. ...repeat until sum of diffs gets worse, or ploidy reached, or the next haplotype is less than <min_percent> reads .
     """
     # we are to ignore all partial haps
-    partial_haps = filter(lambda i: any(s=='?' for s in haplotype_strings[i]), xrange(len(haplotype_strings)))
+    partial_haps = [i for i in range(len(haplotype_strings)) if any(s=='?' for s in haplotype_strings[i])]
     for k in partial_haps:
         del hap_count[k]
 
@@ -189,11 +189,11 @@ def error_correct_haplotypes(hap_obj, isoform_tally, diff_arr, hap_count_ordered
 
     # now create a new isoform_tally
     new_isoform_tally = {}
-    for k,v in isoform_tally.iteritems():
+    for k,v in isoform_tally.items():
         new_isoform_tally[k] = Counter()
-        for old_hap_index, count in v.iteritems():
+        for old_hap_index, count in v.items():
             if old_hap_index not in old_to_new_map:
-                print >> sys.stderr, "Discarding: {0}".format(hap_obj.haplotypes[old_hap_index])
+                print("Discarding: {0}".format(hap_obj.haplotypes[old_hap_index]), file=sys.stderr)
                 continue
             new_hap_index = old_to_new_map[old_hap_index]
             new_isoform_tally[k][new_hap_index] += count

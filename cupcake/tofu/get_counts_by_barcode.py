@@ -28,9 +28,9 @@ def read_classify_csv(csv_filename):
     primer_info = {}
     for r in DictReader(open(csv_filename),delimiter=','):
         if r['primer']!='NA': primer_info[r['id']] = r['primer']
-    primer_ranges = list(set(map(int, primer_info.values())))
+    primer_ranges = list(set(map(int, list(primer_info.values()))))
     primer_ranges.sort()
-    primer_ranges = map(str, primer_ranges)
+    primer_ranges = list(map(str, primer_ranges))
     return primer_ranges, primer_info
 
 
@@ -47,7 +47,7 @@ def get_fl_count_by_barcode(collapse_prefix, classify_csv, cluster_csv, primer_n
         cluster_info[r['cluster_id']].append(r)
 
     group_filename = collapse_prefix + '.group.txt'
-    print >> sys.stderr, "Reading {0}....".format(group_filename)
+    print("Reading {0}....".format(group_filename), file=sys.stderr)
 
     f = open(collapse_prefix + '.fl_count_by_barcode.txt', 'w')
     f.write("pbid")
@@ -65,7 +65,7 @@ def get_fl_count_by_barcode(collapse_prefix, classify_csv, cluster_csv, primer_n
         for p in primer_ranges: f.write('\t' + str(tally[p]))
         f.write('\n')
     f.close()
-    print >> sys.stderr, "Output written to: {0}.".format(f.name)
+    print("Output written to: {0}.".format(f.name), file=sys.stderr)
 
 
 if __name__ == "__main__":

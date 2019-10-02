@@ -22,7 +22,7 @@ def err_correct(genome_file, sam_file, output_err_corrected_fasta, genome_dict=N
         genome_dict = {}
         for r in SeqIO.parse(open(genome_file), 'fasta'):
             genome_dict[r.name] = r
-        print >> sys.stderr, "done reading", genome_file
+        print("done reading {0}".format(genome_file), file=sys.stderr)
 
     f = open(output_err_corrected_fasta, 'w')
     reader = BioReaders.GMAPSAMReader(sam_file, True)
@@ -33,9 +33,7 @@ def err_correct(genome_file, sam_file, output_err_corrected_fasta, genome_dict=N
 
     f.close()
 
-    print >> sys.stderr, "output written to", output_err_corrected_fasta
-
-
+    print("output written to ".format(output_err_corrected_fasta), file=sys.stderr)
 
 
 if __name__ == "__main__":

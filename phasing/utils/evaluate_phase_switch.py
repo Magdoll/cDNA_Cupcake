@@ -53,7 +53,7 @@ def eval_isophase_phaseswitch(isophase_vcf, config_file, out_f, name='NA'):
     reader = vcf.VCFReader(open(isophase_vcf))
     # record the first SNP for each isoform
     prev = {} # sample -> CallData.GT (ex: '0|1')
-    r = reader.next()
+    r = next(reader)
     for c in r.samples:
         prev[c.sample] = c.data.GT
 
@@ -89,9 +89,9 @@ def main_eval():
         if not os.path.exists(vcffile):
             # no SNP, just skip
             assert os.path.exists(nosnp) or os.path.exists(nohap)
-            print >> sys.stderr, "Skipping {0} because no SNPs found.".format(d1)
+            print("Skipping {0} because no SNPs found.".format(d1), file=sys.stderr)
         else:
-            print >> sys.stderr, "Evaluating {0}.".format(d1)
+            print("Evaluating {0}.".format(d1), file=sys.stderr)
             name = d1.split('/')[1]
             eval_isophase_phaseswitch(vcffile, configfile, out_f, name)
     out_f.close()

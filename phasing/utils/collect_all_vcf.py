@@ -13,7 +13,7 @@ for d in dirs:
     reader.samples = []
     for r in reader: snps_by_chrom[r.CHROM].append((r.POS, r))
 
-keys = snps_by_chrom.keys()
+keys = list(snps_by_chrom.keys())
 keys.sort()    
         
 f = vcf.Writer(open('IsoSeq_IsoPhase.vcf', 'w'), reader)

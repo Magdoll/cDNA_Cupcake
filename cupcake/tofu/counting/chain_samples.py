@@ -13,8 +13,8 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
     Double check that the formats are expected and all PBIDs are concordant across the files
     :return: raise Exception if sanity check failed
     """
-    print >> sys.stderr, "Sanity checking. Retrieving PBIDs from {0},{1},{2}...".format(\
-        group_filename, gff_filename, count_filename)
+    print("Sanity checking. Retrieving PBIDs from {0},{1},{2}...".format(\
+        group_filename, gff_filename, count_filename), file=sys.stderr)
     ids1 = [line.strip().split()[0] for line in open(group_filename)]
     ids2 = [r.seqid for r in GFF.collapseGFFReader(gff_filename)]
     f = open(count_filename)
@@ -26,14 +26,14 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
             break
     ids3 = [r['pbid'] for r in DictReader(f, delimiter='\t')]
     if len(set(ids2).difference(ids1))>0 or len(set(ids2).difference(ids3))>0:
-        raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
-            group_filename, gff_filename, count_filename)
+        raise Exception("Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
+            group_filename, gff_filename, count_filename))
 
     if fastq_filename is not None:
         ids4 = [r.id.split('|')[0] for r in SeqIO.parse(open(fastq_filename), 'fastq')]
         if len(set(ids2).difference(ids4))>0:
-            raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0}".format(\
-                fastq_filename, gff_filename)
+            raise Exception("Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0}".format(\
+                fastq_filename, gff_filename))
 
 
 def read_config(filename):
@@ -60,11 +60,11 @@ def read_config(filename):
         for line in f:
             if line.startswith('tmpSAMPLE='):
                 if no_more_tmp:
-                    print >> sys.stderr, "Cannot have tmp_ samples after non-tmp_ samples! Abort!"
+                    print("Cannot have tmp_ samples after non-tmp_ samples! Abort!", file=sys.stderr)
                     sys.exit(-1)
                 name, path = line.strip()[len('tmpSAMPLE='):].split(';')
                 if name.startswith('tmp_'):
-                    print >> sys.stderr, "Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name)
+                    print("Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name), file=sys.stderr)
                     sys.exit(-1)
                 sample_dirs[name] = os.path.abspath(path)
                 sample_names.append('tmp_'+name)
@@ -72,7 +72,7 @@ def read_config(filename):
                 no_more_tmp = True
                 name, path = line.strip()[len('SAMPLE='):].split(';')
                 if name.startswith('tmp_'):
-                    print >> sys.stderr, "Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name)
+                    print("Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name), file=sys.stderr)
                     sys.exit(-1)
                 sample_dirs[name] = os.path.abspath(path)
                 sample_names.append(name)
@@ -86,14 +86,14 @@ def read_config(filename):
                 fastq_filename = line.strip()[len('FASTQ_FILENAME='):]
 
     if group_filename is None:
-        raise Exception, "Expected GROUP_FILENAME= but not in config file {0}! Abort.".format(filename)
+        raise Exception("Expected GROUP_FILENAME= but not in config file {0}! Abort.".format(filename))
     if count_filename is None:
-        raise Exception, "Expected COUNT_FILENAME= but not in config file {0}! Abort.".format(filename)
+        raise Exception("Expected COUNT_FILENAME= but not in config file {0}! Abort.".format(filename))
     if gff_filename is None:
-        raise Exception, "Expected GFF_FILENAME= but not in config file {0}! Abort.".format(filename)
+        raise Exception("Expected GFF_FILENAME= but not in config file {0}! Abort.".format(filename))
 
     if len(sample_names) == 0:
-        print >> sys.stderr, "No samples given. Exit."
+        print("No samples given. Exit.", file=sys.stderr)
         sys.exit(-1)
 
     return sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename
@@ -101,7 +101,7 @@ def read_config(filename):
 def read_count_info(count_filename, dirs, field_to_use):
     count_info = {} # key: (sample, PB.1.1) --> count
     count_header = ''
-    for name, d in dirs.iteritems():
+    for name, d in dirs.items():
         f = open(os.path.join(d, count_filename))
         while True:
             cur = f.tell()
@@ -115,7 +115,7 @@ def read_count_info(count_filename, dirs, field_to_use):
 
 def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
 
-    for d in dirs.itervalues():
+    for d in dirs.values():
         sample_sanity_check(os.path.join(d, group_filename),\
                             os.path.join(d, gff_filename),\
                             os.path.join(d, count_filename),\
@@ -215,12 +215,12 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
     if fastq_filename is not None:
         shutil.copyfile('tmp_' + chain[-1] + '.rep.fq', 'all_samples.chained.rep.fq')
 
-    print >> sys.stderr, "Chained output written to:"
-    print >> sys.stderr, "all_samples.chained.gff"
-    print >> sys.stderr, f1.name
-    print >> sys.stderr, f2.name
+    print("Chained output written to:", file=sys.stderr)
+    print("all_samples.chained.gff", file=sys.stderr)
+    print(f1.name, file=sys.stderr)
+    print(f2.name, file=sys.stderr)
     if fastq_filename is not None:
-        print >> sys.stderr, "all_samples.chained.rep.fq"
+        print("all_samples.chained.rep.fq", file=sys.stderr)
 
 
 if __name__ == "__main__":

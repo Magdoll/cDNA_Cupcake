@@ -123,10 +123,10 @@ def check_multigene_helper(r, s, e, overlaps, min_overlap_bp, min_query_overlap,
         return AMatch(flag, r.flag.strand, s, e, r)
     else:
         # try shaving off genes at ends
-        for i in xrange(1, len(overlaps)-1):
+        for i in range(1, len(overlaps)-1):
             result = check_multigene_helper(r, s, e, overlaps[i:], min_overlap_bp, min_query_overlap, min_gene_overlap)
             if result.name.startswith('poly'): return result
-        for i in xrange(len(overlaps)-1, 1, -1):
+        for i in range(len(overlaps)-1, 1, -1):
             result = check_multigene_helper(r, s, e, overlaps[:i], min_overlap_bp, min_query_overlap, min_gene_overlap)
             if result.name.startswith('poly'): return result
         return AMatch("novel", r.flag.strand, s, e, r)
@@ -139,7 +139,7 @@ def categorize_aln_by_annotation(gene_annotation_file, input_fasta, input_sam, o
     #reader = DictReader(open('ProteinTable149_154224.txt'),delimiter='\t')
     for r in DictReader(open(gene_annotation_file),delimiter='\t'):
         if r['#Replicon Name']!='chr':
-            print >> sys.stderr, "Ignore", r
+            print("Ignore", r, file=sys.stderr)
             continue
         info[r['Locus tag']] = (int(r['Start']), int(r['Stop']), r['Locus tag'])
         t[r['Replicon Accession']][r['Strand']].add(int(r['Start']), int(r['Stop']), r['Locus tag'])
@@ -165,7 +165,7 @@ def categorize_aln_by_annotation(gene_annotation_file, input_fasta, input_sam, o
     f.write(reader.header)
     f1 = open(output_prefix + '.report.txt', 'w')
     f1.write("id\tread_group\tgene_name\tserial_number\tstrand\tstart\tend\n")
-    for k,v in result.iteritems():
+    for k,v in result.items():
         # v is: list of AMatch(name, strand, start, end, record)
         if k.startswith('novel-unannotated'):
             # write novel later, we are grouping them by loci first
@@ -191,8 +191,8 @@ def categorize_aln_by_annotation(gene_annotation_file, input_fasta, input_sam, o
 
     # now write the novel stuff, grouped by regions
     novel_region_index = 1
-    for d1 in novel_ct.itervalues():
-        for ct in d1.itervalues():
+    for d1 in novel_ct.values():
+        for ct in d1.values():
             gn = 'novel-' + str(novel_region_index)
             for _start, _end, _indices in ct.getregions():
                 v = [novel_list[ind] for ind in _indices]
@@ -210,8 +210,8 @@ def categorize_aln_by_annotation(gene_annotation_file, input_fasta, input_sam, o
     f.close()
     f1.close()
 
-    print >> sys.stderr, "Output written to:", f.name
-    print >> sys.stderr, "Output written to:", f1.name
+    print("Output written to:", f.name, file=sys.stderr)
+    print("Output written to:", f1.name, file=sys.stderr)
 
 
 if __name__ == "__main__":

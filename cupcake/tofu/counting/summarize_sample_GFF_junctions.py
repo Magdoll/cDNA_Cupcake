@@ -20,18 +20,18 @@ from Bio import SeqIO
 from sklearn.cluster import Birch
 
 def sanity_check(sample_dirs, gff_filename, genome_filename=None, junction_filename=None):
-    for d in sample_dirs.itervalues():
+    for d in sample_dirs.values():
         file = os.path.join(d, gff_filename)
         if not os.path.exists(file):
-            print >> sys.stderr, "Expected GFF file {0} does not exist. Abort!".format(file)
+            print("Expected GFF file {0} does not exist. Abort!".format(file), file=sys.stderr)
             sys.exit(-1)
 
     if genome_filename is not None and not os.path.exists(genome_filename):
-        print >> sys.stderr, "Genome file {0} given but does not exist. Abort!".format(genome_filename)
+        print("Genome file {0} given but does not exist. Abort!".format(genome_filename), file=sys.stderr)
         sys.exit(-1)
 
     if junction_filename is not None and not os.path.exists(junction_filename):
-        print >> sys.stderr, "Junction file {0} given but does not exist. Abort!".format(junction_filename)
+        print("Junction file {0} given but does not exist. Abort!".format(junction_filename), file=sys.stderr)
         sys.exit(-1)
 
 def read_config(filename):
@@ -57,12 +57,12 @@ def read_config(filename):
     with open(filename) as f:
         for line in f:
             if line.startswith('tmpSAMPLE='):
-                print >> sys.stderr, "Please only use SAMPLE=, not tmpSAMPLE= for junction reports!"
+                print("Please only use SAMPLE=, not tmpSAMPLE= for junction reports!", file=sys.stderr)
                 sys.exit(-1)
             elif line.startswith('SAMPLE='):
                 name, path = line.strip()[len('SAMPLE='):].split(';')
                 if name.startswith('tmp_'):
-                    print >> sys.stderr, "Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name)
+                    print("Sample names are not allowed to start with tmp_! Please change {0} to something else.".format(name), file=sys.stderr)
                     sys.exit(-1)
                 sample_dirs[name] = os.path.abspath(path)
                 sample_names.append(name)
@@ -74,10 +74,10 @@ def read_config(filename):
                 junction_filename = line.strip()[len('JUNCTION_FILENAME='):]
 
     if gff_filename is None:
-        raise Exception, "Expected GFF_FILENAME= but not in config file {0}! Abort.".format(filename)
+        raise Exception("Expected GFF_FILENAME= but not in config file {0}! Abort.".format(filename))
 
     if len(sample_names) == 0:
-        print >> sys.stderr, "No samples given. Exit."
+        print("No samples given. Exit.", file=sys.stderr)
         sys.exit(-1)
 
     return sample_dirs, sample_names, gff_filename, genome_filename, junction_filename
@@ -105,11 +105,11 @@ def summarize_junctions(sample_dirs, sample_names, gff_filename, output_prefix, 
     """
     junc_by_chr_strand = defaultdict(lambda: defaultdict(lambda: [])) # (chr,strand) --> (donor,acceptor) --> samples it show up in (more than once possible)
 
-    for sample_name, d in sample_dirs.iteritems():
+    for sample_name, d in sample_dirs.items():
         for r in GFF.collapseGFFReader(os.path.join(d, gff_filename)):
             n = len(r.ref_exons)
             if n == 1: continue # ignore single exon transcripts
-            for i in xrange(n-1):
+            for i in range(n-1):
                 donor = r.ref_exons[i].end-1 # make it 0-based
                 accep = r.ref_exons[i+1].start # start is already 0-based
                 junc_by_chr_strand[r.chr, r.strand][donor, accep].append(sample_name)
@@ -124,11 +124,11 @@ def summarize_junctions(sample_dirs, sample_names, gff_filename, output_prefix, 
     with open(output_prefix+'.junction_detail.txt', 'w') as f:
         writer = DictWriter(f, JUNC_DETAIL_FIELDS, delimiter='\t')
         writer.writeheader()
-        keys = junc_by_chr_strand.keys()
+        keys = list(junc_by_chr_strand.keys())
         keys.sort()
         for _chr, _strand in keys:
             v = junc_by_chr_strand[_chr, _strand]
-            v_keys = v.keys()
+            v_keys = list(v.keys())
             v_keys.sort()
             labels = cluster_junctions(v_keys)
             for i,(_donor, _accep) in enumerate(v_keys):
@@ -193,17 +193,17 @@ if __name__ == "__main__":
     sanity_check(sample_dirs, gff_filename, genome_filename, junction_filename)
 
     if genome_filename is not None:
-        print >> sys.stderr, "Reading genome file {0}...".format(genome_filename)
+        print("Reading genome file {0}...".format(genome_filename), file=sys.stderr)
         genome_d = SeqIO.to_dict(SeqIO.parse(open(genome_filename), 'fasta'))
     else:
-        print >> sys.stderr, "No genome file given. Ignore."
+        print("No genome file given. Ignore.", file=sys.stderr)
         genome_d = None
 
     if junction_filename is not None:
-        print >> sys.stderr, "Reading junction file {0}....".format(junction_filename)
+        print("Reading junction file {0}....".format(junction_filename), file=sys.stderr)
         junction_bed = read_annotation_junction_bed(junction_filename)
     else:
-        print >> sys.stderr, "No junction file given. Ignore."
+        print("No junction file given. Ignore.", file=sys.stderr)
         junction_bed = None
 
 

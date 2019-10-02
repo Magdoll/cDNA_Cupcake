@@ -71,26 +71,26 @@ def link_files(src_dir, out_dir='./'):
     lima_report = os.path.join(os.path.abspath(src_dir), 'tasks', 'barcoding.tasks.lima-0', 'lima_output.lima.report')
 
     if os.path.exists(hq_fastq):
-        print >> sys.stderr, "Detecting IsoSeq1 task directories..."
+        print("Detecting IsoSeq1 task directories...", file=sys.stderr)
         os.symlink(hq_fastq, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '1'
     elif os.path.exists(hq_fastq2):
-        print >> sys.stderr, "Detecting IsoSeq2 task directories..."
+        print("Detecting IsoSeq2 task directories...", file=sys.stderr)
         os.symlink(hq_fastq2, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv2, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '2'
     elif os.path.exists(hq_fastq3):
-        print >> sys.stderr, "Detecting IsoSeq3 directories..."
+        print("Detecting IsoSeq3 directories...", file=sys.stderr)
         os.symlink(hq_fastq3, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv3, os.path.join(out_dir, 'cluster_report.csv'))
-        print >> sys.stderr, "Making classify_report.csv because not yet in job directories..."
+        print("Making classify_report.csv because not yet in job directories...", file=sys.stderr)
         make_classify_csv_from_lima_report(lima_report, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '3'
     else:
-        print >> sys.stderr, "Cannot find HQ FASTQ in job directory! Does not look like Iso-Seq1, 2, or 3 jobs!"
+        print("Cannot find HQ FASTQ in job directory! Does not look like Iso-Seq1, 2, or 3 jobs!", file=sys.stderr)
         sys.exit(-1)
     return out_dir, 'hq_isoforms.fastq', 'cluster_report.csv', 'classify_report.csv', isoseq_version
 
@@ -159,28 +159,28 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
         #(isoseq1) i0_HQ_sample3f1db2|c44/f3p0/2324
         #(isoseq2) HQ_sampleAZxhBguy|cb1063_c22/f3p0/6697
         #(isoseq3) transcript/0
-        r = SeqIO.parse(open(hq_fastq), 'fastq').next()
+        r = next(SeqIO.parse(open(hq_fastq), 'fastq'))
         m = hq1_id_rex.match(r.id)
         if m is not None:
             isoseq_version = '1'
-            print >> sys.stderr, "IsoSeq1 ID format detected."
+            print("IsoSeq1 ID format detected.", file=sys.stderr)
         else:
             m = hq2_id_rex.match(r.id)
             if m is not None:
                 isoseq_version = '2'
-                print >> sys.stderr, "IsoSeq2 ID format detected."
+                print("IsoSeq2 ID format detected.", file=sys.stderr)
             else:
                 m = hq3_id_rex.match(r.id)
                 if m is not None:
                     isoseq_version = '3'
-                    print >> sys.stderr, "IsoSeq3 ID format detected."
+                    print("IsoSeq3 ID format detected.", file=sys.stderr)
                 else:
-                    raise Exception, "Unrecognized HQ sequence ID format for {0}!".format(r.id)
+                    raise Exception("Unrecognized HQ sequence ID format for {0}!".format(r.id))
 
     # info: dict of hq_isoform --> primer --> FL count
-    print >> sys.stderr, "Reading {0}....".format(classify_csv)
+    print("Reading {0}....".format(classify_csv), file=sys.stderr)
     primer_list, classify_csv = read_classify_csv(classify_csv)
-    print >> sys.stderr, "Reading {0}....".format(cluster_csv)
+    print("Reading {0}....".format(cluster_csv), file=sys.stderr)
     info = read_cluster_csv(cluster_csv, classify_csv, isoseq_version)
 
     primer_list = list(primer_list)
@@ -190,13 +190,13 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
     if primer_names is None:
         primer_names = tmp_primer_names
     else:
-        for k,v in tmp_primer_names.iteritems():
+        for k,v in tmp_primer_names.items():
             if k not in primer_names:
                 primer_names[k] = v
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join(primer_names.keys())))
-    print >> sys.stderr, "Reading {0}....".format(hq_fastq)
+    f.write("id,{0}\n".format(",".join(list(primer_names.keys()))))
+    print("Reading {0}....".format(hq_fastq), file=sys.stderr)
     for r in SeqIO.parse(open(hq_fastq), 'fastq'):
         if isoseq_version=='1':
             m = hq1_id_rex.match(r.id)
@@ -206,7 +206,7 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
             m = hq3_id_rex.match(r.id)
 
         if m is None:
-            print >> sys.stderr, "Unexpected HQ isoform ID format: {0}! Abort.".format(r.id)
+            print("Unexpected HQ isoform ID format: {0}! Abort.".format(r.id), file=sys.stderr)
             sys.exit(-1)
         cid = m.group(1)
         f.write(r.id)
@@ -214,7 +214,7 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
             f.write(",{0}".format(info[cid][p]))
         f.write("\n")
     f.close()
-    print >> sys.stderr, "Count file written to {0}.".format(f.name)
+    print("Count file written to {0}.".format(f.name), file=sys.stderr)
 
 
 if __name__ == "__main__":

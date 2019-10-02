@@ -7,7 +7,7 @@ import vcf
 from Bio.Seq import Seq
 from Bio import SeqIO
 from cupcake.io.BioReaders import GMAPSAMReader
-from coordinate_mapper import get_base_to_base_mapping_from_sam
+from .coordinate_mapper import get_base_to_base_mapping_from_sam
 
 
 __VCF_EXAMPLE__ = \
@@ -46,11 +46,11 @@ class VariantPhaser(object):
         # seq base is 'T' on the sense strand
         # this converts to self.accepted_vars_by_pos[1565] = ['A', 'G']
         # later, when we are matchin back to transcript seq, need to watch for strand!
-        for pos, vars in vc.variant.iteritems():
+        for pos, vars in vc.variant.items():
             self.accepted_vars_by_pos[pos] = [_base.upper() for _base,_count in vars]
             self.count_of_vars_by_pos[pos] = dict((_base.upper(), _count) for _base,_count in vars)
 
-        self.accepted_pos = self.accepted_vars_by_pos.keys()
+        self.accepted_pos = list(self.accepted_vars_by_pos.keys())
         self.accepted_pos.sort()
 
         self.haplotypes = Haplotypes(self.accepted_pos, self.vc.ref_base, self.count_of_vars_by_pos)
@@ -89,7 +89,7 @@ class VariantPhaser(object):
                 continue
             else:
                 f_log.write("{0} phased: haplotype {1}={2}\n".format(r.qID, i, self.haplotypes[i]))
-                print "{0} has haplotype {1}:{2}".format(r.qID, i, self.haplotypes[i])
+                print("{0} has haplotype {1}:{2}".format(r.qID, i, self.haplotypes[i]))
                 self.seq_hap_info[r.qID] = i
 
 
@@ -108,7 +108,7 @@ class VariantPhaser(object):
         # m: mapping of 0-based seq --> 0-based ref position
         # rev_map: mapping of 0-based ref position --> 0-based seq
         m = get_base_to_base_mapping_from_sam(r.segments, r.cigar, r.qStart, r.qEnd, r.flag.strand)
-        ref_m = dict((v,k) for k,v in m.iteritems())
+        ref_m = dict((v,k) for k,v in m.items())
 
         # go through each variant
         # <hap> to represent the concatenated string of all variant positions for this seq
@@ -163,7 +163,7 @@ def phase_isoforms(read_stat_filename, seqids, phaser):
             isoforms[r['pbid']].append(r['id'])
 
     # for each isoform, look at the CCS membership to know which haplotypes are expressed
-    for _iso, _seqids in isoforms.iteritems():
+    for _iso, _seqids in isoforms.items():
         tally = defaultdict(lambda: 0) # haplotype index --> count (of CCS)
         for seqid in _seqids:
             if seqid in phaser.seq_hap_info: # some CCS (seqids) may not have been used by the phaser, so account for that
@@ -262,9 +262,9 @@ class Haplotypes(object):
         sim_tuple = namedtuple('sim_tuple', 'index score')
         sims = [] # list of sim_tuple
         hap_str_len = len(hap_string)
-        for i in xrange(len(self.haplotypes)):
+        for i in range(len(self.haplotypes)):
             # Liz note: currently NOT checking whether existing haplotypes have '?'. I'm assuming no '?'.
-            score = sum((hap_string[k]==self.haplotypes[i][k]) for k in xrange(hap_str_len))
+            score = sum((hap_string[k]==self.haplotypes[i][k]) for k in range(hap_str_len))
             if score > 0:
                 sims.append(sim_tuple(index=i, score=score))
         if len(sims) == 0:
@@ -288,7 +288,7 @@ class Haplotypes(object):
         self.haplotype_vcf_index: hap index --> pos --> phase index (0 for ref, 1+ for alt)
         self.alt_at_pos: dict of <0-based pos> --> alt bases (not is not ref) at this position
         """
-        self.haplotype_vcf_index = [{} for i in xrange(len(self.haplotypes))]
+        self.haplotype_vcf_index = [{} for i in range(len(self.haplotypes))]
         self.alt_at_pos = {}
 
         # what happens in the case of partial phasing
@@ -327,11 +327,11 @@ class Haplotypes(object):
         -- self.get_haplotype_vcf_assignment
         """
         if self.haplotype_vcf_index is None or self.alt_at_pos is None:
-            raise Exception, "Must call self.get_haplotype_vcf_assignment() first!"
+            raise Exception("Must call self.get_haplotype_vcf_assignment() first!")
 
         self.sanity_check()
 
-        name_isoforms = isoform_tally.keys()
+        name_isoforms = list(isoform_tally.keys())
         name_isoforms.sort()
 
         # write a fake VCF example so we can read the headers in
@@ -374,7 +374,7 @@ class Haplotypes(object):
         #  if this isoform shows 2+ allele, then the first allele is indicated by self.haplotypes[0]
         for i,pos in enumerate(self.hap_var_positions):
             ref_chr, ref_pos = fake_map[pos]
-            total_count = sum(self.count_of_vars_by_pos[pos].itervalues())
+            total_count = sum(self.count_of_vars_by_pos[pos].values())
             alt_freq = ["{0:.2f}".format(self.count_of_vars_by_pos[pos][b]*1./total_count) for b in self.alt_at_pos[pos]]
             rec = vcf.model._Record(CHROM=ref_chr,
                               POS=ref_pos+1,
@@ -392,7 +392,7 @@ class Haplotypes(object):
                 # isoform_tally[_iso] is a dict of haplotype index --> count
                 # the index for thos base at this pos would thus be haplotype_vcf_index[hap_index][i]
                 # we always need to show the phases in haplotype index order sorted
-                hap_indices = isoform_tally[_iso].keys()
+                hap_indices = list(isoform_tally[_iso].keys())
                 hap_indices.sort()
                 genotype = "|".join(str(self.haplotype_vcf_index[hap_index][pos]) for hap_index in hap_indices)
                 counts = ",".join(str(isoform_tally[_iso][hap_index]) for hap_index in hap_indices)

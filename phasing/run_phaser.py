@@ -8,7 +8,7 @@ import sys
 try:
     import vcf
 except ImportError:
-    print >> sys.stderr, "Cannot import vcf! Please install pyvcf!"
+    print("Cannot import vcf! Please install pyvcf!", file=sys.stderr)
     sys.exit(-1)
 from Bio import SeqIO
 import phasing.io.SAMMPileUpReader as sp
@@ -58,11 +58,11 @@ reader = sp.MPileUpReader(args.mpileup_filename)
 recs = [r for r in reader]
 vc = VC.MPileUPVariant(recs, min_cov=MIN_COVERAGE, err_sub=ERR_SUB, expected_strand=args.strand, pval_cutoff=args.pval_cutoff)
 vc.call_variant()
-print vc.variant
+print(vc.variant)
 
 if len(vc.variant) == 0:
     os.system("touch {out}.NO_SNPS_FOUND".format(out=args.output_prefix))
-    print >> sys.stderr, "No SNPs found. END."
+    print("No SNPs found. END.", file=sys.stderr)
     sys.exit(0)
 
 # (2) for each CCS read, assign a haplotype (or discard if outlier)
@@ -76,7 +76,7 @@ seqids = set([r.id for r in SeqIO.parse(open(args.fastx_filename), VariantPhaser
 isoform_tally = VariantPhaser.phase_isoforms(args.read_stat, seqids, pp)
 if len(isoform_tally) == 0:
     os.system("touch {out}.NO_HAPS_FOUND".format(out=args.output_prefix))
-    print >> sys.stderr, "No good haps found. END."
+    print("No good haps found. END.", file=sys.stderr)
     sys.exit(0)
 pp.haplotypes.write_haplotype_to_vcf(args.mapping_filename, isoform_tally, args.output_prefix)
 
@@ -95,14 +95,14 @@ else:
 
 if diff_arr is None:
     os.system("touch {out}.cleaned.NO_HAPS_FOUND".format(out=args.output_prefix))
-    print >> sys.stderr, "No good haps found. END."
+    print("No good haps found. END.", file=sys.stderr)
     sys.exit(0)
 
 m, new_hap, new_isoform_tally = VariantPhaseCleaner.error_correct_haplotypes(pp.haplotypes, isoform_tally, diff_arr, hap_count_ordered)
 # write out the mapping relationship between: FL CCS --> (pre-corrected) hap --> error-corrected hap
 with open(args.output_prefix+'.cleaned.hap_info.txt', 'w') as f:
     f.write("id,hap_preclean,hap_postclean\n")
-    for seqid, old_i in pp.seq_hap_info.iteritems():
+    for seqid, old_i in pp.seq_hap_info.items():
         f.write("{0},{1},{2}\n".format(seqid, pp.haplotypes.haplotypes[old_i], new_hap.haplotypes[m[old_i]]))
 
 

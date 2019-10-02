@@ -15,7 +15,7 @@ def sanity_check_seqids(seqids):
     for seqid in seqids:
         m = seqid_rex.match(seqid)
         if m is None:
-            print >> sys.stderr, "Expected ID format (ex: PB.1.2) not followed by {0}! Abort!".format(seqid)
+            print("Expected ID format (ex: PB.1.2) not followed by {0}! Abort!".format(seqid), file=sys.stderr)
             sys.exit(-1)
 
 def get_fusion_id(seqid):
@@ -107,7 +107,7 @@ class MegaPBTree(object):
 
     def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix, fastq_filename=None):
         combined = [] # list of (r1 if r2 is None | r2 if r1 is None | longer of r1 or r2 if both not None)
-        unmatched_recs = self.record_d.keys()
+        unmatched_recs = list(self.record_d.keys())
 
         for r in GFF.collapseGFFReader(gff_filename):
             match_rec = self.match_record_to_tree(r)
@@ -149,7 +149,7 @@ class MegaPBTree(object):
         f_mgroup = open(output_prefix + '.mega_info.txt', 'w')
         f_mgroup.write("pbid\t{0}\t{1}\n".format(self.self_prefix, sample_prefix2))
         loci_index = 0
-        chroms = cluster_tree.keys()
+        chroms = list(cluster_tree.keys())
         chroms.sort()
         for k in chroms:
             for strand in ('+', '-'):
@@ -298,14 +298,14 @@ class MegaPBTreeFusion(MegaPBTree):
         elif len(good) == 1:
             return good[0]
         else:
-            print >> sys.stderr, "ERROR! more than one possible candidate in match_fusion_record! DEBUG."
-            print >> sys.stderr, "MATCHED:", good
+            print("ERROR! more than one possible candidate in match_fusion_record! DEBUG.", file=sys.stderr)
+            print("MATCHED:", good, file=sys.stderr)
             sys.exit(-1)
 
 
     def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix, fastq_filename=None):
         combined = [] # list of (r1 if r2 is None | r2 if r1 is None | longer of r1 or r2 if both not None)
-        unmatched_recs = self.record_d_fusion.keys()
+        unmatched_recs = list(self.record_d_fusion.keys())
 
         for _id, records in GFF.collapseGFFFusionReader(gff_filename):
             match_seqid = self.match_fusion_record(records)
@@ -347,7 +347,7 @@ class MegaPBTreeFusion(MegaPBTree):
         f_mgroup = open(output_prefix + '.mega_info.txt', 'w')
         f_mgroup.write("pbid\t{0}\t{1}\n".format(self.self_prefix, sample_prefix2))
         fusion_index = 0
-        chroms = cluster_tree.keys()
+        chroms = list(cluster_tree.keys())
         chroms.sort()
         for k in chroms:  # IMPORTANT: for fusion, this is *just* the chrom of the first record! Fusions can be multi-chrom
             for strand in ('+', '-'):

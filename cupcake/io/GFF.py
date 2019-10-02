@@ -197,7 +197,7 @@ coverage=66;confidence=40
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
         raw = line.strip().split('\t')
 
         chrom = raw[0]
@@ -234,7 +234,7 @@ class Coords(GTF):
             ith = 0
             
             if tID in self.transcript:
-                print >> sys.stderr, "duplicate tID {0} seen, ignore!".format(tID)
+                print("duplicate tID {0} seen, ignore!".format(tID), file=sys.stderr)
                 continue
             
             self.transcript_info[tID] = {'chr':chr}
@@ -292,7 +292,7 @@ class btabReader:
         cur = self.f.tell()
         line = self.f.readline().strip()
         if cur == self.f.tell():
-            raise StopIteration, "EOF reached!"
+            raise StopIteration("EOF reached!")
         raw = line.split('\t')
         chr= raw[0]
         seqid = raw[5]
@@ -391,7 +391,7 @@ class gmapGFFReader(object):
     def __iter__(self):
         return self
     
-    def next(self):
+    def __next__(self):
         return self.read()            
             
     def read(self):
@@ -412,14 +412,14 @@ class gmapGFFReader(object):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
         raw = line.strip().split('\t')
         while raw[0].startswith('#'):
             line = self.f.readline().strip()
             raw = line.strip().split('\t')
         
         if len(raw) == 0 or raw[0]=='': 
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
 
         assert raw[2] == 'gene'
         raw = self.f.readline().strip().split('\t')
@@ -459,7 +459,7 @@ class gmapGFFReader(object):
                 try:
                     rec.add_exon(rstart1-1, rend1, sstart1-1, send1, rstrand, score)
                 except AssertionError:
-                    print >> sys.stderr, "{0} has non-colinear exons!".format(rec.seqid)
+                    print("{0} has non-colinear exons!".format(rec.seqid), file=sys.stderr)
                     while True:
                         line = self.f.readline().strip()
                         if line.startswith('##'): return rec
@@ -475,7 +475,7 @@ class gmapGFFReader(object):
                         cds_seq_start = sstart1-1 if cds_seq_start is None else cds_seq_start
                         cds_seq_end = send1
             else:
-                raise Exception, "Not supposed to see type {0} here!!".format(type)
+                raise Exception("Not supposed to see type {0} here!!".format(type))
 
         return rec
     
@@ -489,7 +489,7 @@ class pasaGFFReader(gmapGFFReader):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
         while line.startswith('#'): # header section, ignore
             line = self.f.readline().strip()              
         raw = line.split('\t')
@@ -546,7 +546,7 @@ class collapseGFFReader(gmapGFFReader):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
                 
         raw = line.strip().split('\t')
         assert raw[2] == 'transcript'
@@ -576,7 +576,7 @@ class collapseGFFReader(gmapGFFReader):
             else: # another new record, wind back and return
                 self.f.seek(cur)
                 return rec
-        raise Exception, "Should not reach here!"
+        raise Exception("Should not reach here!")
 
 
 fusion_seqid_rex = re.compile('(\S+\\.\d+)\\.(\d+)')
@@ -621,7 +621,7 @@ class ucscGFFReader(gmapGFFReader):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
                 
         raw = line.strip().split('\t')
         assert raw[2] == 'exon'
@@ -654,7 +654,7 @@ def GFFReader(filename):
     elif program == 'PASA':
         return pasaGFFReader(filename)
     else:
-        raise Exception, "{0} is not a recognizable GFF program".format(program) 
+        raise Exception("{0} is not a recognizable GFF program".format(program))
 
 def write_fancyGeneformat(f, r):
     for exon in r.ref_exons:
@@ -862,7 +862,7 @@ def main(gtf):
         path = btab_reclist_to_interval_list(r)
         info = match_transcript(gtf, r[0]['chr'], path)
         if info['matchedExons'] is None:
-            print >> sys.stderr, "Did not find a match for {0}!".format(r[0]['seqid']) 
+            print("Did not find a match for {0}!".format(r[0]['seqid']), file=sys.stderr)
             continue
         for i, j in info['matchedExons']:
             transcript_tally[info['tID']][i] += 1
@@ -879,7 +879,7 @@ def main_pasa(gtf):
         
         info = match_transcript(gtf, chr, path)
         if info['matchedExons'] is None:
-            print >> sys.stderr, "Did not find a match for {0}!".format(tID)
+            print("Did not find a match for {0}!".format(tID), file=sys.stderr)
             continue
         for i, j in info['matchedExons']:
             pasa_tally[info['tID']][i] += 1
@@ -913,7 +913,7 @@ def eval_gmap(gtf, gmap_filename, input_filename):
     for rec in gmapGFFReader(gmap_filename):
         chr = rec.chr        
         seqid = rec.seqid
-        print "seqid:", seqid
+        print("seqid: {0}".format(seqid))
         seqlen = seqlen_dict[seqid]
         try:
             seqid_missed.remove(seqid)
@@ -1003,96 +1003,6 @@ def make_exon_report(gtf, gmap_report_filename):
                         
     f.close()
         
-def make_transcript_report(gtf, pasa_report_filename):
-    """
-    Note: eval_pasa needs to be run to get the report file first.
-    
-    Output: for each reference transcript,
-    <tID> <length> <# of assembled transcripts that covered it fully> <#...not-fully>
-    """
-    f = open(pasa_report_filename + '.transcript.report', 'w')
-    f.write("tID\tLen\tFull\tNonfull\n")
-    coverage = defaultdict(lambda: {'full':0, 'nonfull':0})
-    for r in DictReader(open(pasa_report_filename), delimiter='\t'):
-        if r['category'] == 'full': coverage[r['refID']]['full'] += 1
-        else: coverage[r['refID']]['nonfull'] += 1
-        
-    for tID in gtf.transcript_info:
-        path = gtf.get_exons(tID)
-        reflen = sum(x.end-x.start for x in path)
-        f.write("{0}\t{1}\t{2}\t{3}\n".format(tID, reflen, coverage[tID]['full'], coverage[tID]['nonfull']))
-    
-    f.close()    
-        
-def make_junction_report(pasa_report_filename):
-    head = defaultdict(lambda: 0)
-    donor = defaultdict(lambda: 0)
-    acceptor = defaultdict(lambda: 0)
-    tail = defaultdict(lambda: 0)    
-    for r in DictReader(open(pasa_report_filename), delimiter='\t'):
-        junctions = eval(r['boundary'])
-        head[junctions[0][0]] += 1
-        tail[junctions[-1][1]] += 1
-        if len(junctions) >= 2:
-            donor[junctions[0][1]] += 1
-            acceptor[junctions[-1][0]] += 1
-            if len(junctions) >= 3:
-                for j in junctions[1:-1]:
-                    acceptor[j[0]] += 1
-                    donor[j[1]] += 1
-        
-    
-    with open(pasa_report_filename + '.junction.report', 'w') as f:
-        f.write("type\toffset\tcount\n")
-        for k,v in head.iteritems(): f.write("head\t{0}\t{1}\n".format(k,v))
-        for k,v in tail.iteritems(): f.write("tail\t{0}\t{1}\n".format(k,v))
-        for k,v in donor.iteritems(): f.write("donor\t{0}\t{1}\n".format(k,v))
-        for k,v in acceptor.iteritems(): f.write("acceptor\t{0}\t{1}\n".format(k,v))
-        
-def make_UTR_start_end_report(gtf, pasa_filename, pasa_report_filename):
-    assembled_info = {} # tID --> start, end
-    for r in pasaGFFReader(pasa_filename):
-        assembled_info[r.seqid] = (r.get_start(), r.get_end())
-    
-    f = open(pasa_report_filename + '.UTR.report', 'w')
-    f.write("tID\td5UTR\td3UTR\n")
-    for r in DictReader(open(pasa_report_filename), delimiter='\t'):
-        info = assembled_info[r['tID']]
-        rStrand = gtf.transcript_info[r['refID']]['strand']
-        path = gtf.get_exons(r['refID'])
-        rStart = path[0].start
-        rEnd = path[-1].end
-        
-        if rStrand == '+':
-            diff_5utr = info[0] - rStart
-            diff_3utr = info[1] - rEnd
-        else:
-            diff_5utr = info[1] - rEnd
-            diff_3utr = info[0] - rStart
-    
-        f.write("{0}\t{1}\t{2}\n".format(r['tID'], diff_5utr, diff_3utr))
-        
-    f.close()
-        
-        
-        
-    
-        
-    
-            
-        
-            
-def make_sim_and_ref_seqlength_report(ref_fasta_filename, sim_fasta_filename):
-    from Bio import SeqIO
-    with open(sim_fasta_filename + '.plusref.seqlengths.txt', 'w') as f:
-        f.write("type\tlen\tid\n")
-        for r in SeqIO.parse(open(ref_fasta_filename), 'fasta'):
-            f.write("REF\t{0}\t{1}\n".format(len(r.seq),r.id))
-        for r in SeqIO.parse(open(sim_fasta_filename), 'fasta'):
-            f.write("SIM\t{0}\t{1}\n".format(len(r.seq),r.id))
-            
-        
-
 """
 ##gff-version 3
 # generated on Tue Dec 10 12:13:05 2013 by ./dump_all_gramene_dbs_continuing.pl
@@ -1137,7 +1047,7 @@ class MaizeGFFReader(collapseGFFReader):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
 
         raw = line.strip().split('\t')
         if raw[2] == 'gene': # ignore this and read the next line 'mRNA'
@@ -1172,7 +1082,7 @@ class MaizeGFFReader(collapseGFFReader):
             else: # another new record, wind back and return
                 self.f.seek(cur)
                 return rec
-        raise Exception, "Should not reach here!"
+        raise Exception("Should not reach here!")
                 
     
 
@@ -1210,7 +1120,7 @@ class ExonerateGFF2Reader(collapseGFFReader):
         cur = self.f.tell()
         line = self.f.readline().strip()
         if self.f.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
 
         raw = line.strip().split('\t')
         if raw[2] == 'gene': # read the gene line to get the ID and strand
@@ -1245,7 +1155,7 @@ class ExonerateGFF2Reader(collapseGFFReader):
             elif raw[2] in ('splice3', 'splice5', 'utr3', 'utr5'):
                 pass # ignore
 
-        raise Exception, "Should not reach here!"
+        raise Exception("Should not reach here!")
             
         
         

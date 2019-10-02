@@ -20,7 +20,7 @@ def run_minimap(query_filename, target_filename, cpus, sam_output=False):
 
 def run_cmd(cmd):
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "ERROR RUNNING CMD:", cmd
+        print("ERROR RUNNING CMD:", cmd, file=sys.stderr)
         sys.exit(-1)
 
 

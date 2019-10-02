@@ -38,4 +38,4 @@ for d in dirs:
     writer.writerow(rec)
 f.close()
 
-print >> sys.stderr, "Summarized results of by_loci/<dirs> to {0}.".format(f.name)
+print("Summarized results of by_loci/<dirs> to {0}.".format(f.name), file=sys.stderr)

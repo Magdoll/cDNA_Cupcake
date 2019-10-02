@@ -21,7 +21,7 @@ def make_exons_from_base_mapping(mapping, start, end, strand):
     """
 
     output = [mapping[start]]
-    for i in xrange(start+1, end):
+    for i in range(start+1, end):
         cur_pos, cur_is_junction= mapping[i]
         if cur_is_junction and mapping[i]!=output[-1]:
             # if the last position is the same, DON'T APPEND (was an indel)
@@ -44,9 +44,9 @@ def make_exons_from_base_mapping(mapping, start, end, strand):
             output.append(output[-1])
     #    print "modified:", output
     if strand == '+':
-        return [Interval(output[i][0],output[i+1][0]+1) for i in xrange(0, len(output), 2)]
+        return [Interval(output[i][0],output[i+1][0]+1) for i in range(0, len(output), 2)]
     else: # - strand
-        return [Interval(output[i][0],output[i-1][0]+1)  for i in xrange(len(output)-1,-1,-2)]
+        return [Interval(output[i][0],output[i-1][0]+1)  for i in range(len(output)-1,-1,-2)]
 
 
 
@@ -77,12 +77,12 @@ def get_base_to_base_mapping_from_sam(exons, cigar_string, qStart, qEnd, strand,
         if s == 'S': # soft clipping at the ends, ignore
             if start_soft_clip:
                 assert num == qStart
-                for i in xrange(num): mapping[i] = (cur_genome_loc, False)
+                for i in range(num): mapping[i] = (cur_genome_loc, False)
                 start_soft_clip = False
             else:
                 # soft clipping at the end
                 # advance the mapping but not cur_nt_loc (otherwise will be diff from qEnd)
-                for i in xrange(num): 
+                for i in range(num): 
                     mapping[cur_nt_loc+i] = (cur_genome_loc, False)
                     #cur_nt_loc += 1
                     #print cur_nt_loc
@@ -99,7 +99,7 @@ def get_base_to_base_mapping_from_sam(exons, cigar_string, qStart, qEnd, strand,
             last_base_is_junction = True
         elif s == 'M':
             # for the next "num" matches are all 1:1
-            for i in xrange(num):
+            for i in range(num):
                 if cur_nt_loc in mapping and mapping[cur_nt_loc][1]:
                     # if this is true, then last mapping must be 'D' and was a junction
                     # so we do nothing -- keep it
@@ -111,7 +111,7 @@ def get_base_to_base_mapping_from_sam(exons, cigar_string, qStart, qEnd, strand,
                 cur_genome_loc += 1
             assert cur_genome_loc <= exons[cur_exon_i].end
         elif s == 'I': # insertion w.r.t to genome
-            for i in xrange(num):
+            for i in range(num):
                 mapping[cur_nt_loc] = (cur_genome_loc, last_base_is_junction)
                 cur_nt_loc += 1
                 last_base_is_junction = False
@@ -128,7 +128,7 @@ def get_base_to_base_mapping_from_sam(exons, cigar_string, qStart, qEnd, strand,
     assert cur_nt_loc == qEnd or (cur_nt_loc==qEnd-1 and s=='S')
 
     if strand == '-':
-        mapping = dict((qLen-1-k, v) for k,v in mapping.iteritems())
+        mapping = dict((qLen-1-k, v) for k,v in mapping.items())
 
     if not include_junction_info:
         for k in mapping:

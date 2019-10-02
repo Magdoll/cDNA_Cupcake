@@ -18,7 +18,7 @@ class LazyFastqReader:
             id = line.strip()[1:].split(None, 1)[0] # the header MUST be just 1 line
             id2 = seqid_extraction(id)
             if id2 in self.d:
-                raise Exception, "Duplicate id {0} (or {1})!!".format(id, id2)
+                raise Exception("Duplicate id {0} (or {1})!!".format(id, id2))
             self.d[id2] = self.f.tell()
             self.f.readline() # seq
             self.f.readline() # +
@@ -26,7 +26,7 @@ class LazyFastqReader:
 
     def __getitem__(self, k):
         if k not in self.d:
-            raise Exception, "key {0} not in dictionary!".format(k)
+            raise Exception("key {0} not in dictionary!".format(k))
         self.f.seek(self.d[k])
 
         sequence = self.f.readline().strip()
@@ -66,12 +66,12 @@ class LazyFastaReader:
                 id = line.strip()[1:].split(None, 1)[0] # the header MUST be just 1 line
                 id2 = seqid_extraction(id)
                 if id2 in self.d:
-                    raise Exception, "Duplicate id {0} (or {1})!!".format(id, id2)
+                    raise Exception("Duplicate id {0} (or {1})!!".format(id, id2))
                 self.d[id2] = self.f.tell()
 
     def __getitem__(self, k):
         if k not in self.d:
-            raise Exception, "key {0} not in dictionary!".format(k)
+            raise Exception("key {0} not in dictionary!".format(k))
         self.f.seek(self.d[k])
         content = ''
         for line in self.f:

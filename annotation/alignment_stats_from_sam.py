@@ -48,11 +48,11 @@ def read_annotation_for_junction_info(gff_filename):
     d = defaultdict(lambda: set())
     for r in collapseGFFReader(gff_filename):
         if r.strand == '+':
-            for i in xrange(0, len(r.ref_exons)-1):
+            for i in range(0, len(r.ref_exons)-1):
                 d[(r.chr, r.strand, 'donor')].add(r.ref_exons[i].end-1)
                 d[(r.chr, r.strand, 'acceptor')].add(r.ref_exons[i+1].start)
         else:
-            for i in xrange(0, len(r.ref_exons)-1):
+            for i in range(0, len(r.ref_exons)-1):
                 d[(r.chr, r.strand, 'acceptor')].add(r.ref_exons[i].end-1)
                 d[(r.chr, r.strand, 'donor')].add(r.ref_exons[i+1].start)
     for k in d:
@@ -135,7 +135,7 @@ def evaluate_alignment_sam(input_fa_or_fq, sam_filename, genome_d, output_prefix
         rec1 = {'seqid': r.qID, 'coverage': r.qCoverage, 'identity':r.identity, 'num_sub':r.num_nonmatches-r.num_del-r.num_ins,
                 'num_ins':r.num_ins, 'num_del':r.num_del, 'num_exons':len(r.segments)}
         w1.writerow(rec1)
-        for i in xrange(0, len(r.segments)-1):
+        for i in range(0, len(r.segments)-1):
             rec2 = {'seqid': r.qID}
             seq1, seq2 = get_donor_acceptor(genome_d, r.sID, r.flag.strand, r.segments[i].end-1, r.segments[i+1].start)
             if r.flag.strand == '+':
@@ -168,12 +168,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read genome
-    print >> sys.stderr, "Reading genome {0}...".format(args.genome_filename)
+    print("Reading genome {0}...".format(args.genome_filename), file=sys.stderr)
     genome_d = SeqIO.to_dict(SeqIO.parse(open(args.genome_filename), 'fasta'))
 
     # read gff
     if args.gff is not None:
-        print >> sys.stderr, "Reading annotation {0}...".format(args.gff)
+        print("Reading annotation {0}...".format(args.gff), file=sys.stderr)
         junction_info = read_annotation_for_junction_info(args.gff)
     else:
         junction_info = None

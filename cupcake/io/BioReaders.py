@@ -5,7 +5,6 @@ Duplicated here for tofu installation. This one is called via cupcake.io.BioRead
 
 import re, sys
 from collections import namedtuple
-from exceptions import StopIteration
 
 Interval = namedtuple('Interval', ['start', 'end'])
                                  
@@ -30,7 +29,7 @@ class SimpleSAMReader:
     def __iter__(self):
         return self
     
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration
@@ -141,7 +140,7 @@ class SAMReader:
     def __iter__(self):
         return self
         
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration
@@ -308,7 +307,7 @@ class SAMRecord:
                 cur_start = cur_end + num
                 cur_end = cur_start
             else:
-                raise Exception, "Unrecognized cigar character {0}!".format(type)
+                raise Exception("Unrecognized cigar character {0}!".format(type))
             first_thing = False
         if cur_start != cur_end:
             segments.append(Interval(cur_start, cur_end))
@@ -366,84 +365,9 @@ class SAMRecord:
         return SAMRecord.SAMflag(is_paired, strand, PE_read_num)
             
 
-class BLASRSAMReader(SAMReader):
-    def next(self):
-        line = self.f.readline().strip()
-        if len(line) == 0:
-            raise StopIteration
-        return BLASRSAMRecord(line, self.ref_len_dict, self.query_len_dict)   
-
-class BLASRSAMRecord(SAMRecord):
-    def process(self, record_line, ref_len_dict=None, query_len_dict=None):
-        """
-        SAM files from pbalign.py have following optional fields:
-            XS: 1-based qStart, XE: 1-based qEnd, XQ: query length, NM: number of non-matches
-    
-        0. qID
-        1. flag
-        2. sID
-        3. 1-based offset sStart
-        4. mapping quality (ignore)
-        5. cigar
-        6. name of ref of mate alignment (ignore)
-        7. 1-based offset sStart of mate (ignore)
-        8. inferred fragment length (ignore)
-        9. sequence (ignore)
-        10. read qual (ignore)
-        11. optional fields
-        """
-        raw = record_line.split('\t')
-        self.qID = raw[0]
-        self.sID = raw[2]
-        if self.sID == '*': # means no match! STOP here
-            return
-        self.sStart = int(raw[3]) - 1
-        self.cigar = raw[5]
-        self.segments = self.parse_cigar(self.cigar, self.sStart)
-        self.sEnd = self.segments[-1].end
-        self.flag = SAMRecord.parse_sam_flag(int(raw[1]))
-        
-        # In Yuan Li's BLASR-to-SAM, XQ:i:<subread length>
-        # see https://github.com/PacificBiosciences/blasr/blob/master/common/datastructures/alignmentset/SAMAlignment.h
-        for x in raw[11:]:
-            if x.startswith('XQ:i:'): # XQ should come last, after XS and XE
-                _qLen = int(x[5:])
-                if _qLen > 0: # this is for GMAP's SAM, which has XQ:i:0
-                    self.qLen = _qLen
-            elif x.startswith('XS:i:'): # must be PacBio's SAM, need to update qStart
-                qs = int(x[5:]) - 1 # XS is 1-based
-                if qs > 0:
-                    print "qStart:", self.qStart
-                    assert self.qStart == 0
-                    self.qStart = qs
-                    self.qEnd += qs
-            elif x.startswith('XE:i:'): # must be PacBio's SAM and comes after XS:i:
-                qe = int(x[5:])     # XE is 1-based
-                assert self.qEnd - self.qStart == qe - 1 # qEnd should've been updated already, confirm this
-            elif x.startswith('NM:i:'): # number of non-matches
-                self.num_nonmatches = int(x[5:])
-                self.identity = 1. - (self.num_nonmatches * 1. / (self.num_del + self.num_ins + self.num_mat_or_sub))
-                
-        if ref_len_dict is not None:
-            self.sCoverage = (self.sEnd - self.sStart) * 1. / ref_len_dict[self.sID]
-            self.sLen = ref_len_dict[self.sID]
-
-        if self.flag.strand == '-' and self.qLen is not None:
-            self.qStart, self.qEnd = self.qLen - self.qEnd, self.qLen - self.qStart
-
-        if self.qLen is not None:
-            self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen
-           
-        if query_len_dict is not None: # over write qLen and qCoverage, should be done LAST
-            try:
-                self.qLen = query_len_dict[self.qID]
-            except KeyError: # HACK for blasr's extended qID
-                self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
-            self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen        
-            
             
 class GMAPSAMReader(SAMReader):
-    def next(self):
+    def __next__(self):
         while True:
             line = self.f.readline().strip()
             if len(line) == 0:
@@ -482,13 +406,12 @@ class GMAPSAMRecord(SAMRecord):
         self.sEnd = self.segments[-1].end
         self.flag = SAMRecord.parse_sam_flag(int(raw[1])) # strand can be overwritten by XS:A flag
         self._flag_strand = self.flag.strand # serve as backup for debugging
-        # In Yuan Li's BLASR-to-SAM, XQ:i:<subread length>
-        # see https://github.com/PacificBiosciences/blasr/blob/master/common/datastructures/alignmentset/SAMAlignment.h
+
         for x in raw[11:]:
             if x.startswith('NM:i:'): # number of non-matches
                 self.num_nonmatches = int(x[5:])
                 self.identity = 1. - (self.num_nonmatches * 1. / (self.num_del + self.num_ins + self.num_mat_or_sub))
-            elif x.startswith('XS:A:'): # strand ifnormation
+            elif x.startswith('XS:A:'): # strand information
                 _s = x[5:]
                 if _s!='?':
                     self._flag_strand = self.flag.strand # serve as backup for debugging
@@ -508,13 +431,5 @@ class GMAPSAMRecord(SAMRecord):
             try:
                 self.qLen = query_len_dict[self.qID]
             except KeyError: # HACK for blasr's extended qID
-                k = self.qID.rfind('/')
-                if k >= 0:
-                    try:
-                        self.qLen = query_len_dict[self.qID[:self.qID.rfind('/')]]
-                    except KeyError:
-                        self.qLen = query_len_dict[self.qID]
-                else:
-                    raise Exception, "Unable to find qID {0} in the input fasta/fastq!".format(self.qID)
-            self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen    
-                
+                raise Exception("Unable to find qID {0} in the input fasta/fastq!".format(self.qID))
+            self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen

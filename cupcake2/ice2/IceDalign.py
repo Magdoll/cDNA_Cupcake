@@ -117,14 +117,14 @@ class DalignerRunner(object):
 
     def _iter_i_j(self):
         """Iterate over indices (query block i, target block j)."""
-        for i in xrange(1, self.query_blocks + 1):
-            for j in xrange(1, self.target_blocks + 1):
+        for i in range(1, self.query_blocks + 1):
+            for j in range(1, self.target_blocks + 1):
                 if not (self.query_filename == self.target_filename and i > j):
                     yield (i, j)
 
     def _iter_i_j_k(self):
         """Iterate over indices (query block i, target block j, thread k)."""
-        for k in xrange(DALIGNER_NUM_THREADS):
+        for k in range(DALIGNER_NUM_THREADS):
             for i, j in self._iter_i_j():
                 yield (i, j, k)
 

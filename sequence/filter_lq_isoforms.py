@@ -29,13 +29,13 @@ def main(fastq_filename, output_filename, min_fl_count, min_exp_acc, is_flnc):
     for r in SeqIO.parse(open(fastq_filename), 'fastq'):
         fl_count, exp_acc = func(r)
         if not is_flnc and fl_count is None:
-            print >> sys.stderr, "Sequence header does not include field `full_length_coverage=`. Abort!"
+            print("Sequence header does not include field `full_length_coverage=`. Abort!", file=sys.stderr)
             sys.exit(-1)
         if exp_acc is None:
-            print >> sys.stderr, "Sequence header does not include field `expected_accuracy=`. Please run calc_expected_accuracy_from_fastq.py script first!"
+            print("Sequence header does not include field `expected_accuracy=`. Please run calc_expected_accuracy_from_fastq.py script first!", file=sys.stderr)
             sys.exit(-1)
         if (is_flnc or fl_count >= min_fl_count) and exp_acc >= min_exp_acc:
-            print >> sys.stderr, "Including {0} into output file (FL: {1}, acc: {2}).".format(r.id, fl_count, exp_acc)
+            print("Including {0} into output file (FL: {1}, acc: {2}).".format(r.id, fl_count, exp_acc), file=sys.stderr)
             SeqIO.write(r, f, 'fastq')
     f.close()
 

@@ -1,7 +1,7 @@
 
 
 import os, sys, pdb, subprocess, glob
-from cPickle import dump
+from pickle import dump
 from Bio import SeqIO
 
 from cupcake2.io.minimapIO import MiniReader
@@ -41,7 +41,7 @@ def cleanup_precluster_intermediate_files(batch_index):
         try:
             os.remove(file)
         except:
-            print >> sys.stderr, "Failure to remove {0}. Ignore.".format(file)
+            print("Failure to remove {0}. Ignore.".format(file), file=sys.stderr)
 
 
 def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
@@ -55,26 +55,26 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
     cur_file = "batch{0}.fasta".format(batch_index)
     seqids = set([r.id for r in SeqIO.parse(open(cur_file), 'fasta')])
     o = ar.run_minimap(cur_file, "seed{0}.S.fasta".format(batch_index), cpus=cpus)
-    print >> sys.stderr, "processing", o
+    print("processing", o, file=sys.stderr)
     pCS, remains = sp.process_align_to_pCS(o, seqids, pCS, MiniReader, dun_use_partial=dun_use_partial)
-    print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
-        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
+    print("pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
+        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.values()), len(orphans), len(remains)), file=sys.stderr)
     # write batch<i>.remains.fasta
     cur_file = "batch{0}.remains.fasta".format(batch_index)
     FileIO.write_seqids_to_fasta(remains, cur_file, fasta_d)
     o = ar.run_minimap(cur_file, "seed{0}.orphans.fasta".format(batch_index), cpus=cpus)
-    print >> sys.stderr, "processing", o
+    print("processing", o, file=sys.stderr)
     pCS, orphans, remains = sp.process_align_to_orphan(o, remains, orphans, pCS, MiniReader, dun_use_partial=dun_use_partial)
-    print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
-        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
+    print("pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
+        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.values()), len(orphans), len(remains)), file=sys.stderr)
     # write batch<i>.remains2.fasta and self align
     cur_file = "batch{0}.remains2.fasta".format(batch_index)
     FileIO.write_seqids_to_fasta(remains, cur_file, fasta_d)
     o = ar.run_minimap(cur_file, cur_file, cpus=cpus)
-    print >> sys.stderr, "processing", o
+    print("processing", o, file=sys.stderr)
     pCS, remains = sp.process_self_align_into_seed(o, remains, MiniReader, pCS, dun_use_partial=dun_use_partial)
-    print >> sys.stderr, "pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
-        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.itervalues()), len(orphans), len(remains))
+    print("pCS: {0}, tucked: {1}, orphans: {2}, remains: {3}".format( \
+        len(pCS.S), sum(v == 'T' for v in pCS.seq_stat.values()), len(orphans), len(remains)), file=sys.stderr)
     # combine remains+orphans to new orphans
     orphans = orphans.union(remains)
     FileIO.write_preClusterSet_to_fasta(pCS, "seed{0}.S.fasta".format(batch_index+1), fasta_d)
@@ -83,10 +83,10 @@ def add_batch(batch_index, pCS, orphans, fasta_d, cpus, dun_use_partial):
     return pCS, orphans
 
 def main(cpus, dun_make_bins=False, dun_use_partial=False, num_seqs_per_batch=100000, dun_cleanup_files=False):
-    print "Indexing isoseq_flnc.fasta using LazyFastaReader..."
+    print("Indexing isoseq_flnc.fasta using LazyFastaReader...")
     d = LazyFastaReader('isoseq_flnc.fasta')
 
-    print "Splitting input isoseq_flnc.fasta into seed/batches..."
+    print("Splitting input isoseq_flnc.fasta into seed/batches...")
     num_batchs = create_seed_n_batch_files(input='isoseq_flnc.fasta', fasta_d=d, seed_filename='seed0.fasta', batch_pre='batch', num_seqs_per_batch=num_seqs_per_batch)
 
 
@@ -95,15 +95,15 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False, num_seqs_per_batch=10
     seqids = set([r.id for r in SeqIO.parse(open('seed0.fasta'),'fasta')])
     pCS, orphans = sp.process_self_align_into_seed(o, seqids, MiniReader, dun_use_partial=dun_use_partial)
     # keep stats
-    size_S, size_tucked, size_orphans = len(pCS.S), sum(v=='T' for v in pCS.seq_stat.itervalues()), len(orphans)
-    print "seed 0 initial: S {0}, tucked {1}, orphans {2}".format(size_S, size_tucked, size_orphans)
+    size_S, size_tucked, size_orphans = len(pCS.S), sum(v=='T' for v in pCS.seq_stat.values()), len(orphans)
+    print("seed 0 initial: S {0}, tucked {1}, orphans {2}".format(size_S, size_tucked, size_orphans))
 
     # write out seed1.S.fasta and seed1.orphans.fasta
     FileIO.write_preClusterSet_to_fasta(pCS, 'seed1.S.fasta', d)
     FileIO.write_seqids_to_fasta(orphans, 'seed1.orphans.fasta', d)
     # step 2a. minimap batch1 against seed1.S and process
 
-    for i in xrange(1, num_batchs):
+    for i in range(1, num_batchs):
         pCS, orphans = add_batch(i, pCS, orphans, d, cpus=cpus, dun_use_partial=dun_use_partial)
         cleanup_precluster_intermediate_files(i)
 
@@ -123,7 +123,7 @@ def main(cpus, dun_make_bins=False, dun_use_partial=False, num_seqs_per_batch=10
     # write CSV file
     with open('preCluster.output.csv', 'w') as f:
         f.write("seqid,stat\n")
-        for x, stat in pCS.seq_stat.iteritems():
+        for x, stat in pCS.seq_stat.items():
             if stat == 'T':
                 f.write("{0},tucked\n".format(x))
                 tucked_seqids.append(x)
@@ -177,11 +177,11 @@ if __name__ == "__main__":
 
     # basic sanity checking here
     if not os.path.exists("isoseq_flnc.fasta"):
-        print >> sys.stderr, "Expects isoseq_flnc.fasta in local directory but failed! Abort."
+        print("Expects isoseq_flnc.fasta in local directory but failed! Abort.", file=sys.stderr)
         sys.exit(-1)
 
     if os.path.exists("preCluster_out"):
-        print >> sys.stderr, "preCluster_out/ already exists! Abort."
+        print("preCluster_out/ already exists! Abort.", file=sys.stderr)
         sys.exit(-1)
 
     main(args.cpus, args.dun_make_bins, args.dun_use_partial, args.num_seqs_per_batch, args.dun_cleanup_files)

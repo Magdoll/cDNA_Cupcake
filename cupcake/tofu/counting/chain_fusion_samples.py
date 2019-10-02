@@ -28,27 +28,27 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
     Double check that the formats are expected and all PBIDs are concordant across the files
     :return: raise Exception if sanity check failed
     """
-    print >> sys.stderr, "Sanity checking. Retrieving PBIDs from {0},{1},{2}...".format(\
-        group_filename, gff_filename, count_filename)
+    print("Sanity checking. Retrieving PBIDs from {0},{1},{2}...".format(\
+        group_filename, gff_filename, count_filename), file=sys.stderr)
     ids1 = [line.strip().split()[0] for line in open(group_filename)]
     ids2 = [fusion_id for fusion_id,rs in GFF.collapseGFFFusionReader(gff_filename)]
     f = open(count_filename)
-    for i in xrange(14): f.readline() # just through the header
+    for i in range(14): f.readline() # just through the header
     ids3 = [r['pbid'] for r in DictReader(f, delimiter='\t')]
     if len(set(ids2).difference(ids1))>0 or len(set(ids2).difference(ids3))>0:
-        raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
-            group_filename, gff_filename, count_filename)
+        raise Exception("Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
+            group_filename, gff_filename, count_filename))
 
     if fastq_filename is not None:
         ids4 = [r.id.split('|')[0] for r in SeqIO.parse(open(fastq_filename), 'fastq')]
         if len(set(ids2).difference(ids4))>0:
-            raise Exception, "Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0}".format(\
-                fastq_filename, gff_filename)
+            raise Exception("Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0}".format(\
+                fastq_filename, gff_filename))
 
 
 def chain_fusion_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, fastq_filename=None):
 
-    for d in dirs.itervalues():
+    for d in dirs.values():
         sample_sanity_check(os.path.join(d, group_filename),\
                             os.path.join(d, gff_filename),\
                             os.path.join(d, count_filename),\
@@ -145,12 +145,12 @@ def chain_fusion_samples(dirs, names, group_filename, gff_filename, count_filena
     if fastq_filename is not None:
         shutil.copyfile('tmp_' + chain[-1] + '.rep.fq', 'all_samples.chained.rep.fq')
 
-    print >> sys.stderr, "Chained output written to:"
-    print >> sys.stderr, "all_samples.chained.gff"
-    print >> sys.stderr, f1.name
-    print >> sys.stderr, f2.name
+    print("Chained output written to:", file=sys.stderr)
+    print("all_samples.chained.gff", file=sys.stderr)
+    print(f1.name, file=sys.stderr)
+    print(f2.name, file=sys.stderr)
     if fastq_filename is not None:
-        print >> sys.stderr, "all_samples.chained.rep.fq"
+        print("all_samples.chained.rep.fq", file=sys.stderr)
 
 
 if __name__ == "__main__":

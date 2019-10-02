@@ -12,14 +12,14 @@ simTypeSize = 4
 
 def throwdice(profile):
     dice = random.random()
-    for i in xrange(simTypeSize):
+    for i in range(simTypeSize):
         if dice < profile[i]:
             return simType[i]
         
 def sim_start(ntimes, profile):
     start = defaultdict(lambda: 0)
     acc = defaultdict(lambda: 0)
-    for i in xrange(ntimes):
+    for i in range(ntimes):
         curpos = 0
         while True:
             type = throwdice(profile)
@@ -64,7 +64,7 @@ def sim_seq(seq, profile):
                 break
             elif type=='del': # skip over this
                 break
-            else: raise KeyError, "Invalid type {0}".format(type)
+            else: raise KeyError("Invalid type {0}".format(type))
         
     return sim, qv
             
@@ -82,17 +82,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.sub < 0 or args.sub > 1: 
-        print >> sys.stderr, "Substitution error must be between 0-1!"
+        print("Substitution error must be between 0-1!", file=sys.stderr)
         sys.exit(-1)
     if args.ins < 0 or args.ins > 1:
-        print >> sys.stderr, "Insertion error must be between 0-1!"
+        print("Insertion error must be between 0-1!", file=sys.stderr)
         sys.exit(-1)
     if args.dele < 0 or args.dele > 1:
-        print >> sys.stderr, "Deletion error must be between 0-1!"
+        print("Deletion error must be between 0-1!", file=sys.stderr)
         sys.exit(-1)
 
     if args.sub + args.ins + args.dele > 1:
-        print >> sys.stderr, "Total sub+ins+del error cannot exceed 1!"
+        print("Total sub+ins+del error cannot exceed 1!", file=sys.stderr)
         sys.exit(-1)
 
 
@@ -103,6 +103,6 @@ if __name__ == "__main__":
 
     ith = 0
     for r in SeqIO.parse(open(fasta_filename), 'fasta'):
-        for j in xrange(args.copy):
+        for j in range(args.copy):
             ith += 1
-            print(">{0}_{1}_{2}\n{3}".format(idpre, ith, r.id[:r.id.find('|')], sim_seq(r.seq.tostring(), profile)))
+            print((">{0}_{1}_{2}\n{3}".format(idpre, ith, r.id[:r.id.find('|')], sim_seq(r.seq.tostring(), profile))))

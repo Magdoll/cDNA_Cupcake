@@ -108,7 +108,7 @@ def main_brangus(vcf_filename, out_filename, unzip_snps=None):
         for r in vcf.VCFReader(open(vcf_filename)):
             unzip_snps[r.CHROM][r.POS] = r
 
-    print >> sys.stderr, 'Finished reading ' + vcf_filename
+    print('Finished reading ' + vcf_filename, file=sys.stderr)
     out_f = open(out_filename, 'w')
     FIELDS = ['dir', 'chrom', 'pos', 'strand', 'ref', 'alt_Short', 'alt_PB', 'in_Short', 'in_PB', 'cov_Short', 'cov_PB', 'genomic_HP']
     writer = DictWriter(out_f, FIELDS, delimiter='\t')
@@ -122,9 +122,9 @@ def main_brangus(vcf_filename, out_filename, unzip_snps=None):
         nosnp = os.path.join(d1, 'phased.partial.NO_SNPS_FOUND')
         if not os.path.exists(vcffile):
             assert os.path.exists(nosnp)
-            print >> sys.stderr, ('Skipping {0} because no SNPs found.').format(d1)
+            print(('Skipping {0} because no SNPs found.').format(d1), file=sys.stderr)
         else:
-            print >> sys.stderr, ('Evaluating {0}.').format(d1)
+            print(('Evaluating {0}.').format(d1), file=sys.stderr)
             strand = 'NA' 
             if os.path.exists(config): # find the strand this gene family is on
                 for line in open(config):
@@ -145,14 +145,14 @@ def main_maize(ki11_snps=None, dirs=None):
             #if debug_count > 100000: break
             debug_count += 1
 
-    print >> sys.stderr, 'Finished reading B73Ki11.q20.vcf.'
+    print('Finished reading B73Ki11.q20.vcf.', file=sys.stderr)
 
     ki11_shortread_cov = defaultdict(lambda: {}) # chrom -> pos -> short read cov
     # read the raw Ki11 pileup to get coverage in places where no SNPs were called
     for r in sp.MPileUpReader('Ki11.raw.mpileup'):
         if r is not None:
             ki11_shortread_cov[r.chr][r.pos] = r.cov
-    print >> sys.stderr, "Fnished reading Ki11.raw.mpileup."
+    print("Fnished reading Ki11.raw.mpileup.", file=sys.stderr)
 
     repeat_by_chrom = {}
     # read the Tandem Repeat Finder summary
@@ -161,7 +161,7 @@ def main_maize(ki11_snps=None, dirs=None):
             repeat_by_chrom[r['chrom']] = IntervalTree()
         repeat_by_chrom[r['chrom']].add(int(r['start0']), int(r['end1']))
 
-    print >> sys.stderr, 'Finished reading B73_RefV4.fa.repeat_list.txt.'
+    print('Finished reading B73_RefV4.fa.repeat_list.txt.', file=sys.stderr)
 
 
     FIELDS = ['dir', 'chrom', 'pos', 'ref', 'alt_Short', 'alt_PB', 'in_Short', 'in_PB', 'cov_Short', 'cov_PB', 'genomic_HP']
@@ -180,9 +180,9 @@ def main_maize(ki11_snps=None, dirs=None):
         nosnp = os.path.join(d1, 'phased.partial.NO_SNPS_FOUND')
         if not os.path.exists(vcffile):
             assert os.path.exists(nosnp)
-            print >> sys.stderr, ('Skipping {0} because no SNPs found.').format(d1)
+            print(('Skipping {0} because no SNPs found.').format(d1), file=sys.stderr)
         else:
-            print >> sys.stderr, ('Evaluating {0}.').format(d1)
+            print(('Evaluating {0}.').format(d1), file=sys.stderr)
             good_positions, cov_at_pos = get_positions_to_recover(mapfile, mpileup, ki11_snps, min_cov=30) # use lower min cov here becuz a few close cases where BQ filtering lowered cov
             name = d1.split('/')[1]
             eval_isophase(vcffile, ki11_snps, good_positions, cov_at_pos, repeat_by_chrom, ki11_shortread_cov, writer_f, name)

@@ -41,13 +41,13 @@ def sanity_check_collapse_input(input_prefix):
     gff_filename = input_prefix + '.gff'
     rep_filename = input_prefix + '.rep.fq'
     if not os.path.exists(count_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(count_filename)
+        print("File {0} does not exist. Abort!".format(count_filename), file=sys.stderr)
         sys.exit(-1)
     if not os.path.exists(gff_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(gff_filename)
+        print("File {0} does not exist. Abort!".format(gff_filename), file=sys.stderr)
         sys.exit(-1)
     if not os.path.exists(rep_filename):
-        print >> sys.stderr, "File {0} does not exist. Abort!".format(rep_filename)
+        print("File {0} does not exist. Abort!".format(rep_filename), file=sys.stderr)
         sys.exit(-1)
 
     pbids1 = set([r.id for r in SeqIO.parse(open(rep_filename),'fastq')])
@@ -55,10 +55,10 @@ def sanity_check_collapse_input(input_prefix):
     pbids3 = set(read_count_file(count_filename)[0].keys())
 
     if len(pbids1)!=len(pbids2) or len(pbids2)!=len(pbids3) or len(pbids1)!=len(pbids3):
-        print >> sys.stderr, "The number of PBID records in the files disagree! Sanity check failed."
-        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(rep_filename, len(pbids1))
-        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(gff_filename, len(pbids2))
-        print >> sys.stderr, "# of PBIDs in {0}: {1}".format(count_filename, len(pbids3))
+        print("The number of PBID records in the files disagree! Sanity check failed.", file=sys.stderr)
+        print("# of PBIDs in {0}: {1}".format(rep_filename, len(pbids1)), file=sys.stderr)
+        print("# of PBIDs in {0}: {1}".format(gff_filename, len(pbids2)), file=sys.stderr)
+        print("# of PBIDs in {0}: {1}".format(count_filename, len(pbids3)), file=sys.stderr)
         sys.exit(-1)
 
     return count_filename, gff_filename, rep_filename
@@ -139,7 +139,7 @@ def main():
 
     good = []
     f = open(output_prefix + '.gff', 'w')
-    keys = recs.keys()
+    keys = list(recs.keys())
     keys.sort()
     for k in recs:
         xxx = recs[k]
@@ -170,9 +170,9 @@ def main():
         writer.writerow(r)
     f.close()
 
-    print >> sys.stderr, "Output written to:", output_prefix + '.gff'
-    print >> sys.stderr, "Output written to:", output_prefix + '.rep.fq'
-    print >> sys.stderr, "Output written to:", output_prefix + '.gff'
+    print("Output written to:", output_prefix + '.gff', file=sys.stderr)
+    print("Output written to:", output_prefix + '.rep.fq', file=sys.stderr)
+    print("Output written to:", output_prefix + '.gff', file=sys.stderr)
 
 if __name__ == "__main__":
     main()

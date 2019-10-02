@@ -19,7 +19,7 @@ def fa2fq(input):
     try:
         assert input.lower().endswith('.fasta') or input.lower().endswith('.fa')
     except AssertionError:
-        print >> sys.stderr, "Input {0} does not end with .fasta or .fa! Abort".format(input)
+        print("Input {0} does not end with .fasta or .fa! Abort".format(input), file=sys.stderr)
         sys.exit(-1)
     output = input[:input.rfind('.')] + '.fastq'
 
@@ -29,7 +29,7 @@ def fa2fq(input):
         SeqIO.write(r, f, 'fastq')
     f.close()
 
-    print >> sys.stderr, "Output written to", f.name
+    print("Output written to", f.name, file=sys.stderr)
     return f.name
 
 if __name__ == "__main__":

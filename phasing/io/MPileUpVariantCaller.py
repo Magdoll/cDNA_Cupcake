@@ -100,11 +100,11 @@ class MPileUPVariant(object):
                 bases = 'atcg'
 
             r.clean_counts = Counter(r.counts)
-            keys = r.counts.keys()
+            keys = list(r.counts.keys())
             for k in keys:
                 if k not in bases:
                     del r.clean_counts[k]
-            r.clean_cov = sum(r.clean_counts.itervalues())
+            r.clean_cov = sum(r.clean_counts.values())
             r.clean_type = len(r.clean_counts)
 
     def call_variant(self):

@@ -42,7 +42,7 @@ class STARJunctionRecord:
     def process_line(line):
         raw = line.strip().split()
         if len(raw)!=9:
-            raise Exception, "Expected 9 columns for STAR junction file! Got {0} instead!".format(len(raw))
+            raise Exception("Expected 9 columns for STAR junction file! Got {0} instead!".format(len(raw)))
 
         chrom = raw[0]
         start = int(raw[1])
@@ -69,7 +69,7 @@ class STARJunctionReader:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration

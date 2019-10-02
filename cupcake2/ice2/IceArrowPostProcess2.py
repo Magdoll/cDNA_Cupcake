@@ -9,7 +9,7 @@ import re
 import logging
 import os.path as op
 from collections import defaultdict
-from cPickle import load
+from pickle import load
 from time import sleep
 
 from pbcore.io import FastqReader, FastqWriter, FastaWriter
@@ -148,7 +148,7 @@ class IceArrowPostProcess2(IceFiles2):
                     done_flag = False
 
         # now go through all the expected fastq files and check they exist
-        for fq_filename,(job_id,sh_file) in submitted.iteritems():
+        for fq_filename,(job_id,sh_file) in submitted.items():
             if not nfs_exists(fq_filename) or \
                     os.stat(fq_filename).st_size == 0:
                 if job_id in running_jids:  # still running, pass
@@ -210,7 +210,7 @@ class IceArrowPostProcess2(IceFiles2):
         a = load(open(self.final_pickle_fn))
         uc = a['uc']
         # check if the uc cids are integers
-        uc_keys_are_int = type(uc.keys()[0]) is int
+        uc_keys_are_int = type(list(uc.keys())[0]) is int
 
         polished = {} # cid --> FastqRecord
 
@@ -236,7 +236,7 @@ class IceArrowPostProcess2(IceFiles2):
 
         # calculate expected QV given 5'/3' trimming
         # for sequences that are shorter than the trimming, use the length itself
-        for cid, r in polished.iteritems():
+        for cid, r in polished.items():
             qv_len = max(len(r.quality), len(r.quality) - self.qv_trim_5 - self.qv_trim_3)
             q = [phred_to_qv(x) for x in r.quality]
             err_sum = sum(q[self.qv_trim_5: -self.qv_trim_3])

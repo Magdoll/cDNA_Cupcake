@@ -98,7 +98,7 @@ def choose_template_by_blasr(fasta_filename, out_filename, nproc=8,
 
     # find the one with the highest average alignment similarity
     score_array = []
-    for k, v in scores.iteritems():
+    for k, v in scores.items():
         score_array.append((np.ceil(np.mean(v)), k))
     if len(score_array) < min_number_reads:
         errMsg = "Not enough number of reads in " + \
@@ -215,7 +215,7 @@ def pbdagcon_wrapper(fasta_filename, output_prefix,
 
     except AlignGraphUtilError:
         # pick the first sequence as reference as a backup plan
-        first_seq = FastaReader(fasta_filename).__iter__().next()
+        first_seq = next(FastaReader(fasta_filename).__iter__())
         with open(ref_filename, 'w') as f:
             f.write(">{0}_ref\n{1}\n".
                     format(consensus_name, first_seq.sequence))

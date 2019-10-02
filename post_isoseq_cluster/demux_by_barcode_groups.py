@@ -18,7 +18,7 @@ def get_type_fafq(in_filename):
     if in_filename.endswith('.FA') or in_filename.endswith('FASTA'): return 'fasta'
     elif in_filename.endswith('.FQ') or in_filename.endswith('FASTQ'): return 'fastq'
     else:
-        raise Exception, "Unrecognized file suffix .{0}! Must end with .fasta or .fastq!".format(in_filename[in_filename.find('.'):])
+        raise Exception("Unrecognized file suffix .{0}! Must end with .fasta or .fastq!".format(in_filename[in_filename.find('.'):]))
 
 def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_dict, in_fafq=None):
     """
@@ -32,7 +32,7 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
     in_tissue = defaultdict(lambda: set()) # pbid --> list of tissue it is in (EM, END, R)
 
     for r in DictReader(open(demux_count_file),delimiter=','):
-        for k,v in r.iteritems():
+        for k,v in r.items():
             if k=='id': continue
             if int(v) > 0: in_tissue[r['id']].add(k)
 
@@ -40,20 +40,20 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
 
     handles = {}
     handles_fafq = {}
-    for g in out_group_dict.itervalues():
+    for g in out_group_dict.values():
         handles[g] = open("{o}_{g}_only.gff".format(o=output_prefix, g=g), 'w')
         if in_fafq is not None: handles_fafq[g] = open("{o}_{g}_only.{t}".format(o=output_prefix, g=g, t=type_fafq), 'w')
 
     if in_fafq is not None:
         fafq_dict = SeqIO.to_dict(SeqIO.parse(open(in_fafq), type_fafq))
-        fafq_dict_keys = fafq_dict.keys()
+        fafq_dict_keys = list(fafq_dict.keys())
         for k in fafq_dict_keys:
             m = rex_pbid.match(k)
             if m is not None: fafq_dict[m.group(1)] = fafq_dict[k]
     reader = GMAPSAMReader(pooled_sam, True)
     for r in reader:
         if r.sID == '*':
-            print >> sys.stderr, "Ignore {0} because unmapped.".format(r.qID)
+            print("Ignore {0} because unmapped.".format(r.qID), file=sys.stderr)
             continue
         m = rex_pbid.match(r.qID)
         if m is not None: pbid = m.group(1)
@@ -68,7 +68,7 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
 
         groups_to_write_in = set()
         if pbid not in in_tissue:
-            print >> sys.stderr, "WARNING: {0} does not belong to any group indicated by outgroup_dict".format(pbid)
+            print("WARNING: {0} does not belong to any group indicated by outgroup_dict".format(pbid), file=sys.stderr)
         for tissue in in_tissue[pbid]:
             groups_to_write_in.add(out_group_dict[tissue])
 

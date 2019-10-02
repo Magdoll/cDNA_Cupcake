@@ -92,7 +92,7 @@ class MiniRecord:
                               sID=raw[5], sLength=int(raw[6]), sStart=int(raw[7]), sEnd=int(raw[8])+1,
                               nMatch=int(raw[9]), nBase=int(raw[10]), identity=identity)
         except:
-            raise ValueError, "String not recognized as a valid PAF record: {0}".format(line)
+            raise ValueError("String not recognized as a valid PAF record: {0}".format(line))
 
 
     def characterize(self, max_missed_5_len, max_missed_5_ratio, max_missed_3_len, max_missed_3_ratio, \
@@ -153,11 +153,11 @@ class MiniReader(BLASRReaderBase):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         cur = self.infile.tell()
         line = self.infile.readline().strip()
         if self.infile.tell() == cur:
-            raise StopIteration, "EOF reached!!"
+            raise StopIteration("EOF reached!!")
 
         return MiniRecord.fromPAF(line, has_cigar=True)
 

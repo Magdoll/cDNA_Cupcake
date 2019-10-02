@@ -78,28 +78,28 @@ def link_files(src_dir, out_dir='./'):
     lima_report = os.path.join(os.path.abspath(src_dir), 'tasks', 'barcoding.tasks.lima-0', 'lima_output.lima.report')
 
     if os.path.exists(mapped_fastq):
-        print >> sys.stderr, "Detecting IsoSeq1 task directories..."
+        print("Detecting IsoSeq1 task directories...", file=sys.stderr)
         os.symlink(mapped_fastq, os.path.join(out_dir, 'mapped.fastq'))
         os.symlink(mapped_gff, os.path.join(out_dir, 'mapped.gff'))
         os.symlink(read_stat, os.path.join(out_dir, 'mapped.read_stat.txt'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '1'
     elif os.path.exists(mapped_fastq2):
-        print >> sys.stderr, "Detecting IsoSeq2 task directories..."
+        print("Detecting IsoSeq2 task directories...", file=sys.stderr)
         os.symlink(mapped_fastq2, os.path.join(out_dir, 'mapped.fastq'))
         os.symlink(mapped_gff2, os.path.join(out_dir, 'mapped.gff'))
         os.symlink(read_stat2, os.path.join(out_dir, 'mapped.read_stat.txt'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '2'
     elif os.path.exists(mapped_fastq3):
-        print >> sys.stderr, "Detecting IsoSeq3 task directories..."
+        print("Detecting IsoSeq3 task directories...", file=sys.stderr)
         os.symlink(mapped_fastq3, os.path.join(out_dir, 'mapped.fastq'))
         os.symlink(mapped_gff3, os.path.join(out_dir, 'mapped.gff'))
         os.symlink(read_stat3, os.path.join(out_dir, 'mapped.read_stat.txt'))
         make_classify_csv_from_lima_report(lima_report, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '3'
     else:
-        print >> sys.stderr, "Cannot find HQ FASTQ in job directory! Does not look like Iso-Seq1, 2, or 3 jobs!"
+        print("Cannot find HQ FASTQ in job directory! Does not look like Iso-Seq1, 2, or 3 jobs!", file=sys.stderr)
         sys.exit(-1)
     return out_dir, 'mapped.fastq', 'mapped.read_stat.txt', 'classify_report.csv', isoseq_version
 
@@ -161,9 +161,9 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
         assert os.path.exists(classify_csv)
 
     # info: dict of hq_isoform --> primer --> FL count
-    print >> sys.stderr, "Reading {0}....".format(classify_csv)
+    print("Reading {0}....".format(classify_csv), file=sys.stderr)
     primer_list, classify_info = read_classify_csv(classify_csv)
-    print >> sys.stderr, "Reading {0}....".format(read_stat)
+    print("Reading {0}....".format(read_stat), file=sys.stderr)
     info = read_read_stat(read_stat, classify_info)
 
     primer_list = list(primer_list)
@@ -173,24 +173,24 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
     if primer_names is None:
         primer_names = tmp_primer_names
     else:
-        for k,v in tmp_primer_names.iteritems():
+        for k,v in tmp_primer_names.items():
             if k not in primer_names:
                 primer_names[k] = v
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join(primer_names.values())))
-    print >> sys.stderr, "Reading {0}....".format(mapped_fastq)
+    f.write("id,{0}\n".format(",".join(list(primer_names.values()))))
+    print("Reading {0}....".format(mapped_fastq), file=sys.stderr)
     for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
         m = mapped_id_rex.match(r.id)  # expected ID: PB.X.Y|xxxx.....
         if m is None:
-            raise Exception, "Expected ID format PB.X.Y but found {0}!".format(r.id)
+            raise Exception("Expected ID format PB.X.Y but found {0}!".format(r.id))
         pbid = m.group(1)
         f.write(pbid)
         for p in primer_names:
             f.write(",{0}".format(info[pbid][p]))
         f.write("\n")
     f.close()
-    print >> sys.stderr, "Count file written to {0}.".format(f.name)
+    print("Count file written to {0}.".format(f.name), file=sys.stderr)
 
 
 if __name__ == "__main__":

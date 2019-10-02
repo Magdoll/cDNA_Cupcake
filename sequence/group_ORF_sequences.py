@@ -41,7 +41,7 @@ def dedup_ORFs(faa_filename, output_prefix, is_pbid):
         if is_pbid:
             m = rex_pbid.match(seq_dict[s][0])  # we will just take the first member and use the PB.X.Y
             if m is None:
-                print >> sys.stderr, "WARNING: seqid {0} is not in PB.X.Y format!".format(seq_dict[s][0])
+                print("WARNING: seqid {0} is not in PB.X.Y format!".format(seq_dict[s][0]), file=sys.stderr)
             else:
                 pb_x = m.group(1)   # ex: PB.10
                 pbid_counter[pb_x] += 1
@@ -54,7 +54,7 @@ def dedup_ORFs(faa_filename, output_prefix, is_pbid):
     f1.close()
     f2.close()
 
-    print >> sys.stderr, "Output written to: {0},{1}".format(f1.name, f2.name)
+    print("Output written to: {0},{1}".format(f1.name, f2.name), file=sys.stderr)
 
 
 if __name__ == "__main__":

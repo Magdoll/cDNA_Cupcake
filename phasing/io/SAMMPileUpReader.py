@@ -111,7 +111,7 @@ class MPileUpRecord(object):
                 self.counts["+"+self.readBase[start:end]] += 1
                 i = end
             else:
-                raise Exception, "Unknown {0} in readBase!".format(b)
+                raise Exception("Unknown {0} in readBase!".format(b))
 
         assert self.cov == sanity_counter or (self.readBase=='*' and self.cov==0)
         # set nCov which is cov provided by non-indel non-skipped bases
@@ -130,7 +130,7 @@ class MPileUpReader(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         cur = self.f.tell()
         line = self.f.readline()
         if self.f.tell() == cur:
@@ -162,7 +162,7 @@ class MPileUpReader(object):
                                  baseQuals='',
                                  alnQuals='')
         else:
-            raise Exception, "Expected to have 7 cols in mpileup record \
-            but saw only {0}, abort! Line was: {1}".format(len(raw), line)
+            raise Exception("Expected to have 7 cols in mpileup record \
+            but saw only {0}, abort! Line was: {1}".format(len(raw), line))
 
 

@@ -4,7 +4,7 @@ __author__ = 'etseng@pacb.com'
 import pdb
 import os, sys
 import itertools
-from cPickle import *
+from pickle import *
 from collections import defaultdict, namedtuple
 
 from Bio import SeqIO
@@ -55,7 +55,7 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
     id_to_rep = {}
     for line in open(group_filename):
         pb_id, members = line.strip().split('\t')
-        print >> sys.stderr, "Picking representative sequence for", pb_id
+        print("Picking representative sequence for", pb_id, file=sys.stderr)
         best_id = None
         best_seq = None
         best_qual = None
@@ -94,7 +94,7 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
                 coords[r.qID] += "+{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
                 record_storage[pb_id].append(r)
 
-    for pb_id, records in record_storage.iteritems():
+    for pb_id, records in record_storage.items():
         for i,r in enumerate(records):
             isoform_index = i + 1
             f_gff.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{pi}\"; transcript_id \"{pi}.{j}\";\n".format(\
@@ -157,8 +157,8 @@ def is_fusion_compatible(r1, r2, max_fusion_point_dist, max_exon_end_dist, allow
                 else: dist = abs(r1.sEnd - r2.sEnd)
                 return dist <= max_fusion_point_dist
             else:
-                raise Exception, "Not possible case for multi-exon transcript and " + \
-                        "single-exon transcript to be exact!"
+                raise Exception("Not possible case for multi-exon transcript and " + \
+                        "single-exon transcript to be exact!")
         else: # multi-exon case, must be OK
             return True
     elif type == 'super' or type == 'subset':
@@ -224,7 +224,7 @@ def iter_gmap_sam_for_fusion(gmap_sam_filename, fusion_candidates, transfrag_len
 
     for r in iter:
         if len(records) >= 1 and (r.sID==records[-1].sID and r.sStart < records[-1].sStart):
-            print >> sys.stderr, "SAM file is NOT sorted. ABORT!"
+            print("SAM file is NOT sorted. ABORT!", file=sys.stderr)
             sys.exit(-1)
         if len(records) >= 1 and (r.sID != records[0].sID or r.sStart > records[-1].sEnd):
             yield(sep_by_strand(records))
@@ -259,7 +259,7 @@ def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05,
         else:
             d[r.qID].append(TmpRec(qCov=r.qCoverage, qLen=r.qLen, qStart=r.qLen-r.qEnd, qEnd=r.qLen-r.qStart, sStart=r.sStart, sEnd=r.sEnd, iden=r.identity))
     fusion_candidates = []
-    for k, data in d.iteritems():
+    for k, data in d.items():
 #        if k.startswith('i3_c68723/f6p549'): pdb.set_trace()
         if len(data) > 1 and \
             all(a.iden>=.95 for a in data) and \
@@ -294,7 +294,7 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
 
     # step (2). merge the fusion exons
     for recs in iter_gmap_sam_for_fusion(sam_filename, fusion_candidates, bs.transfrag_len_dict):
-        for v in recs.itervalues():
+        for v in recs.values():
             if len(v) > 0:
                 o = merge_fusion_exons(v, max_fusion_point_dist=100, max_exon_end_dist=0, allow_extra_5_exons=allow_extra_5_exons)
                 for group in o:
@@ -308,10 +308,10 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
 #    f_bad = f_good
     gene_index = 1
     already_seen = set()
-    for qid,indices in compressed_records_pointer_dict.iteritems():
+    for qid,indices in compressed_records_pointer_dict.items():
         combo = tuple(indices)
         if combo in already_seen:
-            print "combo seen:", combo
+            print("combo seen:", combo)
             #raw_input("")
             continue
         already_seen.add(combo)
@@ -365,13 +365,13 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
         output_filename = output_prefix + '.rep.fa'
     pick_rep(fa_or_fq_filename, sam_filename, gff_filename, group_filename, output_filename, is_fq=is_fq, pick_least_err_instead=False)
 
-    print >> sys.stderr, "{0} fusion candidates identified.".format(count)
-    print >> sys.stderr, "Output written to: {0}.gff, {0}.group.txt, {1}".format(output_prefix, output_filename)
+    print("{0} fusion candidates identified.".format(count), file=sys.stderr)
+    print("Output written to: {0}.gff, {0}.group.txt, {1}".format(output_prefix, output_filename), file=sys.stderr)
 
     # (optional) step 5. get count information
     if cluster_report_csv is not None:
         get_abundance_post_collapse(output_prefix, cluster_report_csv, output_prefix)
-        print >> sys.stderr, "Count information written to: {0}.abundance.txt".format(output_prefix)
+        print("Count information written to: {0}.abundance.txt".format(output_prefix), file=sys.stderr)
 
 
 if __name__ == "__main__":

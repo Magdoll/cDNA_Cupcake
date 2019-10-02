@@ -27,9 +27,9 @@ class SimpleBEDReader:
         self.f = open(filename)
 
         if start_base!=0 and start_base!=1:
-            raise Exception, "start_base can only be 0 or 1!"
+            raise Exception("start_base can only be 0 or 1!")
         if end_base!=0 and end_base!=1:
-            raise Exception, "end_base can only be 0 or 1!"
+            raise Exception("end_base can only be 0 or 1!")
 
         self.start_base = start_base
         self.end_base = end_base
@@ -37,7 +37,7 @@ class SimpleBEDReader:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         return self.read()
 
     def read(self):
@@ -75,9 +75,9 @@ class LazyBEDPointReader(SimpleBEDReader):
         self.f = open(filename)
 
         if start_base!=0 and start_base!=1:
-            raise Exception, "start_base can only be 0 or 1!"
+            raise Exception("start_base can only be 0 or 1!")
         if end_base!=0 and end_base!=1:
-            raise Exception, "end_base can only be 0 or 1!"
+            raise Exception("end_base can only be 0 or 1!")
 
         self.start_base = start_base
         self.end_base = end_base
@@ -100,7 +100,7 @@ class LazyBEDPointReader(SimpleBEDReader):
             if i not in self.pos_d[chrom]:
                 self.pos_d[chrom][i] = cur
                 if debug:
-                    print >> sys.stdout, "**** Hashing {0}:{1}....".format(chrom, start)
+                    print("**** Hashing {0}:{1}....".format(chrom, start), file=sys.stdout)
 
     def get_pos(self, chrom, pos):
         if chrom not in self.pos_d: return 'NA'

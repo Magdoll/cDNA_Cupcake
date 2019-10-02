@@ -17,18 +17,18 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
             total += c
     
     counts = []
-    for k,v in count_d.iteritems():
+    for k,v in count_d.items():
         counts += [k]*v
     
     return total, counts
 
 def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
-    sizes = range(0, total+1, step)
-    print "min fl count:", min_fl_count
-    print "size", "min", "max", "mean", "sd"
+    sizes = list(range(0, total+1, step))
+    print("min fl count:", min_fl_count)
+    print("size", "min", "max", "mean", "sd")
     for s in sizes:
         tmp = []
-        for i in xrange(iter):
+        for i in range(iter):
             tally = defaultdict(lambda: 0)
             for k in random.sample(counts, s):
                 tally[k] += 1
@@ -36,7 +36,7 @@ def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
         #tmp = [len(set(random.sample(counts, s))) for i in xrange(iter)]
         _mean = sum(tmp)*1./len(tmp)
         _std = math.sqrt(sum((x-_mean)**2 for x in tmp)*1./len(tmp))
-        print s, min(tmp), max(tmp), _mean, _std
+        print(s, min(tmp), max(tmp), _mean, _std)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

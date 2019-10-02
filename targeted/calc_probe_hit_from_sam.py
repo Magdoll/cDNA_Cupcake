@@ -4,15 +4,16 @@ __author__ = 'etseng@pacb.com'
 import os, sys
 from bx.intervals import IntervalTree, Interval
 from Bio import SeqIO
+from csv import DictWriter
 
 try:
     import BED
 except ImportError:
-    print >> sys.stderr, "Cannot find BED.py! Please make sure you have cDNA_Cupcake/sequence in $PYTHONPATH."
+    print("Cannot find BED.py! Please make sure you have cDNA_Cupcake/sequence in $PYTHONPATH.", file=sys.stderr)
 try:
     import BioReaders
 except ImportError:
-    print >> sys.stderr, "Cannot find BioReaders.py! Please make sure you have cDNA_Cupcake/sequence in $PYTHONPATH."
+    print("Cannot find BioReaders.py! Please make sure you have cDNA_Cupcake/sequence in $PYTHONPATH.", file=sys.stderr)
 
 
 def get_probe_hit(tree, gene_info, r):
@@ -61,12 +62,22 @@ def calc_ontarget_rate(tree, gene_info, input_fasta, sam_filename, output_filena
         f = sys.stdout
     else:
         f = open(output_filename, 'w')
-    f.write("read_id\tread_len\tis_fl\tnum_probe\tnum_base_overlap\tloci\tgenes\n")
+
+    FIELDS = ['read_id', 'read_len', 'num_probe', 'num_base_overlap', 'loci', 'genes']
+    writer = DictWriter(f, FIELDS, delimiter='\t')
+    writer.writeheader()
+
     reader = BioReaders.GMAPSAMReader(sam_filename, True,query_len_dict=query_len_dict)
     for r in reader:
         if r.sID=='*': continue
         num_probe,base_hit,genes_seen=get_probe_hit(tree, gene_info, r)
-        f.write("{0}\t{1}\tY\t{2}\t{3}\t{4}:{5}-{6}\t{7}\n".format(r.qID,r.qLen,num_probe,base_hit,r.sID,r.sStart,r.sEnd,",".join(genes_seen)))
+        rec = {'read_id': r.qID,
+               'read_len': r.qLen,
+               'num_probe': num_probe,
+               'num_base_overlap': base_hit,
+               'loci': "{0}:{1}-{2}".format(r.sID,r.sStart,r.sEnd),
+               'genes': ",".join(genes_seen)}
+        writer.writerow(rec)
 
     f.close()
 

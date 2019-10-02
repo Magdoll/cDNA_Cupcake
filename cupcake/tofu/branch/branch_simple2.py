@@ -80,12 +80,12 @@ class BranchSimple:
         try:
             records = [next(quality_alignments)]
         except StopIteration:
-            print >> sys.stderr, "No valid records from {0}!".format(gmap_sam_filename)
+            print("No valid records from {0}!".format(gmap_sam_filename), file=sys.stderr)
             return
         # go through remainder of alignments and group by subject ID
         for r in quality_alignments:
             if r.sID == records[0].sID and r.sStart < records[-1].sStart:
-                print >> sys.stderr, "SAM file is NOT sorted. ABORT!"
+                print("SAM file is NOT sorted. ABORT!", file=sys.stderr)
                 sys.exit(-1)
             if r.sID != records[0].sID or r.sStart > max(x.sEnd for x in records):
                 yield sep_by_strand(records)
@@ -289,7 +289,7 @@ class BranchSimple:
         result_merged = list(result)
         iterative_merge_transcripts(result_merged, node_d, allow_extra_5_exons, self.max_5_diff, self.max_3_diff)
 
-        print >> sys.stderr, "merged {0} down to {1} transcripts".format(len(result), len(result_merged))
+        print("merged {0} down to {1} transcripts".format(len(result), len(result_merged)), file=sys.stderr)
 
         self.isoform_index = starting_isoform_index
         # make the exon value --> interval dictionary
@@ -309,7 +309,7 @@ class BranchSimple:
 
             i = 0
             j = 0
-            for j in xrange(1, len(segments)):
+            for j in range(1, len(segments)):
                 if segments[j].start != segments[j-1].end:
                     f_out.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{p}.{i}\"; transcript_id \"{p}.{i}.{j}\";\n".format(\
                     chr=self.chrom, s=segments[i].start+1, e=segments[j-1].end, p=gene_prefix,i=self.cuff_index, j=self.isoform_index, strand=self.strand))
@@ -371,7 +371,7 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5, max_5_diff, max_3_diff):
     n2 = len(l2)
 
     #  not ok if this is at the 3' end and does not share the last exon; if 5' end, ok to miss exons as long as rest agrees
-    for i in xrange(n1):
+    for i in range(n1):
         if l1[i] == l2[0]: break
         elif i > 0 and (strand=='-' and node_d[l1[i-1]].end!=node_d[l1[i]].start): return False, None # 3' end disagree
         elif i > 0 and (strand=='+' and not merge5 and node_d[l1[i-1]].end!=node_d[l1[i]].start): return False, None # 5' end disagree, in other words m1 has an extra 5' exon that m2 does not have and merge5 is no allowed
@@ -387,7 +387,7 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5, max_5_diff, max_3_diff):
         return False, None
 
     #pdb.set_trace()
-    for j in xrange(i, min(n1, n2+i)):
+    for j in range(i, min(n1, n2+i)):
         # matching l1[j] with l2[j-i]
         if l1[j] != l2[j-i]: # they must not match
             return False, None
@@ -396,7 +396,7 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5, max_5_diff, max_3_diff):
     if j == n1-1: # check that the remaining of l2 are adjacent
         if j-i == n2-1:
             return True, m1
-        for k in xrange(j-i+1, n2):
+        for k in range(j-i+1, n2):
             # case 1: this is the 3' end, check that there are no additional 3' exons
             #         AND that the 3' exon for l2 is not more than <max_3_diff> bp longer
             if (strand=='+' and (node_d[l2[k-1]].end!=node_d[l2[k]].start or node_d[l2[k]].end-node_d[l2[j-i]].end>max_3_diff)): return False, None
@@ -405,14 +405,14 @@ def compare_exon_matrix(m1, m2, node_d, strand, merge5, max_5_diff, max_3_diff):
         m1[0, l2[j-i+1]:] = m1[0, l2[j-i+1]:] + m2[0, l2[j-i+1]:]
         return True, m1
     elif j-i == n2-1: # we've reached end of l2, there's more l1
-        for k in xrange(j+1, n1):
+        for k in range(j+1, n1):
             # case 1, but for m1
             if (strand=='+' and (node_d[l1[k-1]].end!=node_d[l1[k]].start or node_d[l1[k]].end-node_d[l1[j]].end>max_3_diff)): return False, None
             # case 2, but for m1
             if (strand=='-' and (not merge5) and (node_d[l1[k-1]].end!=node_d[l1[k]].start or node_d[l1[k]].end-node_d[l1[j]].end>max_5_diff)): return False, None
         return True, m1
 
-    raise Exception, "Should not happen"
+    raise Exception("Should not happen")
 
 
 def trim_exon_left_to_right(m1, m2, node_d, max_distance):
@@ -434,13 +434,13 @@ def trim_exon_left_to_right(m1, m2, node_d, max_distance):
 
     # find l1[i] == l2[0]
     # meanwhile, REJECT if either (a) a junction is encountered already; (b) the distance exceeds threshold
-    for i in xrange(n1):
+    for i in range(n1):
         if l1[i] == l2[0]: break
         elif i > 0 and node_d[l1[i-1]].end!=node_d[l1[i]].start: return False, None  # condition (a)
         elif node_d[l1[i]].end - node_d[l1[0]].start > max_distance: return False, None # condition (b)
 
     # walk down l1, l2 together until first junction is met
-    for j in xrange(i, n1):
+    for j in range(i, n1):
         if j-i > n2-1: return False, None # junction not yet encountered yet no more m2 (must be one-exon only), REJECT
         # matching l1[j] with l2[j-i]
         if l1[j] != l2[j-i]: # they must not match
@@ -472,12 +472,12 @@ def exon_matching(exon_tree, ref_exon, match_extend_tolerate_left, match_extend_
     # check that all matches are adjacent (no splicing! this just one integral exon)
     if (not intervals_adjacent) or c_branch.intervals_all_adjacent(matches):
         # check if the ends differ a little, if so, extend to min/max
-        for i in xrange(len(matches)):
+        for i in range(len(matches)):
             d_start = abs(matches[i].start - ref_exon.start)
             #print "matching {0} to {1}".format(matches[i].start, ref_exon.start)
             #pdb.set_trace()
             if d_start <= match_extend_tolerate_left: # now find the furthest end that satisfies the results
-                for j in xrange(len(matches)-1, i-1, -1):
+                for j in range(len(matches)-1, i-1, -1):
                     if abs(matches[j].end - ref_exon.end) <= match_extend_tolerate_right:
                         return matches[i:(j+1)]
         return None

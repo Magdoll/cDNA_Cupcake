@@ -35,13 +35,13 @@ def read_flnc_fastq(flnc_filename):
     flnc_fastq_d = LazyFastqReader(flnc_filename)
     rich_zmws = set()
 
-    for k in flnc_fastq_d.keys():
+    for k in list(flnc_fastq_d.keys()):
         m = rex_flnc.match(k)
         if m is None:
             m = rex_flnc2.match(k)
             if m is None:
                 m = rex_flnc3.match(k)
-                if m is None: raise Exception, "Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(k)
+                if m is None: raise Exception("Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(k))
         zmw = m.group(1)
         flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
         rich_zmws.add(zmw)
@@ -60,21 +60,21 @@ def read_read_stat(stat_filename, rich_zmws):
     poor_zmws_not_in_rich = set()
     reader = DictReader(open(stat_filename),delimiter='\t')
     if any(x not in reader.fieldnames for x in required_fields):
-        raise Exception, "Expected fields `pbid`, `is_fl`, and `stat` in {0} but only saw: {1}".format(\
-            stat_filename, reader.fieldnames)
+        raise Exception("Expected fields `pbid`, `is_fl`, and `stat` in {0} but only saw: {1}".format(\
+            stat_filename, reader.fieldnames))
 
     for r in reader:
        if r['is_fl']=='Y' and r['stat']=='unique':
            m = rex_pbid.match(r['pbid'])
            if m is None:
-               raise Exception, "Expected PBID format PB.X.Y but saw {0}".format(r['pbid'])
+               raise Exception("Expected PBID format PB.X.Y but saw {0}".format(r['pbid']))
            locus = m.group(1) # ex: PB.1
            m = rex_flnc.match(r['id'])
            if m is None:
                m = rex_flnc2.match(r['id'])
                if m is None:
                    m = rex_flnc3.match(r['id'])
-                   if m is None: raise Exception, "Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(r['id'])
+                   if m is None: raise Exception("Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(r['id']))
            zmw = m.group(1)
            if zmw in rich_zmws:
                tally_by_loci[locus].append((r['pbid'], zmw))
@@ -97,7 +97,7 @@ def read_GFF(gff_filename, logf):
 
     for r in collapseGFFReader(gff_filename):
         m = rex_pbid.match(r.seqid)
-        if m is None: raise Exception, "Expected PBID format PB.X.Y but saw {0}".format(r.seqid)
+        if m is None: raise Exception("Expected PBID format PB.X.Y but saw {0}".format(r.seqid))
         locus = m.group(1) # ex: PB.1
         if locus not in tmp:
             tmp[locus] = [r]
@@ -110,7 +110,7 @@ def read_GFF(gff_filename, logf):
 
 
     # now figure out the exonic regions for each gene PB.X
-    for locus, records in tmp.iteritems():
+    for locus, records in tmp.items():
         c = ClusterTree(0, 0)
         for r in records:
             for e in r.ref_exons:
@@ -143,43 +143,43 @@ def make_fake_genome(genome_d, gff_info, locus, output_prefix, output_name):
     with open(output_prefix+'.mapping.txt', 'w') as f:
         i = 0
         for s,e in regions:
-            for j in xrange(s,e):
+            for j in range(s,e):
                 f.write("{0},{1},{2}\n".format(i, chrom, j))
                 i += 1
 
     with open(output_prefix+'.pbids.txt', 'w') as f:
         f.write("\n".join(gff_info[locus].isoforms)+'\n')
 
-    print >> sys.stderr, "Output written to {0}.fasta, {0}.mapping.txt, {0}.pbids.txt.".format(output_prefix)
+    print("Output written to {0}.fasta, {0}.mapping.txt, {0}.pbids.txt.".format(output_prefix), file=sys.stderr)
 
 
 def select_loci_to_phase(args, genome_dict):
 
     logf = open('warning.logs', 'w')
-    print >> sys.stderr, "Reading FLNC file..."
+    print("Reading FLNC file...", file=sys.stderr)
     flnc_fastq_d, rich_zmws = read_flnc_fastq(args.flnc_filename)
 
-    print >> sys.stderr, "Reading read_stat...."
+    print("Reading read_stat....", file=sys.stderr)
     tally_by_loci, poor_zmws_not_in_rich = read_read_stat(args.stat_filename, rich_zmws)
 
-    print >> sys.stderr, "Reading GFF file...."
+    print("Reading GFF file....", file=sys.stderr)
     gff_info = read_GFF(args.gff_filename, logf)
 
     # find all gene loci that has at least X FLNC coverage
-    cand_loci = filter(lambda k: len(tally_by_loci[k]) >= args.coverage, tally_by_loci)
-    print >> sys.stderr, "Total {0} loci read. {1} has >= {2} coverage.".format(\
-        len(tally_by_loci), len(cand_loci), args.coverage)
+    cand_loci = [k for k in tally_by_loci if len(tally_by_loci[k]) >= args.coverage]
+    print("Total {0} loci read. {1} has >= {2} coverage.".format(\
+        len(tally_by_loci), len(cand_loci), args.coverage), file=sys.stderr)
     for locus in cand_loci:
         if locus not in gff_info:
             logf.write("WARNING: {0} skipped because not in GFF info (probably filtered out later).\n".format(\
                 locus))
             continue
 
-        print >> sys.stderr, "making", locus
+        print("making", locus, file=sys.stderr)
         d2 = os.path.join("by_loci/{0}_size{1}".format(locus, len(tally_by_loci[locus])))
         os.makedirs(d2)
 
-        chrom_len = dict((k, len(v)) for k,v in genome_dict.iteritems())
+        chrom_len = dict((k, len(v)) for k,v in genome_dict.items())
 
         with open(os.path.join(d2, 'config'), 'w') as f:
             ref_start = max(0, gff_info[locus].regions[0][0])   # ref start must be >= 0
@@ -226,32 +226,32 @@ def getargs():
     return parser
 
 if __name__ == "__main__":
-    print >> sys.stderr, "Reading genome..."
+    print("Reading genome...", file=sys.stderr)
     parser = getargs()
 
     args = parser.parse_args()
 
     if os.path.exists("by_loci"):
-        print >> sys.stderr, "Directory by_loci/ already exists. Delete before running!"
+        print("Directory by_loci/ already exists. Delete before running!", file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.genome_fasta):
-        print >> sys.stderr, "Cannot find genome FASTA {0}. Abort!".format(args.genome_fasta)
+        print("Cannot find genome FASTA {0}. Abort!".format(args.genome_fasta), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.flnc_filename):
-        print >> sys.stderr, "Cannot find FLNC file {0}. Abort!".format(args.flnc_filename)
+        print("Cannot find FLNC file {0}. Abort!".format(args.flnc_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.gff_filename):
-        print >> sys.stderr, "Cannot find GFF file {0}. Abort!".format(args.gff_filename)
+        print("Cannot find GFF file {0}. Abort!".format(args.gff_filename), file=sys.stderr)
         sys.exit(-1)
 
     if not os.path.exists(args.stat_filename):
-        print >> sys.stderr, "Cannot find Stat file {0}. Abort!".format(args.stat_filename)
+        print("Cannot find Stat file {0}. Abort!".format(args.stat_filename), file=sys.stderr)
         sys.exit(-1)
 
-    print >> sys.stderr, "Reading genome fasta {0}....".format(args.genome_fasta)
+    print("Reading genome fasta {0}....".format(args.genome_fasta), file=sys.stderr)
     genome_d = SeqIO.to_dict(SeqIO.parse(open(args.genome_fasta),'fasta'))
 
     select_loci_to_phase(args, genome_d)

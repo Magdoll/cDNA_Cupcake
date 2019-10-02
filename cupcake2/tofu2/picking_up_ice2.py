@@ -2,7 +2,7 @@ __author__ = 'etseng@pacb.com'
 
 #!/usr/bin/env python
 import os, sys
-from cPickle import *
+from pickle import *
 from pbcore.io.FastqIO import FastqReader, FastqWriter
 
 import cupcake2.ice2.IceIterative2 as ice
@@ -36,7 +36,7 @@ def ensure_pickle_goodness(pickle_filename, root_dir, flnc_filename, fasta_files
     """
     a = load(open(pickle_filename))
     if a['fasta_filename'] != os.path.abspath(os.path.join(root_dir,'current.fasta')):
-        raise Exception, "The pickle file {0} indicates that current.fasta is not being used. ICE2 likely did not finish to a point that could be picked up.".format(pickle_filename)
+        raise Exception("The pickle file {0} indicates that current.fasta is not being used. ICE2 likely did not finish to a point that could be picked up.".format(pickle_filename))
 
     a['newids'] = check_n_fix_newids(a)
 
@@ -46,23 +46,23 @@ def ensure_pickle_goodness(pickle_filename, root_dir, flnc_filename, fasta_files
 
     # add the paired fasta/fastq files
     if len(fasta_files_to_add) != len(fastq_files_to_add):
-        raise Exception, "Number of fasta and fastq files to add is not equal!"
+        raise Exception("Number of fasta and fastq files to add is not equal!")
 
     # sanity check that the fasta/fastq files to add exist
     for file in fastq_files_to_add.split(','):
         if not os.path.exists(file):
-            raise Exception, "{0} does not exist!".format(file)
+            raise Exception("{0} does not exist!".format(file))
     for file in fasta_files_to_add.split(','):
         if not os.path.exists(file):
-            raise Exception, "{0} does not exist!".format(file)
+            raise Exception("{0} does not exist!".format(file))
 
     if 'root_dir' not in a:
-        print >> sys.stderr, "Pickle {0} missing some key-values. Fixing it.".format(pickle_filename)
+        print("Pickle {0} missing some key-values. Fixing it.".format(pickle_filename), file=sys.stderr)
         a['root_dir'] = root_dir
         a['qv_prob_threshold'] = 0.03
         with open(pickle_filename + '.fixed', 'w') as f:
             dump(a, f)
-        print >> sys.stderr, "Fixed pickle written to {0}.fixed".format(pickle_filename)
+        print("Fixed pickle written to {0}.fixed".format(pickle_filename), file=sys.stderr)
         return a, pickle_filename + '.fixed'
     else:
         # newid might have been fixed, STILL output pickle writing anyway
@@ -74,11 +74,11 @@ def check_n_fix_newids(icec_obj):
     newids = icec_obj['newids']
 
     if len(newids) == 0:
-        print >> sys.stderr, "newids is empty (probably a finalized run). set it."
-        for k, v in icec_obj['d'].iteritems():
+        print("newids is empty (probably a finalized run). set it.", file=sys.stderr)
+        for k, v in icec_obj['d'].items():
             if len(v) != 1:
                 newids.add(k)
-        print >> sys.stderr, "added {0} seqs to newids".format(len(newids))
+        print("added {0} seqs to newids".format(len(newids)), file=sys.stderr)
     return newids
 
 
@@ -97,7 +97,7 @@ def make_current_fastq(icec_obj, flnc_filename, root_dir):
 def pickup_icec_job(pickle_filename, root_dir, flnc_filename, flnc_fq, fasta_files_to_add, fastq_files_to_add):
     icec_obj, icec_pickle_filename = ensure_pickle_goodness(pickle_filename, root_dir, flnc_filename, fasta_files_to_add, fastq_files_to_add)
     make_current_fastq(icec_obj, flnc_fq, root_dir)
-    print >> sys.stderr, "Reading QV information...."
+    print("Reading QV information....", file=sys.stderr)
     probqv = pm.ProbFromFastq(os.path.join(root_dir,'current.fastq'))
 
     icec = ice.IceIterative2.from_pickle(icec_pickle_filename, probqv)
@@ -111,15 +111,15 @@ def pickup_icec_job(pickle_filename, root_dir, flnc_filename, flnc_fq, fasta_fil
     icec.fasta_filenames_to_add = fasta_files_to_add.split(',')
     icec.fastq_filenames_to_add = fastq_files_to_add.split(',')
 
-    todo = icec.uc.keys()
-    print >> sys.stderr, "Re-run gcon for proper refs...."
+    todo = list(icec.uc.keys())
+    print("Re-run gcon for proper refs....", file=sys.stderr)
     icec.run_gcon_parallel(todo)
-    print >> sys.stderr, "Re-calculating cluster prob, just to be safe...."
+    print("Re-calculating cluster prob, just to be safe....", file=sys.stderr)
     icec.calc_cluster_prob(True)
-    print >> sys.stderr, "Sanity checking now...."
+    print("Sanity checking now....", file=sys.stderr)
     icec.sanity_check_uc_refs()
     icec.ensure_probQV_newid_consistency()
-    print >> sys.stderr, "Sanity check done. Resuming ICE job."
+    print("Sanity check done. Resuming ICE job.", file=sys.stderr)
     icec.run()
 
 

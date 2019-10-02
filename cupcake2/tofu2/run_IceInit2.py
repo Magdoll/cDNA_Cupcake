@@ -1,6 +1,6 @@
 __author__ = 'etseng@pacb.com'
 
-from cPickle import dump
+from pickle import dump
 
 from cupcake2.ice2.IceInit2 import IceInit2
 from cupcake2.tofu2.ClusterOptions2 import IceOptions2, SgeOptions2

@@ -6,13 +6,13 @@ import subprocess
 
 def run_cmd(cmd):
     if subprocess.check_call(cmd, shell=True)!=0:
-        raise Exception, "Error cmd:", cmd
+        raise Exception("Error cmd:").with_traceback(cmd)
 
 
 input = sys.argv[1] # ex: test.sam
 
 if not input.endswith('.sam'):
-    print >> sys.stderr, "Only accepts files ending in .sam. Abort!"
+    print("Only accepts files ending in .sam. Abort!", file=sys.stderr)
     sys.exit(-1)
 
 prefix = input[:-4]

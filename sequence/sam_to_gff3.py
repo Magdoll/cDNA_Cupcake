@@ -37,7 +37,7 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
     :return SeqRecord ready to be written as GFF3
     """
     if r.sID == '*':
-        print >> sys.stderr, "Skipping {0} because unmapped.".format(r.qID)
+        print("Skipping {0} because unmapped.".format(r.qID), file=sys.stderr)
         return None
     t_len = sum(e.end-e.start for e in r.segments)
     seq = Seq('A'*t_len)  # DO NOT CARE since sequence is not written in GFF3
@@ -77,7 +77,7 @@ def convert_sam_to_gff3(sam_filename, output_gff3, source, q_dict=None):
     qid_index_dict = Counter()
     with open(output_gff3, 'w') as f:
         recs = [convert_sam_rec_to_gff3_rec(r0, source,qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
-        BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
+        BCBio_GFF.write([x for x in recs if x is not None], f)
 
 def main():
     from argparse import ArgumentParser
@@ -90,7 +90,7 @@ def main():
     args = parser.parse_args()
 
     if not args.sam_filename.endswith('.sam'):
-        print >> sys.stderr, "Only accepts files ending in .sam. Abort!"
+        print("Only accepts files ending in .sam. Abort!", file=sys.stderr)
         sys.exit(-1)
 
     prefix = args.sam_filename[:-4]
@@ -102,10 +102,10 @@ def main():
 
     with open(output_gff3, 'w') as f:
         recs = [convert_sam_rec_to_gff3_rec(r0, args.source) for r0 in GMAPSAMReader(args.sam_filename, True, query_len_dict=q_dict)]
-        BCBio_GFF.write(filter(lambda x: x is not None, recs), f)
+        BCBio_GFF.write([x for x in recs if x is not None], f)
 
 
-    print >> sys.stderr, "Output written to {0}.".format(output_gff3)
+    print("Output written to {0}.".format(output_gff3), file=sys.stderr)
 
 if __name__ == "__main__":
     main()

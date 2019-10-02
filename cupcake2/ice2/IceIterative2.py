@@ -3,7 +3,7 @@ __author__ = 'etseng@pacb.com'
 """
 Class ICEIterative for iterative clustering and error correction.
 """
-import cPickle
+import pickle
 import json
 import math
 import os
@@ -184,7 +184,7 @@ class IceIterative2(IceFiles2):
         if refs is None:
             self.add_log("Creating a reference dict using run_gcon_parallel.",
                          level=logging.INFO)
-            self.run_gcon_parallel(self.uc.keys())
+            self.run_gcon_parallel(list(self.uc.keys()))
         else:
             self.add_log("loading references from a reference dict directly.",
                          level=logging.INFO)
@@ -274,7 +274,7 @@ class IceIterative2(IceFiles2):
     def init_d(self):
         """Initialize the probability dictionary: seqid --> {}
         """
-        for dummy_cid, v in self.uc.iteritems():
+        for dummy_cid, v in self.uc.items():
             for qid in v:
                 self.d[qid] = {}
 
@@ -294,7 +294,7 @@ class IceIterative2(IceFiles2):
         """Load an instance of IceIterative from a pickle file."""
         a = None
         with open(pickle_filename) as h:
-            a = cPickle.load(h)
+            a = pickle.load(h)
         all_fasta_filename = a['all_fasta_filename']
         # need to make current.fasta!!!
         newids = a['newids']
@@ -344,7 +344,7 @@ class IceIterative2(IceFiles2):
         >c<cid>/abundance/length
         """
         with open(fasta_filename, 'w') as f:
-            for cid, filename in self.refs.iteritems():
+            for cid, filename in self.refs.items():
                 assert cid in self.uc
                 #r = SeqIO.read(open(filename), 'fasta')
                 rs = []
@@ -385,7 +385,7 @@ class IceIterative2(IceFiles2):
             else:
                 d.update({'ice_opts': self.ice_opts,
                           'sge_opts': self.sge_opts})
-                cPickle.dump(d, f)
+                pickle.dump(d, f)
 
     def make_new_cluster(self):
         """Add a new cluster to self.uc."""
@@ -428,7 +428,7 @@ class IceIterative2(IceFiles2):
     def no_moves_possible(self):
         """
         Check self.uc, return True if no moves are possible, False otherwise."""
-        for cid, members in self.uc.iteritems():
+        for cid, members in self.uc.items():
             if len(members) <= 2:  # match singleton criterion here
                 for x in members:
                     if len(self.d[x]) > 1:
@@ -437,7 +437,7 @@ class IceIterative2(IceFiles2):
                 for x in members:
                     if cid not in self.d[x]:
                         return False
-                    if self.d[x][cid] != max(self.d[x].itervalues()):
+                    if self.d[x][cid] != max(self.d[x].values()):
                         return False
         return True
 
@@ -507,7 +507,7 @@ class IceIterative2(IceFiles2):
             # ToDo: distribute jobs evenly (must look ahead at cluster sizes)
             numgconJobs = int(math.ceil(count_jobs / float(chunk_size)))
             #(count_jobs/chunk_size) + (count_jobs%chunk_size>0)
-            for job_i in xrange(numgconJobs):
+            for job_i in range(numgconJobs):
                 f = open(self.gconJobFN(self.iterNum, job_i), 'w')
                 # e.g. "scripts/$iterNum/gcon_job_{0}.sh"
                 f.write("#!/bin/bash\n")
@@ -547,7 +547,7 @@ class IceIterative2(IceFiles2):
             self.add_log("use_sge = {0}".format(self.use_sge))
             if self.use_sge is True:
                 job_list = ''
-                for job_i, f in job_sh_dict.iteritems():
+                for job_i, f in job_sh_dict.items():
                     f.close()
                     jid = "ice_iterative_{unique_id}_{it}_{j}".format(
                         unique_id=self.sge_opts.unique_id,
@@ -582,7 +582,7 @@ class IceIterative2(IceFiles2):
                       "{donesh}".format(donesh=real_upath(self.gconDoneJobFN(self.iterNum)))
                 self.qsub_cmd_and_log(cmd)
             else:
-                for job_i, f in job_sh_dict.iteritems():
+                for job_i, f in job_sh_dict.items():
                     f.close()
 
                 msg = "Adding {n} ice_pbdagcon jobs to thread pool.".\
@@ -696,14 +696,14 @@ class IceIterative2(IceFiles2):
         """
         self.removed_qids = set()
         self.changes = set()
-        cids = self.uc.keys()
+        cids = list(self.uc.keys())
 
         for cid in cids:
             n = len(self.uc[cid])
             for qid in self.uc[cid]:
                 if (n < min_cluster_size or
                         cid not in self.d[qid] or
-                        self.d[qid][cid] != max(self.d[qid].itervalues())):
+                        self.d[qid][cid] != max(self.d[qid].values())):
                     msg = "Final round: remove {0} (from {1}) because {2}".\
                         format(qid, cid, self.d[qid])
                     self.add_log(msg)
@@ -745,7 +745,7 @@ class IceIterative2(IceFiles2):
             if len(self.d[sid]) == 0:  # no match to existing cluster
                 orphan.append(sid)
             else:
-                best = self.d[sid].items()
+                best = list(self.d[sid].items())
                 best.sort(key=lambda x: x[1], reverse=True)
                 cid = best[0][0]
                 r = self.seq_dict[sid]
@@ -769,7 +769,7 @@ class IceIterative2(IceFiles2):
             i = 0
         else:
             i = max(self.uc) + 1
-        for k, v in uc.iteritems():
+        for k, v in uc.items():
             cid = k + i
             self.uc[cid] = v
             self.changes.add(cid)
@@ -790,7 +790,7 @@ class IceIterative2(IceFiles2):
                 for qid in set(self.uc[cid]).difference(self.newids):
                     self.d[qid] = {cid: -0}
         else:
-            for cid, qids in self.uc.iteritems():
+            for cid, qids in self.uc.items():
                 if len(self.uc[cid]) < self.rerun_gcon_size:
                     continue  # no way it's needed
                 for qid in set(qids).difference(self.newids):
@@ -1039,13 +1039,13 @@ class IceIterative2(IceFiles2):
         orphan = []
         qid_to_cid = {}  # qID --> cluster index
         # make cluster_dict
-        for i, cluster in self.uc.iteritems():
+        for i, cluster in self.uc.items():
             for qID in cluster:
                 qid_to_cid[qID] = i
 
         for qID in self.d:
             old_i = qid_to_cid[qID]
-            x = self.d[qID].items()
+            x = list(self.d[qID].items())
             if len(x) == 0:
                 # no best! move it to the orphan group
                 self.remove_from_cluster(qID, old_i)
@@ -1140,7 +1140,7 @@ class IceIterative2(IceFiles2):
         # later will append them to the latest fasta file so they
         # still can move around
         active_ids = set()
-        for cid, ids in self.uc.iteritems():
+        for cid, ids in self.uc.items():
             if len(ids) >= self.rerun_gcon_size:
                 # if not already removed
                 msg = "Removing from probQV all members of {0}".format(cid)
@@ -1254,14 +1254,14 @@ class IceIterative2(IceFiles2):
         """Check cluster sanity."""
         _membership = {}
         try:
-            for cid, members in self.uc.iteritems():
+            for cid, members in self.uc.items():
                 assert len(members) > 0
                 for x in members:
                     assert x not in _membership
                     _membership[x] = cid
                 if (cid not in self.refs or
                         len(self.refs[cid]) == 0):
-                    print "ref for {0} does not exist!".format(cid)
+                    print("ref for {0} does not exist!".format(cid))
                 elif check_dir_lambda(cid):  # or random.random() <= .01:
                     self.add_log("Randomly checking {cid}".format(cid=cid))
                     seqids = set(line.strip()[1:].split()[0] for line in
@@ -1269,8 +1269,8 @@ class IceIterative2(IceFiles2):
                     assert seqids == set(members)
                     assert op.exists(self.refs[cid])
             for x in self.d:
-                if len(self.d[x]) == 1 and self.d[x].values()[0] == 0:
-                    cid = self.d[x].keys()[0]
+                if len(self.d[x]) == 1 and list(self.d[x].values())[0] == 0:
+                    cid = list(self.d[x].keys())[0]
                     assert len(self.uc[cid]) >= self.rerun_gcon_size
         except AssertionError:
             errMsg = "Cluster sanity check failed!"
@@ -1303,7 +1303,7 @@ class IceIterative2(IceFiles2):
             # out_prefix='output/tmp',
             self.add_new_batch(f, fq)
             self.check_cluster_sanity()
-            for dummy_i in xrange(1):
+            for dummy_i in range(1):
                 self.run_for_new_batch()
                 sizes.append(len(self.uc))
             self.write_pickle(self.uptoPickleFN(f))
@@ -1321,7 +1321,7 @@ class IceIterative2(IceFiles2):
         pickle_filename = pickleFN
         # this is just back up for debugging purpose
         self.add_log("run_post_ICE_merging called with max_iter={0}, using_blasr={1}".format(max_iter, use_blasr))
-        for _i in xrange(max_iter):
+        for _i in range(max_iter):
             self.add_log("Before merging: {0} clusters".format(len(self.uc)))
             self.add_log("Running post-iterative-merging iteration {n}".
                          format(n=_i), level=logging.INFO)
@@ -1520,7 +1520,7 @@ class IceIterative2(IceFiles2):
 
         self.newids = set() # set to empty so freeze_d() will do the right thing
 
-        for _i in xrange(3):
+        for _i in range(3):
             self.add_log("run_for_new_batch iteration {n}".format(n=_i),
                          level=logging.INFO)
             self.run_for_new_batch()

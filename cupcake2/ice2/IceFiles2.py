@@ -176,6 +176,6 @@ class IceFiles2(IceFiles):
         rex = re.compile("b(\d+)_c(\d+)")
         m = rex.match(cid)
         if m is None:
-            raise Exception, "{0} is not a valid b<bin>_c<cid> format!".format(cid)
+            raise Exception("{0} is not a valid b<bin>_c<cid> format!".format(cid))
         _cid = int(m.group(2))
         return op.join(self.tmp_dir, str(_cid/10000), cid)

@@ -13,8 +13,8 @@ def sanity_check_gcon2():
 
     errmsg = gcon2_py + " is not installed."
     if subprocess.check_call(cmd, shell=True)!=0:
-        print >> sys.stderr, "ERROR RUNNING CMD:", cmd
-        print >> sys.stderr, errmsg
+        print("ERROR RUNNING CMD:", cmd, file=sys.stderr)
+        print(errmsg, file=sys.stderr)
         sys.exit(-1)
     return gcon2_py
 
@@ -214,7 +214,7 @@ def eval_sam_alignment(record, debug=False):
         elif _type in ('H', 'S'):
             q_index += _count
         else:
-            raise Exception, "Unrecognized cigar character {0}!".format(_type)
+            raise Exception("Unrecognized cigar character {0}!".format(_type))
 
 
     return ece

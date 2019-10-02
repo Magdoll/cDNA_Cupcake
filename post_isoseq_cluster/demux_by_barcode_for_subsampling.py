@@ -32,13 +32,13 @@ def demux_for_subsamping(class_filename, fasta_filename, demux_count_file, outpu
     reader = DictReader(open(demux_count_file),delimiter=',')
     for r in reader:
         if r['id'] not in d:
-            print >> sys.stderr, "WARNING: skipping {0} because not in {1}".format(\
-                r['id'], class_filename)
+            print("WARNING: skipping {0} because not in {1}".format(\
+                r['id'], class_filename), file=sys.stderr)
             continue
 
         m = pbid_rex.match(r['id'])
         if m is None:
-            print >> sys.stderr, "ERROR: unable to parse ID {0}. Expected format PB.X.Y!".format(r['id'])
+            print("ERROR: unable to parse ID {0}. Expected format PB.X.Y!".format(r['id']), file=sys.stderr)
             sys.exit(-1)
 
         newrec = {'pbid': r['id'], 'pbgene': m.group(1), 'length': lens[r['id']]}
@@ -53,14 +53,14 @@ def demux_for_subsamping(class_filename, fasta_filename, demux_count_file, outpu
         newrec['refisoform'] = trans
 
         group_counts = Counter()
-        for b, g in out_group_dict.iteritems():
+        for b, g in out_group_dict.items():
             group_counts[g] += int(r[b])
 
         for g in out_groups:
             newrec['fl_count'] = group_counts[g]
             writers[g].writerow(newrec)
 
-    for h in handles.itervalues():
+    for h in handles.values():
         h.close()
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ Steps:
 import os.path as op
 import logging
 import shutil
-import cPickle
+import pickle
 import json
 from math import ceil
 from collections import defaultdict
@@ -132,7 +132,7 @@ class IceArrow2(IceFiles2):
         """
         n = BaseConstants.HQ_ARROW_CIDS_PER_FILE
         m = len(cids)
-        return [(i,min(m,i+n)) for i in xrange(0, m, n)]
+        return [(i,min(m,i+n)) for i in range(0, m, n)]
 
     def reconstruct_ref_fa_for_clusters_in_bin(self, cids, refs):
         """
@@ -148,11 +148,11 @@ class IceArrow2(IceFiles2):
             raise IOError("Final consensus FASTA file {f}".format(
                 f=self.final_consensus_fa) + "does not exist.")
 
-        print "Reconstructing g consensus files for clusters {0}, {1} in {2}".format(cids[0], cids[-1], self.tmp_dir)
+        print("Reconstructing g consensus files for clusters {0}, {1} in {2}".format(cids[0], cids[-1], self.tmp_dir))
         self.add_log("Reconstructing g consensus files for clusters {0}, {1} in {2}".format(cids[0], cids[-1], self.tmp_dir))
 
         final_consensus_d = FastaRandomReader(self.final_consensus_fa)
-        for ref_id in final_consensus_d.d.keys():
+        for ref_id in list(final_consensus_d.d.keys()):
             # Liz: this is no longer valid for the Ice2 cids #cid = int(ref_id.split('/')[0].replace('c', ''))
             cid = ref_id
             if cid in cids:
@@ -352,9 +352,9 @@ class IceArrow2(IceFiles2):
         total_jobs = min(len(arrow_sh_scripts), self.sge_opts.max_sge_jobs if self.sge_opts.use_sge else 1)
         script_per_job = len(arrow_sh_scripts) / total_jobs + (1 if len(arrow_sh_scripts)%total_jobs > 0 else 0)
 
-        for i in xrange(total_jobs):
+        for i in range(total_jobs):
             with open(self.arrow_submission_file(i, total_jobs), 'w') as f:
-                for j in xrange(i*script_per_job, min(len(arrow_sh_scripts), (i+1)*script_per_job)):
+                for j in range(i*script_per_job, min(len(arrow_sh_scripts), (i+1)*script_per_job)):
                     f.write("bash {0}\n".format(arrow_sh_scripts[j]))
                 files.append(f.name)
 
@@ -465,7 +465,7 @@ class IceArrow2(IceFiles2):
 
         #print "create_arrows_bins_no_submit calld for {0}-{1}, {2} files".format(cids_todo[0],cids_todo[-1], len(cids_todo))
         # Reconstruct refs if not exist.
-        cids_missing_refs = filter(lambda x: not op.exists(refs[x]), cids_todo)
+        cids_missing_refs = [x for x in cids_todo if not op.exists(refs[x])]
         #print "{0} missing refs".format(len(cids_missing_refs))
         if len(cids_missing_refs) > 0:
             self.reconstruct_ref_fa_for_clusters_in_bin(cids=cids_missing_refs, refs=refs)
@@ -488,7 +488,7 @@ class IceArrow2(IceFiles2):
                 if fn.endswith(".json"):
                     return json.loads(f.read())
                 else:
-                    return cPickle.load(f)
+                    return pickle.load(f)
         self.add_log("Loading uc from {f}.".format(f=self.final_pickle_fn))
         a = _load_pickle(self.final_pickle_fn)
         uc = a['uc']

@@ -17,19 +17,19 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
             total += c
     
     counts = []
-    for k,v in count_d.iteritems():
+    for k,v in count_d.items():
         counts += [k]*v
     
     return total, counts
 
 from collections import defaultdict
 def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
-    sizes = range(100, total+1, step)
-    print "min fl count:", min_fl_count
-    print "size", "category", "min", "max", "mean", "sd"
+    sizes = list(range(100, total+1, step))
+    print("min fl count:", min_fl_count)
+    print("size", "category", "min", "max", "mean", "sd")
     for s in sizes:
         tmp = defaultdict(lambda: []) # category --> N iterations
-        for i in xrange(iter):
+        for i in range(iter):
             tally = defaultdict(lambda: 0)
             uniq_id_count = defaultdict(lambda: set()) # category -> unique ids
             for k in random.sample(counts, s):
@@ -43,7 +43,7 @@ def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
         for _cat in tmp:
             _mean = sum(tmp[_cat])*1./len(tmp[_cat])
             _std = math.sqrt(sum((x-_mean)**2 for x in tmp[_cat])*1./len(tmp[_cat]))
-            print s, _cat, min(tmp[_cat]), max(tmp[_cat]), _mean, _std
+            print(s, _cat, min(tmp[_cat]), max(tmp[_cat]), _mean, _std)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

@@ -12,11 +12,11 @@ def generate_batch_cmds_for_polishing(chunk_prefix, nfl_filename, subread_xml, c
     # verify that the pickles exists as well
     for fasta in fastas:
         pickle = fasta[:-len('.consensus.fasta')] + '.pickle'
-        print "looking for", pickle
+        print("looking for", pickle)
         assert os.path.exists(pickle)
         dirname = fasta[:-len('.consensus.fasta')]
         if os.path.exists(dirname):
-            print >> sys.stderr, "Directory {0} already exist! Abort!".format(dirname)
+            print("Directory {0} already exist! Abort!".format(dirname), file=sys.stderr)
             sys.exit(-1)
 
     cmd_f = open(cmd_filename, 'w')

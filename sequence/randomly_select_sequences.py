@@ -19,8 +19,8 @@ def sep_by_primer(file, output_prefix, sample_size):
 
     n = len(ids)
     if sample_size > n:
-        print >> sys.stderr, "WARNING: {0} contains only {1} sequences but subsample size at {2}! Simply output whole file.".format(\
-            file, n, sample_size)
+        print("WARNING: {0} contains only {1} sequences but subsample size at {2}! Simply output whole file.".format(\
+            file, n, sample_size), file=sys.stderr)
 
     chosen_ids = random.sample(ids, min(n, sample_size))
 
@@ -29,7 +29,7 @@ def sep_by_primer(file, output_prefix, sample_size):
             if r.id in chosen_ids:
                 SeqIO.write(r, f, filetype)
 
-        print >> sys.stderr, "Randomly selected sequences written to {0}.".format(f.name)
+        print("Randomly selected sequences written to {0}.".format(f.name), file=sys.stderr)
 
 
 if __name__ == "__main__":

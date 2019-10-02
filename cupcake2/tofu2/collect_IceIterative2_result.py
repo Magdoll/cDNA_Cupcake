@@ -13,7 +13,7 @@ Modify the cids from "c0" --> "pC<bin>_c0"
 import os, sys, glob
 import fileinput
 from Bio import SeqIO
-from cPickle import *
+from pickle import *
 from cupcake.io.SeqReaders import LazyFastaReader
 
 
@@ -38,11 +38,11 @@ def collect_ice2_dirs(dirs_to_collect, output_fasta, output_pickle, new_cid_form
             # in case where the refs no longer exist (user deletion, just SKIP)
             new_ref = os.path.join(os.path.dirname(refs[cid]), 'collected_ref.fasta')
             if os.path.exists(refs[cid]):
-                r  = SeqIO.parse(open(refs[cid]), 'fasta').next()
+                r  = next(SeqIO.parse(open(refs[cid]), 'fasta'))
                 with open(new_ref, 'w') as f:
                     f.write(">{newcid}\n{seq}\n".format(newcid=newcid, seq=r.seq))
             else:
-                print >> sys.stderr, "WARNING: ref file {0} no longer exists. new ref files not written.".format(refs[cid])
+                print("WARNING: ref file {0} no longer exists. new ref files not written.".format(refs[cid]), file=sys.stderr)
             combined_refs[newcid] = new_ref
 
         for line in fileinput.input(fasta_file):
@@ -104,10 +104,10 @@ def chunk_collected_fasta_pickle(combined_fasta, combined_uc, combined_refs, num
     uc = combined_uc
     refs = combined_refs
 
-    keys = uc.keys()
+    keys = list(uc.keys())
     keys.sort()
     n = len(keys) / num_chunks + 1
-    for i in xrange(num_chunks):
+    for i in range(num_chunks):
         _from = i * n
         _to = min(len(keys), (i+1) * n)
         with open("{0}.chunk{1}.consensus.fasta".format(chunk_prefix, i), 'w') as f:

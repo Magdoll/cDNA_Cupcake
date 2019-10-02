@@ -51,7 +51,7 @@ import os.path as op
 import re
 import time
 import logging
-from cPickle import dump
+from pickle import dump
 import json
 
 from pbcommand.models import FileTypes
@@ -346,7 +346,7 @@ class IcePartialOne2(object):
         # or after collection
         # ex: b<bin>_c<cid>
 
-        r = SeqIO.parse(open(self.ref_fasta),'fasta').next()
+        r = next(SeqIO.parse(open(self.ref_fasta),'fasta'))
         sID_starts_with_c = automatic_determine_if_sID_starts_with_c(r.id)
         logging.info("sID_starts_with_c: {0}.".format(sID_starts_with_c))
 
@@ -384,7 +384,7 @@ class IcePartialOne2(object):
                                   tmp_dir=self.tmp_dir,
                                   sID_starts_with_c=sID_starts_with_c)
         else:
-            raise Exception, "Aligner choice {0} not recognized!".format(self.ice_opts.aligner_choice)
+            raise Exception("Aligner choice {0} not recognized!".format(self.ice_opts.aligner_choice))
         return 0
 
 

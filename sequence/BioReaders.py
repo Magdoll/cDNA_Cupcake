@@ -5,19 +5,8 @@ Duplicated here for tofu installation. This one is called via cupcake.io.BioRead
 
 import re, sys
 from collections import namedtuple
-from exceptions import StopIteration
 
 Interval = namedtuple('Interval', ['start', 'end'])
-       
-def iter_cigar_string(cigar_string):
-    num = cigar_string[0]
-    for s in cigar_string[1:]:
-        if str.isalpha(s):
-            yield int(num), s
-            num = ''
-        else:
-            num += s
-            
                                  
 class SimpleSAMReader:
     """
@@ -40,7 +29,7 @@ class SimpleSAMReader:
     def __iter__(self):
         return self
     
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration
@@ -90,6 +79,8 @@ class SimpleSAMRecord:
         N - skipped (which means splice junction)
         S - soft clipped
         H - hard clipped (not shown in SEQ)
+        = - read match
+        X - read mismatch
 
         ex: 50M43N3D
 
@@ -100,11 +91,11 @@ class SimpleSAMRecord:
         """
         cur_end = start
         q_aln_len = 0
-        #for num, type in SimpleSAMRecord.cigar_rex.findall(cigar):
-        for num, type in iter_cigar_string(cigar):
+        for (num, type) in re.findall('(\d+)(\S)', cigar):
+            num = int(num)
             if type == 'I':
                 q_aln_len += num
-            elif type == 'M':
+            elif type in ('M', '=', 'X'):
                 cur_end += num
                 q_aln_len += num
             elif type == 'D':
@@ -149,7 +140,7 @@ class SAMReader:
     def __iter__(self):
         return self
         
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration
@@ -279,6 +270,8 @@ class SAMRecord:
         N - skipped (which means splice junction)
         S - soft clipped
         H - hard clipped (not shown in SEQ)
+        = - read match
+        X - read mismatch
 
         ex: 50M43N3D
 
@@ -294,14 +287,15 @@ class SAMRecord:
         self.num_del = 0
         self.num_ins = 0
         self.num_mat_or_sub = 0
-        for num, type in iter_cigar_string(cigar):
+        for (num, type) in re.findall('(\d+)(\S)', cigar):
+            num = int(num)
             if type == 'H' or type == 'S':
                 if first_thing:
                     self.qStart += num
             elif type == 'I':
                 q_aln_len += num
                 self.num_ins += num
-            elif type == 'M':
+            elif type in ('M','=','X'):
                 cur_end += num
                 q_aln_len += num
                 self.num_mat_or_sub += num
@@ -312,6 +306,8 @@ class SAMRecord:
                 segments.append(Interval(cur_start, cur_end))
                 cur_start = cur_end + num
                 cur_end = cur_start
+            else:
+                raise Exception("Unrecognized cigar character {0}!".format(type))
             first_thing = False
         if cur_start != cur_end:
             segments.append(Interval(cur_start, cur_end))
@@ -370,7 +366,7 @@ class SAMRecord:
             
 
 class BLASRSAMReader(SAMReader):
-    def next(self):
+    def __next__(self):
         line = self.f.readline().strip()
         if len(line) == 0:
             raise StopIteration
@@ -416,7 +412,7 @@ class BLASRSAMRecord(SAMRecord):
             elif x.startswith('XS:i:'): # must be PacBio's SAM, need to update qStart
                 qs = int(x[5:]) - 1 # XS is 1-based
                 if qs > 0:
-                    print "qStart:", self.qStart
+                    print("qStart:", self.qStart)
                     assert self.qStart == 0
                     self.qStart = qs
                     self.qEnd += qs
@@ -446,7 +442,7 @@ class BLASRSAMRecord(SAMRecord):
             
             
 class GMAPSAMReader(SAMReader):
-    def next(self):
+    def __next__(self):
         while True:
             line = self.f.readline().strip()
             if len(line) == 0:
@@ -518,6 +514,6 @@ class GMAPSAMRecord(SAMRecord):
                     except KeyError:
                         self.qLen = query_len_dict[self.qID]
                 else:
-                    raise Exception, "Unable to find qID {0} in the input fasta/fastq!".format(self.qID)
+                    raise Exception("Unable to find qID {0} in the input fasta/fastq!".format(self.qID))
             self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen    
                 

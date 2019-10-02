@@ -27,11 +27,11 @@ def simulate_phasing_data(seq0, err_sub, ploidity, copies, write_fastq=False):
     :param copies: list of how many copies to simulate per allele   ex: [10, 10] means 10 for each allele
     """
     n = len(seq0)
-    var_positions = random.sample(range(n), n/SNP_INTERVAL)
+    var_positions = random.sample(list(range(n)), n/SNP_INTERVAL)
     var_positions.sort()
 
     new_seqs = [seq0]
-    for ignore in xrange(ploidity-1):
+    for ignore in range(ploidity-1):
         num_tries = 0
         while num_tries < 10:  # after 10 attemps, give up simulating enough divergent seqs (this happens for very short haps)
             num_tries += 1
@@ -57,7 +57,7 @@ def simulate_phasing_data(seq0, err_sub, ploidity, copies, write_fastq=False):
     f.close()
     # 2. write fake.mapping.txt
     f = open('fake.mapping.txt', 'w')
-    for i in xrange(n): f.write("{0},fake,{0}\n".format(i))
+    for i in range(n): f.write("{0},fake,{0}\n".format(i))
     f.close()
 
     # simulate CCS reads
@@ -70,7 +70,7 @@ def simulate_phasing_data(seq0, err_sub, ploidity, copies, write_fastq=False):
     profile = [err_sub, err_sub, err_sub, 1.]
     for i,copy in enumerate(copies):
         if i >= len(new_seqs): break
-        for c in xrange(copy):
+        for c in range(copy):
             cur_seq, cur_qv = sim_seq(new_seqs[i], profile)
             cur_id = "hap{0}_{1}".format(i+1, c)
             if write_fastq:
@@ -107,12 +107,12 @@ if __name__ == "__main__":
 
     assert 2 <= args.ploidity <= 6
 
-    copies = map(int, args.copies.split(','))
+    copies = list(map(int, args.copies.split(',')))
     assert len(copies) == args.ploidity
 
     for r in SeqIO.parse(open(args.fasta_filename), 'fasta'):
         d2 = r.id.split('|')[0]
-        print >> sys.stderr, "making {0}".format(d2)
+        print("making {0}".format(d2), file=sys.stderr)
         os.makedirs(d2)
         os.chdir(d2)
         simulate_phasing_data(r.seq.tostring(), args.err_sub, args.ploidity, copies, args.write_fastq)

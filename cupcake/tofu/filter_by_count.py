@@ -56,12 +56,12 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
         else:
             count_header += line
     d = dict((r['pbid'], r) for r in DictReader(f, delimiter='\t'))
-    for k,v in d.iteritems():
-        print k,v
+    for k,v in d.items():
+        print(k,v)
     f.close()
 
     # group_max_count_p NOT used for now
-    good = filter(lambda x: int(d[x]['count_fl']) >= min_count and (dun_use_group_count or group_max_count_fl[x] >= min_count), d)
+    good = [x for x in d if int(d[x]['count_fl']) >= min_count and (dun_use_group_count or group_max_count_fl[x] >= min_count)]
 
     # write output GFF
     f = open(output_prefix + '.gff', 'w')
@@ -88,9 +88,9 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
         writer.writerow(r)
     f.close()
 
-    print >> sys.stderr, "Output written to:", output_prefix + '.gff'
-    print >> sys.stderr, "Output written to:", output_prefix + '.rep.fq'
-    print >> sys.stderr, "Output written to:", output_prefix + '.abundance.txt'
+    print("Output written to:", output_prefix + '.gff', file=sys.stderr)
+    print("Output written to:", output_prefix + '.rep.fq', file=sys.stderr)
+    print("Output written to:", output_prefix + '.abundance.txt', file=sys.stderr)
 
 
 

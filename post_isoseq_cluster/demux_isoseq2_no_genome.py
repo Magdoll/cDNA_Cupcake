@@ -53,13 +53,13 @@ def link_files(src_dir, out_dir='./'):
     primer_csv = os.path.join(os.path.abspath(src_dir), 'tasks', 'pbcoretools.tasks.gather_csv-1', 'file.csv')
 
     if os.path.exists(hq_fastq):
-        print >> sys.stderr, "Detecting IsoSeq1 task directories..."
+        print("Detecting IsoSeq1 task directories...", file=sys.stderr)
         os.symlink(hq_fastq, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
         isoseq_version = '1'
     else:
-        print >> sys.stderr, "Detecting IsoSeq2 task directories..."
+        print("Detecting IsoSeq2 task directories...", file=sys.stderr)
         os.symlink(hq_fastq2, os.path.join(out_dir, 'hq_isoforms.fastq'))
         os.symlink(cluster_csv2, os.path.join(out_dir, 'cluster_report.csv'))
         os.symlink(primer_csv, os.path.join(out_dir, 'classify_report.csv'))
@@ -107,14 +107,14 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
         assert os.path.exists(classify_csv)
 
     # info: dict of hq_isoform --> primer --> FL count
-    print >> sys.stderr, "Reading {0}....".format(classify_csv)
+    print("Reading {0}....".format(classify_csv), file=sys.stderr)
     max_primer, classify_csv = read_classify_csv(classify_csv)
-    print >> sys.stderr, "Reading {0}....".format(cluster_csv)
+    print("Reading {0}....".format(cluster_csv), file=sys.stderr)
     info = read_cluster_csv(cluster_csv, classify_csv, isoseq_version)
 
     f = open(output_filename, 'w')
-    f.write("id,{0}\n".format(",".join("primer"+str(i) for i in xrange(max_primer+1))))
-    print >> sys.stderr, "Reading {0}....".format(hq_fastq)
+    f.write("id,{0}\n".format(",".join("primer"+str(i) for i in range(max_primer+1))))
+    print("Reading {0}....".format(hq_fastq), file=sys.stderr)
     for r in SeqIO.parse(open(hq_fastq), 'fastq'):
         if isoseq_version=='1':
             m = hq1_id_rex.match(r.id)
@@ -122,15 +122,15 @@ def main(job_dir=None, hq_fastq=None, cluster_csv=None, classify_csv=None, outpu
             m = hq2_id_rex.match(r.id)
 
         if m is None:
-            print >> sys.stderr, "Unexpected HQ isoform ID format: {0}! Abort.".format(r.id)
+            print("Unexpected HQ isoform ID format: {0}! Abort.".format(r.id), file=sys.stderr)
             sys.exit(-1)
         cid = m.group(1)
         f.write(r.id)
-        for p in xrange(max_primer+1):
+        for p in range(max_primer+1):
             f.write(",{0}".format(info[cid][p]))
         f.write("\n")
     f.close()
-    print >> sys.stderr, "Count file written to {0}.".format(f.name)
+    print("Count file written to {0}.".format(f.name), file=sys.stderr)
 
 
 if __name__ == "__main__":
