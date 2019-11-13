@@ -46,7 +46,7 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
                 fastq_filename, gff_filename))
 
 
-def chain_fusion_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, fastq_filename=None):
+def chain_fusion_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='count_fl', fuzzy_junction=0, fastq_filename=None):
 
     for d in dirs.values():
         sample_sanity_check(os.path.join(d, group_filename),\
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("config_file")
-    parser.add_argument("field_to_use", choices=['norm_fl', 'norm_nfl', 'norm_nfl_amb', 'count_fl', 'count_nfl', 'count_nfl_amb'], default='norm_nfl', help="Which count field to use for chained sample (default: norm_nfl)")
+    parser.add_argument("field_to_use", choices=['norm_fl', 'count_fl'], default='count_fl', help="Which count field to use for chained sample (default: count_fl)")
     parser.add_argument("--fuzzy_junction", default=5, type=int, help="Max allowed distance in junction to be considered identical (default: 5 bp)")
     #parser.add_argument("--allow_5merge", action="store_true", default=False, help="Allow 5' truncated transcripts (default: off)" )
     args = parser.parse_args()

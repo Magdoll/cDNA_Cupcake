@@ -27,7 +27,7 @@ def summarize_GMAP_sam(input_fa_or_fq, input_sam):
         f.write("{0}\t{1}\t{2:.4f}\t{3:.4f}\t{4}\n".format(r.qID, d[r.qID], r.qCoverage, r.identity, uni))
     f.close()
 
-    print("Output written to:", f.name, file=sys.stderr)
+    print("Output written to: {0}".format(f.name), file=sys.stderr)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

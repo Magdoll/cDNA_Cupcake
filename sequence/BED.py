@@ -11,11 +11,13 @@ https://genome.ucsc.edu/FAQ/FAQformat#format1
 SimpleBED --- chr, 0-based start, 1-based end
 """
 class SimpleBED(object):
-    def __init__(self, chrom, start, end, name=None):
+    def __init__(self, chrom, start, end, name=None, score=None, strand=None):
         self.chr = chrom
         self.start = start
         self.end = end
         self.name = name
+        self.score = score
+        self.strand = strand
 
     def __str__(self):
         return "{c}:{s}-{e} (name:{n})".format(c=self.chr, s=self.start, e=self.end, n=self.name)
@@ -47,9 +49,10 @@ class SimpleBEDReader:
             raise StopIteration
 
         raw = line.strip().split('\t')
-        if len(raw) >= 4: name=raw[3]
-        else: name=None
-        return SimpleBED(raw[0], int(raw[1])-self.start_base, int(raw[2])+(1-self.end_base), name)
+        if len(raw) >= 6: strand,name=raw[5],raw[3]
+        elif len(raw) >= 4: strand,name=None,raw[3]
+        else: strand,name=None,None
+        return SimpleBED(raw[0], int(raw[1])-self.start_base, int(raw[2])+(1-self.end_base), name, None, strand)
 
 
 class SimpleBEDWriter:

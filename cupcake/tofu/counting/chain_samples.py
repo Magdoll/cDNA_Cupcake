@@ -113,7 +113,7 @@ def read_count_info(count_filename, dirs, field_to_use):
             count_info[name, r['pbid']] = r[field_to_use]
     return count_header, count_info
 
-def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='norm_nfl', fuzzy_junction=0, allow_5merge=False, fastq_filename=None):
+def chain_samples(dirs, names, group_filename, gff_filename, count_filename, field_to_use='count_fl', fuzzy_junction=0, allow_5merge=False, max_3_diff=100, fastq_filename=None):
 
     for d in dirs.values():
         sample_sanity_check(os.path.join(d, group_filename),\
@@ -138,6 +138,7 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
         o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, \
                         internal_fuzzy_max_dist=fuzzy_junction, \
                         allow_5merge=allow_5merge, \
+                        max_3_diff=max_3_diff, \
                         fastq_filename='tmp_'+name+'.rep.fq' if fastq_filename is not None else None)
         #chain.append(name) # no need, already done above
     else: # everything is new, start fresh
@@ -147,6 +148,7 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
         o = sp.MegaPBTree(os.path.join(d, gff_filename), os.path.join(d, group_filename), \
                         self_prefix=name, internal_fuzzy_max_dist=fuzzy_junction, \
                         allow_5merge=allow_5merge, \
+                        max_3_diff=max_3_diff, \
                         fastq_filename=os.path.join(d, fastq_filename) if fastq_filename is not None else None)
         start_i = 1
 
@@ -159,6 +161,7 @@ def chain_samples(dirs, names, group_filename, gff_filename, count_filename, fie
         o = sp.MegaPBTree('tmp_'+name+'.gff', 'tmp_'+name+'.group.txt', self_prefix='tmp_'+name, \
                           internal_fuzzy_max_dist=fuzzy_junction, \
                           allow_5merge=allow_5merge, \
+                          max_3_diff=max_3_diff, \
                           fastq_filename='tmp_'+name+'.rep.fq' if fastq_filename is not None else None)
         chain.append(name)
 
@@ -227,11 +230,12 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("config_file")
-    parser.add_argument("field_to_use", choices=['norm_fl', 'norm_nfl', 'norm_nfl_amb', 'count_fl', 'count_nfl', 'count_nfl_amb'], default='norm_nfl', help="Which count field to use for chained sample (default: norm_nfl)")
+    parser.add_argument("field_to_use", choices=['norm_fl', 'count_fl'], default='count_fl', help="Which count field to use for chained sample (default: count_fl)")
     parser.add_argument("--fuzzy_junction", default=5, type=int, help="Max allowed distance in junction to be considered identical (default: 5 bp)")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_5merge", default=True, help="Don't collapse shorter 5' transcripts (default: off)")
+    parser.add_argument("--max_3_diff", type=int, default=100, help="Maximum 3' difference allowed (default: 100bp)")
     args = parser.parse_args()
 
     sample_dirs, sample_names, group_filename, gff_filename, count_filename, fastq_filename = read_config(args.config_file)
-    chain_samples(sample_dirs, sample_names, group_filename, gff_filename, count_filename, args.field_to_use, args.fuzzy_junction, args.allow_5merge, fastq_filename)
+    chain_samples(sample_dirs, sample_names, group_filename, gff_filename, count_filename, args.field_to_use, args.fuzzy_junction, args.allow_5merge, args.max_3_diff, fastq_filename)
 

@@ -109,7 +109,7 @@ def read_read_stat(read_stat, classify_info):
     """
     info = defaultdict(lambda: Counter())
     for r in DictReader(open(read_stat), delimiter='\t'):
-        if r['is_fl'] == 'Y':
+        if ('is_fl' not in r) or r['is_fl'] == 'Y': # newer isoseq3 collapse version doesn't have is_fl field
             p = classify_info[r['id']]
             info[r['pbid']][p] += 1
     return dict(info)

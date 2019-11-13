@@ -28,11 +28,12 @@ class MegaPBTree(object):
     Structure for maintaining a non-redundant set of gene annotations
     Used to combine with different collapsed GFFs from different samples
     """
-    def __init__(self, gff_filename, group_filename, internal_fuzzy_max_dist=0, self_prefix=None, allow_5merge=False, fastq_filename=None):
+    def __init__(self, gff_filename, group_filename, internal_fuzzy_max_dist=0, self_prefix=None, allow_5merge=False, fastq_filename=None, max_3_diff=None):
         self.gff_filename = gff_filename
         self.group_filename = group_filename
         self.self_prefix = self_prefix
         self.internal_fuzzy_max_dist = internal_fuzzy_max_dist
+        self.max_3_diff = max_3_diff
         self.allow_5merge = allow_5merge
         self.record_d = dict((r.seqid, r) for r in GFF.collapseGFFReader(gff_filename))
         #sanity_check_seqids(self.record_d.keys()) # sanity check all IDs look like PB.1.2
@@ -88,7 +89,12 @@ class MegaPBTree(object):
             r.segments = r.ref_exons
             r2.segments = r2.ref_exons
             if compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'exact': # is a match!
-                return r2
+                if self.max_3_diff is None or \
+                        (r.strand=='+' and abs(r.end-r2.end)<=self.max_3_diff) or \
+                        (r.strand=='-' and abs(r.start-r2.start)<=-self.max_3_diff):
+                    return r2
+                else:
+                    return None
             elif self.allow_5merge: # check if the shorter one is a subset of the longer one
                 if len(r.segments) > len(r2.segments):
                     a, b = r, r2

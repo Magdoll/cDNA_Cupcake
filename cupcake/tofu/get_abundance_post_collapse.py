@@ -34,8 +34,8 @@ PBfusion.2      HQ_sample0ZPg9hS7|cb7607_c16635/f3p0/810,HQ_sample0ZPg9hS7|cb760
 
 
 import os, sys, re
-from collections import defaultdict
-from csv import DictReader
+from collections import Counter
+from csv import DictReader, DictWriter
 
 def get_roi_len(seqid):
     # before isoseq3: <movie>/<zmw>/<start>_<end>_CCS
@@ -193,56 +193,28 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
 def make_abundance_file(read_count_filename, output_filename, given_total=None, restricted_movies=None, write_header_comments=True):
     """
     If given_total is not None, use it instead of the total count based on <read_count_filename>
-    given_total should be dict of {fl, nfl, nfl_amb}
-
-    total_ids['fl'] --- number of FL, mapped or unmapped
-    total_ids['nfl'] --- number of mapped unique nFL plus unmapped nFL, but excludes mapped ambiguous nFL
-    total_ids['nfl_amb'] --- number of mapped, non-unique (ambiguous) nFL
     """
-    total_ids = {'fl': set(), 'nfl': set(), 'nfl_amb': set()}
-    tally = defaultdict(lambda: {'fl': 0, 'nfl': 0, 'nfl_amb': 0}) # pbid, could be NA --> # of FL reads mapped to it
-    amb_count = defaultdict(lambda: []) # non-fl id --> list of pbid matches
+    tally = Counter() # pbid --> FL count
 
     reader = DictReader(open(read_count_filename), delimiter='\t')
     for r in reader:
         movie = r['id'].split('/')[0]
         if restricted_movies is None or movie in restricted_movies:
-            if r['pbid'] != 'NA':
-                if r['is_fl'] == 'Y': # FL, must be uniquely mapped
-                    assert r['stat'] == 'unique'
-                    tally[r['pbid']]['fl'] += 1
-                    total_ids['fl'].add(r['id'])
-                else: # non-FL, can be ambiguously mapped
-                    if r['stat'] == 'unique':
-                        tally[r['pbid']]['nfl'] += 1
-                        total_ids['nfl'].add(r['id'])
-                    else:
-                        assert r['stat'] == 'ambiguous'
-                        amb_count[r['id']].append(r['pbid'])
-                        total_ids['nfl_amb'].add(r['id'])
-            else: # even if it is unmapped it still counts in the abundance total!
-                if r['is_fl'] == 'Y':
-                    total_ids['fl'].add(r['id'])
-                else:
-                    total_ids['nfl'].add(r['id'])
-
-
-    # put the ambiguous back in tally weighted
-    for seqid, pbids in amb_count.items():
-        weight = 1. / len(pbids)
-        for pbid in pbids:
-             tally[pbid]['nfl_amb'] += weight
+            if r['is_fl']!='Y':
+                print("sequence {0} has `is_fl` field set to `{1}`. Ignoring this read.".format(r['id'], r['is_fl']), file=sys.stderr)
+                continue
+            if r['pbid']=='NA':
+                print("sequence {0} has `pbid` field set to `{1}`. Ignoring this read.".format(r['id'], r['pbid']), file=sys.stderr)
+                continue
+            assert r['stat'] == 'unique'
+            tally[r['pbid']] += 1
 
     if given_total is not None:
-        use_total_fl = given_total['fl']
-        use_total_nfl = given_total['fl'] + given_total['nfl']
-        # ToDo: the below is NOT EXACTLY CORRECT!! Fix later!
-        use_total_nfl_amb = given_total['fl'] + given_total['nfl'] + given_total['nfl_amb']
+        use_total_fl = given_total
     else:
-        use_total_fl = len(total_ids['fl'])
-        use_total_nfl = len(total_ids['fl']) + len(total_ids['nfl'])
-        use_total_nfl_amb = len(total_ids['fl']) + len(total_ids['nfl']) + len(total_ids['nfl_amb'])
+        use_total_fl = sum(tally.values())
 
+    COUNT_FIELDS = ['pbid', 'count_fl', 'norm_fl']
     f = open(output_filename,'w')
     if write_header_comments:
         f.write("#\n")
@@ -250,26 +222,20 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
         f.write("# Field explanation\n")
         f.write("# -----------------\n")
         f.write("# count_fl: Number of associated FL reads\n")
-        f.write("# count_nfl: Number of associated FL + unique nFL reads\n")
-        f.write("# count_nfl_amb: Number of associated FL + unique nFL + weighted ambiguous nFL reads\n")
         f.write("# norm_fl: count_fl / total number of FL reads, mapped or unmapped\n")
-        f.write("# norm_nfl: count_nfl / total number of mapped unique or unmapped (FL + nFL) reads\n")
-        f.write("# norm_nfl_amb: count_nfl_amb / total number of all reads\n")
         f.write("# Total Number of FL reads: {0}\n".format(use_total_fl))
-        f.write("# Total Number of FL + unique nFL reads: {0}\n".format(use_total_nfl))
-        f.write("# Total Number of all reads: {0}\n".format(use_total_nfl_amb))
         f.write("#\n")
-    f.write("pbid\tcount_fl\tcount_nfl\tcount_nfl_amb\tnorm_fl\tnorm_nfl\tnorm_nfl_amb\n")
+
+    writer = DictWriter(f, COUNT_FIELDS, delimiter='\t')
+    writer.writeheader()
 
     keys = list(tally.keys())
     keys.sort(key=lambda x: list(map(int, x.split('.')[1:]))) # sort by PB.1, PB.2....
     for k in keys:
-        v = tally[k]
-        a = v['fl']
-        b = a + v['nfl']
-        c = b + v['nfl_amb']
-        f.write("{0}\t{1}\t{2}\t{3}\t".format(k, a, b, c))
-        f.write("{0:.4e}\t{1:.4e}\t{2:.4e}\n".format(a*1./use_total_fl, b*1./use_total_nfl, c*1./use_total_nfl_amb))
+        count_fl = tally[k]
+        norm_fl  = count_fl*1./use_total_fl
+        rec = {'pbid': k, 'count_fl': count_fl, 'norm_fl': "{0:.4e}".format(norm_fl)}
+        writer.writerow(rec)
     f.close()
 
 

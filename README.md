@@ -1,10 +1,12 @@
 # cDNA_Cupcake
 
-Last Updated: 10/02/2019
+![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
+
+Last Updated: 11/13/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 9.0.1
+Current version: 9.0.2
 
 **If you use Python 2.7, please use the branch [Py2_v8.7.x](https://github.com/Magdoll/cDNA_Cupcake/tree/Py2_v8.7.x). Note that however, the Py2 version will NOT have any new features, only bug fixes! Users are encouraged to migrate to Python 3.7 now.**
 
@@ -38,7 +40,6 @@ Please see [wiki](https://github.com/Magdoll/cDNA_Cupcake/wiki) for the latest m
 A brief list of currently listed scripts are:
 
 ### Annotation and Rarefaction
-* `parse_matchAnnot.py`: Parse matchAnnot results into summary format.
 * `make_file_for_subsampling_from_collapsed.py`: Prepare file for running subsampling (rarefaction curve).
 * `subsample.py` and `subsample_with_category.py`: Running subsamping. Results can be plotted with Excel graphics and R, etc.
 
@@ -46,15 +47,11 @@ A brief list of currently listed scripts are:
 * `get_seq_stats.py`: Summarize length distribution of a FASTA/FASTQ file.
 * `rev_comp.py`: Reverse complement a sequence from command line.
 * `fa2fq.py` and `fq2fa.py`: Convert between FASTA and FASTQ format.
-* `sort_fasta_by_len.py`: sort fasta file by length (increasing or decreasing).
 * `get_seqs_from_list.py`: extract list of sequences given a fasta file and a list of IDs.
 * `err_correct_w_genome.py`: generate fasta sequences given genom
 * `sam_to_bam.py`: quick script to run SAM to BAM conversion. Assumes `samtools` is installed.
 * `sam_to_gff3.py`: use BCBio and BioPython to convert SAM file into GFF3 format. 
-
-
-### Sequence Simulation
-* `simulate.py`: Simulate error in sequences.
+* `group_ORF_sequences.py`: group identical ORF sequences from different isoforms.
 
 ### Cupcake ToFU: supporting scripts for Iso Seq after clustering step
 * `collapse_isoforms_by_sam.py`: Collapse HQ isoform results to unique isoforms (based on genome alignment).
@@ -66,6 +63,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.10.02 updated to v9.0.2. updated collapse script series parameters to fit with isoseq3 output.
 
 2019.10.02 updated to v9.0.1. bug fix on fasta output in `dedup_FLNC_per_cluster.py`. removed pbcore dependency so Py3 fully usable for single cell scripts!
 

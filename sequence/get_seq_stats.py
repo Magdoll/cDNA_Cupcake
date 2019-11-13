@@ -30,7 +30,7 @@ def get_seq_stats(file, binwidth):
     # print by 1 kb bins
     print("Length Breakdown by kb range:")
 
-    _max = max(lens)/binwidth+1
+    _max = (max(lens)/binwidth)+1
     bin = [0]*_max
     for x in lens: bin[x/binwidth] += 1
 
