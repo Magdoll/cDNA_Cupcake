@@ -311,6 +311,7 @@ class btabBlockReader(btabReader):
         self.f.seek(cur)    
         return recs[:-1]
 
+pbid_rex = re.compile('(PB\.\d+|PBfusion\.\d+)(\.\d+){0,1}')
 class gmapRecord:
     def __init__(self, chr, coverage, identity, strand, seqid, geneid=None):
         """
@@ -325,11 +326,18 @@ class gmapRecord:
         self.identity = identity
         self.strand = strand
         self.seqid = seqid
-        self.geneid = geneid if geneid is not None else self.seqid.split('.')[0]
         self.ref_exons = []
         self.seq_exons = []
         self.cds_exons = []
         self.scores = []
+
+        # handle gene ids specially for PB.X.Y and PBfusion.X.Y
+        if geneid is not None:
+            self.geneid = geneid
+        else:
+            m = pbid_rex.match(seqid)
+            if m is not None:
+                self.geneid = m.group(1)
         
     def __str__(self):
         return """
