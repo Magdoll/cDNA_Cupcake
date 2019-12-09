@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 11/13/2019
+Last Updated: 12/09/2019
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 9.0.2
+Current version: 9.0.3
 
 **If you use Python 2.7, please use the branch [Py2_v8.7.x](https://github.com/Magdoll/cDNA_Cupcake/tree/Py2_v8.7.x). Note that however, the Py2 version will NOT have any new features, only bug fixes! Users are encouraged to migrate to Python 3.7 now.**
 
@@ -63,6 +63,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2019.12.09 updated to v9.0.3. fixed geneid display issue with PB.X.Y in GFF output for collapse.
 
 2019.10.02 updated to v9.0.2. updated collapse script series parameters to fit with isoseq3 output.
 
