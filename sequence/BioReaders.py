@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Should always be faithful duplicate of sequence/BioReaders.py
 Duplicated here for tofu installation. This one is called via cupcake.io.BioReaders.

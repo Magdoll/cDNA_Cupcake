@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__="etseng@pacb.com"
 
 import os, re, sys

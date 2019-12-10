@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Readers for STAR (spliced aligner) format reading
 """
