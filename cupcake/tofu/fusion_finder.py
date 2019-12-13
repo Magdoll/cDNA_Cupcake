@@ -1,6 +1,6 @@
+#!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
-#!/usr/bin/env python
 import pdb
 import os, sys
 import itertools

@@ -1,6 +1,6 @@
+#!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
-#!/usr/bin/env python
 import os, sys, glob, shutil
 from csv import DictReader
 from collections import defaultdict

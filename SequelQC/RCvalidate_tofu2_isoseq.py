@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__ = 'etseng@pacb.coatchAn'
 __version__ = '1.2'
 

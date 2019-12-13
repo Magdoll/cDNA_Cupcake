@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 import os, sys
 from csv import DictReader, DictWriter
 from collections import Counter, defaultdict
