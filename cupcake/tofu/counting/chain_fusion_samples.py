@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
 """
@@ -15,7 +16,6 @@ Difference with regular chaining:
 from cupcake.tofu.counting.chain_samples import read_config, read_count_info
 
 
-#!/usr/bin/env python
 import os, sys, glob, shutil
 from csv import DictReader
 from collections import defaultdict
