@@ -18,7 +18,19 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
     group_filename = input_prefix + '.group.txt'
     count_filename = input_prefix + '.abundance.txt'
     gff_filename = input_prefix + '.gff'
-    rep_filename = input_prefix + '.rep.fq'
+    rep_filenames = [(input_prefix + '.rep.fq', 'fastq'), (input_prefix + '.rep.fastq','fastq'), \
+                     (input_prefix + '.rep.fa', 'fasta'), (input_prefix + '.rep.fasta','fasta')]
+
+    rep_filename = None
+    rep_type = None
+    for x,type in rep_filenames:
+        if os.path.exists(x):
+            rep_filename = x
+            rep_type = type
+
+    if rep_filename is None:
+        print("Expected to find input fasta or fastq files {0}.rep.fa or {0}.rep.fq. Not found. Abort!".format(input_prefix), file=sys.stderr)
+        sys.exit(-1)
 
     if not dun_use_group_count:
         # read group
@@ -71,10 +83,10 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
 
 
     # write output rep.fq
-    f = open(output_prefix + '.rep.fq', 'w')
-    for r in SeqIO.parse(open(rep_filename), 'fastq'):
+    f = open(output_prefix + '.rep.' + ('fq' if rep_type=='fastq' else 'fa'), 'w')
+    for r in SeqIO.parse(open(rep_filename), rep_type):
         if r.name.split('|')[0] in good:
-           SeqIO.write(r, f, 'fastq')
+           SeqIO.write(r, f, rep_type)
     f.close()
 
     # write output to .abundance.txt
@@ -89,7 +101,7 @@ def filter_by_count(input_prefix, output_prefix, min_count, dun_use_group_count=
     f.close()
 
     print("Output written to:", output_prefix + '.gff', file=sys.stderr)
-    print("Output written to:", output_prefix + '.rep.fq', file=sys.stderr)
+    print("Output written to:", rep_filename, file=sys.stderr)
     print("Output written to:", output_prefix + '.abundance.txt', file=sys.stderr)
 
 

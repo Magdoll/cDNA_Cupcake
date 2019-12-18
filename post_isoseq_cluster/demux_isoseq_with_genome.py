@@ -55,6 +55,12 @@ from Bio import SeqIO
 
 mapped_id_rex = re.compile('(PB.\d+.\d+)')
 
+def type_fafq(fafq):
+    x = fafq.upper()
+    if x.endswith('.FA') or x.endswith('.FASTA'): return 'fasta'
+    elif x.endswith('.FQ') or x.endswith('.FASTQ'): return 'fastq'
+    else: raise Exception("Mapped fasta/fastq filename must end with .fasta or .fastq! Saw {0} instead, abort!".format(fafq))
+
 def link_files(src_dir, out_dir='./'):
     """
     :param src_dir: job directory
@@ -151,12 +157,12 @@ def make_classify_csv_from_lima_report(report_filename, output_filename):
     h.close()
 
 
-def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
+def main(job_dir=None, mapped_fafq=None, read_stat=None, classify_csv=None, output_filename=sys.stdout, primer_names=None):
     if job_dir is not None:
         out_dir_ignore, mapped_fastq, read_stat, classify_csv, isoseq_version = link_files(job_dir)
         assert isoseq_version in ('1', '2', '3')
     else:
-        assert os.path.exists(mapped_fastq)
+        assert os.path.exists(mapped_fafq)
         assert os.path.exists(read_stat)
         assert os.path.exists(classify_csv)
 
@@ -179,8 +185,8 @@ def main(job_dir=None, mapped_fastq=None, read_stat=None, classify_csv=None, out
 
     f = open(output_filename, 'w')
     f.write("id,{0}\n".format(",".join(list(primer_names.values()))))
-    print("Reading {0}....".format(mapped_fastq), file=sys.stderr)
-    for r in SeqIO.parse(open(mapped_fastq), 'fastq'):
+    print("Reading {0}....".format(mapped_fafq), file=sys.stderr)
+    for r in SeqIO.parse(open(mapped_fafq), type_fafq(mapped_fafq)):
         m = mapped_id_rex.match(r.id)  # expected ID: PB.X.Y|xxxx.....
         if m is None:
             raise Exception("Expected ID format PB.X.Y but found {0}!".format(r.id))
@@ -197,7 +203,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("")
     parser.add_argument("-j", "--job_dir", help="Job directory (if given, automatically finds required files)")
-    parser.add_argument("--mapped_fastq", help="mapped fastq (overridden by --job_dir if given)")
+    parser.add_argument("--mapped_fafq", help="mapped fasta/fastq (overridden by --job_dir if given)")
     parser.add_argument("--read_stat", help="read_stat txt (overridden by --job_dir if given)")
     parser.add_argument("--classify_csv", help="Classify report CSV (overriden by --job_dir if given)")
     parser.add_argument("--primer_names", default=None, help="Text file showing primer sample names (default: None)")
@@ -213,4 +219,4 @@ if __name__ == "__main__":
     else:
         primer_names = None
 
-    main(args.job_dir, args.mapped_fastq, args.read_stat, args.classify_csv, args.output, primer_names)
+    main(args.job_dir, args.mapped_fafq, args.read_stat, args.classify_csv, args.output, primer_names)
