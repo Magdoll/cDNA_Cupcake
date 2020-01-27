@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 12/18/2019
+Last Updated: 01.27.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 9.1.1
+Current version: 10.0.0
 
 **If you use Python 2.7, please use the branch [Py2_v8.7.x](https://github.com/Magdoll/cDNA_Cupcake/tree/Py2_v8.7.x). Note that however, the Py2 version will NOT have any new features, only bug fixes! Users are encouraged to migrate to Python 3.7 now.**
 
@@ -63,6 +63,10 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.01.27 updated to v10.0.0. `chain_samples.py` now supported multithreading via `--cpus` option, also fixed chain bugs related to 3' differences.
+
+2019.12.30 updated to v9.2.0. fixed support for running `run_preCluster.py` that is used by Cogent.
 
 2019.12.18 updated to v9.1.1. changed `bcbiogff` dependency to `bcbio-gff` in `setup.py`.
 

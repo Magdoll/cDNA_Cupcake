@@ -19,7 +19,6 @@ Output format:
 11. Mapping quality (0–255 with 255 missing unavailable)
 """
 import re
-from cupcake.io.BLASRRecord import BLASRReaderBase
 
 cigar_rex = re.compile('(\d+)(\S)')
 def parse_cigar_to_identity(cigar):
@@ -145,10 +144,29 @@ class MiniRecord:
 
 
 
-class MiniReader(BLASRReaderBase):
-    def __init__(self, fileName):
-        BLASRReaderBase.__init__(self, fileName=fileName,
-                                 className="MiniReader")
+class MiniReader(object):
+    def __init__(self, fileName, className="MiniReader"):
+        self.fileName = fileName
+        self.className = className
+        try:
+            self.infile = open(self.fileName, 'r')
+        except IOError as e:
+            errMsg = self.className + ": could not read file " + \
+                fileName + "\n" + str(e)
+            raise IOError(errMsg)
+
+    def __iter__(self):
+        raise NotImplementedError(self.className +
+                                  ".__iter__ not impelemented.")
+
+    def __enter__(self):
+        return self
+
+    def close(self):
+        self.infile.close()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     def __iter__(self):
         return self

@@ -18,7 +18,20 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
     Two files must exist: .abundance.txt and .rep.fq so we can make the length
     """
     count_filename = input_prefix + '.abundance.txt'
-    fq_filename = input_prefix + '.rep.fq'
+
+    rep_filenames = [(input_prefix + '.rep.fq', 'fastq'), (input_prefix + '.rep.fastq','fastq'), \
+                     (input_prefix + '.rep.fa', 'fasta'), (input_prefix + '.rep.fasta','fasta')]
+
+    rep_filename = None
+    rep_type = None
+    for x,type in rep_filenames:
+        if os.path.exists(x):
+            rep_filename = x
+            rep_type = type
+
+    if rep_filename is None:
+        print("Expected to find input fasta or fastq files {0}.rep.fa or {0}.rep.fq. Not found. Abort!".format(input_prefix), file=sys.stderr)
+        sys.exit(-1)
 
     if not include_single_exons:
         from cupcake.io.GFF import collapseGFFReader
@@ -31,10 +44,6 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
 
     if demux_file is None and not os.path.exists(count_filename):
         print("Cannot find {0}. Abort!".format(count_filename), file=sys.stderr)
-        sys.exit(-1)
-
-    if not os.path.exists(fq_filename):
-        print("Cannot find {0}. Abort!".format(fq_filename), file=sys.stderr)
         sys.exit(-1)
 
     if matchAnnot_parsed is not None and not os.path.exists(matchAnnot_parsed):
@@ -62,7 +71,7 @@ def make_file_for_subsample(input_prefix, output_prefix, demux_file=None, matchA
     else:
         match_dict = None
 
-    seqlen_dict = dict((r.id.split('|')[0],len(r.seq)) for r in SeqIO.parse(open(fq_filename),'fastq'))
+    seqlen_dict = dict((r.id.split('|')[0],len(r.seq)) for r in SeqIO.parse(open(rep_filename),rep_type))
 
     to_write = {}
     if demux_file is None:

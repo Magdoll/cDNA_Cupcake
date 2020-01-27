@@ -1,15 +1,18 @@
 __author__ = 'etseng@pacb.com'
 
 
-import os, sys, re
+import os, sys, re, time
+from csv import DictWriter
 from Bio import SeqIO
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from cupcake.tofu import compare_junctions
 from cupcake.io import GFF
 from bx.intervals import IntervalTree
 from bx.intervals.cluster import ClusterTree
 
 seqid_rex = re.compile('(\S+\\.\d+)\\.(\d+)')
+
+MatchRecord = namedtuple('MatchRecord', ['ref_id', 'addon_id', 'rec', 'members', 'seqrec'])
 
 def sanity_check_seqids(seqids):
     for seqid in seqids:
@@ -22,6 +25,58 @@ def get_fusion_id(seqid):
     m = seqid_rex.match(seqid)
     return m.group(1)
 
+def write_reclist_to_gff_n_info(rec_list, final_prefix, ref_name, addon_name, use_fq=False):
+    # now go through the rec list and figure out in what order we are outputting the total records
+    tree = defaultdict(lambda: {'+':ClusterTree(0,0), '-':ClusterTree(0,0)})
+    tree_keys_numeric = set()
+    tree_keys_alpha = set()
+    for i,match_rec in enumerate(rec_list):
+        tree[match_rec.rec.chr][match_rec.rec.strand].insert(match_rec.rec.start, match_rec.rec.end, i)
+
+    for chrom in tree:
+        try:
+            k = int(chrom)
+            tree_keys_numeric.add(k)
+        except ValueError:
+            tree_keys_alpha.add(chrom)
+    tree_keys = sorted(list(tree_keys_numeric)) + sorted(list(tree_keys_alpha))
+
+    f_gff = open(final_prefix+'.gff', 'w')
+    f_info = open(final_prefix+'.mega_info.txt', 'w')
+    writer_info = DictWriter(f_info, fieldnames=['superPBID', ref_name, addon_name], delimiter='\t')
+    writer_info.writeheader()
+    f_group = open(final_prefix+'.group.txt', 'w')
+    if use_fq:
+        f_fq = open(final_prefix+'.rep.fq', 'w')
+    # sort the combined gff (tree) by chromosome and strand (- first)
+
+    new_group_info = {}
+
+    pb_i = 0
+    for _chr in tree_keys:
+        for _strand in ('+', '-'):
+            for _start,_end,_indices in tree[_chr][_strand].getregions():
+                # further sort these records by (start, end, num_exons)
+                _indices.sort(key=lambda i: (rec_list[i].rec.start, rec_list[i].rec.end, len(rec_list[i].rec.ref_exons)))
+                pb_i += 1
+                for pb_j, recs_index in enumerate(_indices):
+                    pbid = "PB.{0}.{1}".format(pb_i, pb_j + 1)
+                    match_rec = rec_list[recs_index]
+                    new_group_info[pbid] = match_rec.members
+                    match_rec.rec.seqid = pbid
+                    GFF.write_collapseGFF_format(f_gff, match_rec.rec)
+                    writer_info.writerow({'superPBID': pbid, ref_name: match_rec.ref_id, addon_name: match_rec.addon_id})
+                    f_group.write("{0}\t{1}\n".format(pbid, ",".join(match_rec.members)))
+                    if use_fq:
+                        match_rec.seqrec.id = pbid
+                        match_rec.seqrec.description = ''
+                        SeqIO.write(match_rec.seqrec, f_fq, 'fastq')
+    f_gff.close()
+    f_info.close()
+    f_group.close()
+    if use_fq:
+        f_fq.close()
+    return new_group_info
 
 class MegaPBTree(object):
     """
@@ -88,10 +143,29 @@ class MegaPBTree(object):
         for r2 in matches:
             r.segments = r.ref_exons
             r2.segments = r2.ref_exons
-            if compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'exact': # is a match!
-                if self.max_3_diff is None or \
+            n1 = len(r.segments)
+            n2 = len(r2.segments)
+
+            three_end_is_match = self.max_3_diff is None or \
                         (r.strand=='+' and abs(r.end-r2.end)<=self.max_3_diff) or \
-                        (r.strand=='-' and abs(r.start-r2.start)<=-self.max_3_diff):
+                        (r.strand=='-' and abs(r.start-r2.start)<=-self.max_3_diff)
+
+            last_junction_match = False
+            if n1 == 1:
+                if n2 == 1: last_junction_match = True
+                else: last_junction_match = False
+            else:
+                if n2 == 1: last_junction_match = False
+                else:
+                    if r.strand == '+':
+                        last_junction_match = (abs(r.segments[-1].start-r2.segments[-1].start) < self.internal_fuzzy_max_dist) and \
+                                              (abs(r.segments[0].end-r2.segments[0].end) < self.internal_fuzzy_max_dist)
+                    else:
+                        last_junction_match = (abs(r.segments[0].end-r2.segments[0].end) < self.internal_fuzzy_max_dist) and \
+                                              (abs(r.segments[1].start-r2.segments[1].start) < self.internal_fuzzy_max_dist)
+
+            if compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'exact': # is a match!
+                if three_end_is_match:
                     return r2
                 else:
                     return None
@@ -103,20 +177,27 @@ class MegaPBTree(object):
                 # a is the longer one, b is the shorter one
                 if compare_junctions.compare_junctions(b, a, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'subset':
                     # we only know that a is a subset of b, verify that it is actually 5' truncated (strand-sensitive!)
-                    # if + strand, last exon of a should match last exon of b
-                    # if - strand, first exon of a should match first exon of b
-                    if (r.strand == '+' and compare_junctions.overlaps(a.segments[-1], b.segments[-1])) or \
-                       (r.strand == '-' and compare_junctions.overlaps(a.segments[0], b.seq_exons[0])):
+                    # if + strand, last junction of (a,b) should match and 3' end not too diff
+                    # if - strand, first exon of a should match first exon of b AND the next exon don't overlap
+                    if three_end_is_match and last_junction_match:
                         return r2
-
+                    else:
+                        return None
         return None
 
     def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix, fastq_filename=None):
         combined = [] # list of (r1 if r2 is None | r2 if r1 is None | longer of r1 or r2 if both not None)
         unmatched_recs = list(self.record_d.keys())
 
+        #recs = [r for r in GFF.collapseGFFReader(gff_filename)]
+        #pool = Pool(processes=cpus)
+        #start_t = time.time()
+        #matches = pool.map(self.match_record_to_tree, recs)
+        #print("Got results in {0} sec".format(time.time()-start_t))
+
         for r in GFF.collapseGFFReader(gff_filename):
             match_rec = self.match_record_to_tree(r)
+        #for (r,match_rec) in zip(recs, matches):
             if match_rec is not None:  # found a match! put longer of r1/r2 in
                 combined.append((match_rec, r))
                 try:
@@ -145,66 +226,30 @@ class MegaPBTree(object):
         Write ClusterTree (chr --> dict --> (start, end, rec_list_index)) as collapsedGFF format
         Returns --- a new group_info!!!
         """
-        if fastq_filename2 is not None:
+        use_fq = fastq_filename2 is not None and self.fastq_dict is not None
+        if use_fq:
             fastq_dict2 = MegaPBTree.read_fastq_to_dict(fastq_filename2)
-            f_fastq = open(output_prefix+'.rep.fq', 'w')
         group_info2 = MegaPBTree.read_group(group_filename2, sample_prefix2)
-        new_group_info = {}
-        f_out = open(output_prefix+'.gff', 'w')
-        f_group = open(output_prefix+'.group.txt', 'w')
-        f_mgroup = open(output_prefix + '.mega_info.txt', 'w')
-        f_mgroup.write("pbid\t{0}\t{1}\n".format(self.self_prefix, sample_prefix2))
-        loci_index = 0
-        chroms = list(cluster_tree.keys())
-        chroms.sort()
-        for k in chroms:
-            for strand in ('+', '-'):
-                for _s, _e, rec_indices in cluster_tree[k][strand].getregions():
-                    loci_index += 1
-                    isoform_index = 0
-                    for i in rec_indices:
-                        isoform_index += 1
-                        tID = "PB.{i}.{j}".format(i=loci_index,j=isoform_index)
-                        r1, r2 = rec_list[i]
-                        if r1 is None: # r2 is not None
-                            r = r2
-                            new_group_info[tID] = group_info2[r2.seqid]
-                            f_mgroup.write("{tID}\tNA\t{group}\n".format(tID=tID, group=r2.seqid))
-                            if fastq_filename2 is not None:
-                                seqrec = fastq_dict2[r2.seqid]
-                        elif r2 is None: # r1 is not None
-                            r = r1
-                            new_group_info[tID] = self.group_info[r1.seqid]
-                            f_mgroup.write("{tID}\t{group}\tNA\n".format(tID=tID, group=r1.seqid))
-                            if fastq_filename2 is not None:
-                                seqrec = self.fastq_dict[r1.seqid]
-                        else: # both r1, r2 are not empty
-                            if (r1.end - r1.start > r2.end - r2.start):
-                                r = r1
-                                if fastq_filename2 is not None:
-                                    seqrec = self.fastq_dict[r1.seqid]
-                            else:
-                                r = r2
-                                if fastq_filename2 is not None:
-                                    seqrec = fastq_dict2[r2.seqid]
-                            new_group_info[tID] = self.group_info[r1.seqid] + group_info2[r2.seqid]
-                            f_mgroup.write("{tID}\t{group1}\t{group2}\n".format(tID=tID, group1=r1.seqid, group2=r2.seqid))
 
+        # currently: rec_list is (r1, r2) where r1, r2 are records and could be None
+        # make rec_list into list of MatchRec (ref_id, addon_id, representative rec, seqrec, group_info members)
+        new_rec_list = []
+        for r1, r2 in rec_list:
+            if r2 is None:
+                new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id="NA", rec=r1, members=self.group_info[r1.seqid],
+                                                seqrec=self.fastq_dict[r1.seqid] if use_fq else None))
+            elif r1 is None:
+                new_rec_list.append(MatchRecord(ref_id="NA", addon_id=r2.seqid, rec=r2, members=group_info2[r2.seqid],
+                                                seqrec=fastq_dict2[r2.seqid] if use_fq else None))
+            else:
+                if (r1.end - r1.start) > (r2.end - r2.start):
+                    new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id=r2.seqid, rec=r1, members=self.group_info[r1.seqid]+group_info2[r2.seqid],
+                                                    seqrec=self.fastq_dict[r1.seqid] if use_fq else None))
+                else:
+                    new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id=r2.seqid, rec=r2, members=self.group_info[r1.seqid] + group_info2[r2.seqid],
+                                                    seqrec=fastq_dict2[r2.seqid] if use_fq else None))
 
-                        if fastq_filename2 is not None:
-                            seqrec.id = tID
-                            SeqIO.write(seqrec, f_fastq, 'fastq')
-                        f_group.write("{tID}\t{members}\n".format(tID=tID, members=",".join(new_group_info[tID])))
-                        f_out.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"PB.{i}\"; transcript_id \"{tID}\";\n".format(\
-                            chr=k, s=r.start+1, e=r.end, strand=strand, tID=tID, i=loci_index))
-                        for exon in r.ref_exons:
-                            f_out.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"PB.{i}\"; transcript_id \"{tID}\";\n".format(\
-                                chr=k, s=exon.start+1, e=exon.end, strand=strand, tID=tID, i=loci_index))
-        f_out.close()
-        f_group.close()
-        f_mgroup.close()
-        if fastq_filename2 is not None:
-            f_fastq.close()
+        new_group_info = write_reclist_to_gff_n_info(new_rec_list, output_prefix, self.self_prefix, sample_prefix2, use_fq)
         return new_group_info
 
 

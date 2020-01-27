@@ -2,11 +2,10 @@
 __author__="etseng@pacb.com"
 
 """
-Given a pooled input SAM + demux CSV file, write out per-{barcode group} GFFs
+Given a pooled input GFF + demux CSV file, write out per-{barcode group} GFFs
 If input fasta/fastq is given, optionally also output per-{barcode group} FASTA/FASTQ
 """
 import os, re, sys
-from cupcake.io.BioReaders import GMAPSAMReader
 import cupcake.io.GFF as GFF
 from csv import DictReader
 from collections import defaultdict
@@ -21,7 +20,7 @@ def get_type_fafq(in_filename):
     else:
         raise Exception("Unrecognized file suffix .{0}! Must end with .fasta or .fastq!".format(in_filename[in_filename.find('.'):]))
 
-def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_dict, in_fafq=None):
+def regroup_gff(pooled_gff, demux_count_file, output_prefix, out_group_dict, in_fafq=None):
     """
     :param pooled_sam: SAM file
     :param demux_count_file: comma-delimited per-barcode count file
@@ -51,23 +50,10 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
         for k in fafq_dict_keys:
             m = rex_pbid.match(k)
             if m is not None: fafq_dict[m.group(1)] = fafq_dict[k]
-    reader = GMAPSAMReader(pooled_sam, True)
+    reader = GFF.collapseGFFReader(pooled_gff)
     for r in reader:
-        if r.sID == '*':
-            print("Ignore {0} because unmapped.".format(r.qID), file=sys.stderr)
-            continue
-        m = rex_pbid.match(r.qID)
-        if m is not None: pbid = m.group(1)
-        else: pbid = r.qID
-        # convert SAM record to GFF record type
-        r.seqid = pbid
-        r.chr = r.sID
-        r.start, r.end = r.sStart, r.sEnd
-        r.strand = r.flag.strand
-        r.ref_exons = r.segments
-        r.cds_exons = None
-
         groups_to_write_in = set()
+        pbid = r.seqid
         if pbid not in in_tissue:
             print("WARNING: {0} does not belong to any group indicated by outgroup_dict".format(pbid), file=sys.stderr)
         for tissue in in_tissue[pbid]:
@@ -78,19 +64,17 @@ def regroup_sam_to_gff(pooled_sam, demux_count_file, output_prefix, out_group_di
             if in_fafq is not None:
                 SeqIO.write(fafq_dict[pbid], handles_fafq[g], type_fafq)
 
-
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
     parser.add_argument("--pooled_fastx", default=None, help="Pooled FASTA/FASTQ (optional, if given, will also output demux fa/fq)")
-    parser.add_argument("pooled_sam", help="Pooled SAM file")
+    parser.add_argument("pooled_gff", help="Pooled GFF file")
     parser.add_argument("demux_count_file", help="Demux count file")
     parser.add_argument("output_prefix", help="Output prefix for GFF outputs")
     parser.add_argument("outgroup_dict", help="Tuples indicating barcode grouping")
 
-
     args = parser.parse_args()
     tmp = eval(args.outgroup_dict)
     out_group_dict = dict([tmp]) if len(tmp)==1 else dict(tmp)
-    regroup_sam_to_gff(args.pooled_sam, args.demux_count_file, args.output_prefix, out_group_dict, args.pooled_fastx)
+    regroup_gff(args.pooled_gff, args.demux_count_file, args.output_prefix, out_group_dict, args.pooled_fastx)
