@@ -79,6 +79,7 @@ class BranchSimple:
         # find first acceptably mapped read
         try:
             records = [next(quality_alignments)]
+            max_end = records[0].sEnd
         except StopIteration:
             print("No valid records from {0}!".format(gmap_sam_filename), file=sys.stderr)
             return
@@ -87,11 +88,13 @@ class BranchSimple:
             if r.sID == records[0].sID and r.sStart < records[-1].sStart:
                 print("SAM file is NOT sorted. ABORT!", file=sys.stderr)
                 sys.exit(-1)
-            if r.sID != records[0].sID or r.sStart > max(x.sEnd for x in records):
+            if r.sID != records[0].sID or r.sStart > max_end:
                 yield sep_by_strand(records)
                 records = [r]
+                max_end = r.sEnd
             else:
                 records.append(r)
+                max_end = max(max_end, r.sEnd)
         yield sep_by_strand(records)
 
     def get_quality_alignments(self, gmap_sam_reader, ignored_fout):

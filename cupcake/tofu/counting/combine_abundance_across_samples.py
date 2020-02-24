@@ -2,6 +2,7 @@ __author__ = 'etseng@pacb.com'
 
 
 import os, sys, re, time
+import pdb
 from csv import DictWriter
 from Bio import SeqIO
 from collections import defaultdict, namedtuple
@@ -13,6 +14,17 @@ from bx.intervals.cluster import ClusterTree
 seqid_rex = re.compile('(\S+\\.\d+)\\.(\d+)')
 
 MatchRecord = namedtuple('MatchRecord', ['ref_id', 'addon_id', 'rec', 'members', 'seqrec'])
+
+def find_representative_in_iso_list(records):
+    """
+    :param records: list of GMAPRecord
+    :return: representative record that is (a) the most number of exons or then (b) longest
+    """
+    rep = records[0]
+    for r in records[1:]:
+        if len(rep.ref_exons) < len(r.ref_exons) or (rep.end-rep.start) < (r.end-r.start):
+            rep = r
+    return rep
 
 def sanity_check_seqids(seqids):
     for seqid in seqids:
@@ -135,10 +147,11 @@ class MegaPBTree(object):
         r --- GMAPRecord
         tree --- dict of chromosome --> strand --> IntervalTree
 
-        If exact match (every exon junction) or 5' truncated (allow_5merge is True), return the matching GMAPRecord
-        Otherwise return None
-        *NOTE*: the tree should be non-redundant so can return as soon as exact match is found!
+        If exact match (every exon junction) or 5' truncated (allow_5merge is True), YIELD the matching GMAPRecord(s)
+        *NOTE/UPDATE*: could have multiple matches! )
         """
+        #if r.chr=='chr17' and r.start > 39604000:
+        #    pdb.set_trace()
         matches = self.tree[r.chr][r.strand].find(r.start, r.end)
         for r2 in matches:
             r.segments = r.ref_exons
@@ -148,7 +161,7 @@ class MegaPBTree(object):
 
             three_end_is_match = self.max_3_diff is None or \
                         (r.strand=='+' and abs(r.end-r2.end)<=self.max_3_diff) or \
-                        (r.strand=='-' and abs(r.start-r2.start)<=-self.max_3_diff)
+                        (r.strand=='-' and abs(r.start-r2.start)<=self.max_3_diff)
 
             last_junction_match = False
             if n1 == 1:
@@ -158,17 +171,15 @@ class MegaPBTree(object):
                 if n2 == 1: last_junction_match = False
                 else:
                     if r.strand == '+':
-                        last_junction_match = (abs(r.segments[-1].start-r2.segments[-1].start) < self.internal_fuzzy_max_dist) and \
-                                              (abs(r.segments[0].end-r2.segments[0].end) < self.internal_fuzzy_max_dist)
+                        last_junction_match = (abs(r.segments[-1].start-r2.segments[-1].start) <= self.internal_fuzzy_max_dist) and \
+                                              (abs(r.segments[0].end-r2.segments[0].end) <= self.internal_fuzzy_max_dist)
                     else:
-                        last_junction_match = (abs(r.segments[0].end-r2.segments[0].end) < self.internal_fuzzy_max_dist) and \
-                                              (abs(r.segments[1].start-r2.segments[1].start) < self.internal_fuzzy_max_dist)
+                        last_junction_match = (abs(r.segments[0].end-r2.segments[0].end) <= self.internal_fuzzy_max_dist) and \
+                                              (abs(r.segments[1].start-r2.segments[1].start) <= self.internal_fuzzy_max_dist)
 
             if compare_junctions.compare_junctions(r, r2, internal_fuzzy_max_dist=self.internal_fuzzy_max_dist) == 'exact': # is a match!
                 if three_end_is_match:
-                    return r2
-                else:
-                    return None
+                    yield r2
             elif self.allow_5merge: # check if the shorter one is a subset of the longer one
                 if len(r.segments) > len(r2.segments):
                     a, b = r, r2
@@ -180,43 +191,40 @@ class MegaPBTree(object):
                     # if + strand, last junction of (a,b) should match and 3' end not too diff
                     # if - strand, first exon of a should match first exon of b AND the next exon don't overlap
                     if three_end_is_match and last_junction_match:
-                        return r2
-                    else:
-                        return None
-        return None
+                        yield r2
+
 
     def add_sample(self, gff_filename, group_filename, sample_prefix, output_prefix, fastq_filename=None):
-        combined = [] # list of (r1 if r2 is None | r2 if r1 is None | longer of r1 or r2 if both not None)
-        unmatched_recs = list(self.record_d.keys())
-
-        #recs = [r for r in GFF.collapseGFFReader(gff_filename)]
-        #pool = Pool(processes=cpus)
-        #start_t = time.time()
-        #matches = pool.map(self.match_record_to_tree, recs)
-        #print("Got results in {0} sec".format(time.time()-start_t))
+        combined = [] # list of (<matches to r2 or None>, r2)
+        unmatched_recs = set(self.record_d.keys())
 
         for r in GFF.collapseGFFReader(gff_filename):
-            match_rec = self.match_record_to_tree(r)
-        #for (r,match_rec) in zip(recs, matches):
-            if match_rec is not None:  # found a match! put longer of r1/r2 in
-                combined.append((match_rec, r))
-                try:
-                    unmatched_recs.remove(match_rec.seqid)
-                except ValueError:
-                    pass # already deleted, OK, this happens for single-exon transcripts
+            match_rec_list = [r for r in self.match_record_to_tree(r)]
+            if len(match_rec_list) > 0:  # found match(es)! put longer of r1/r2 in
+                #if len(match_rec_list) > 1: pdb.set_trace()  #DEBUG
+                combined.append((match_rec_list, r))
+                for match_rec in match_rec_list:
+                    try:
+                        unmatched_recs.remove(match_rec.seqid)
+                    except KeyError:
+                        pass # already deleted, OK, this can happen
             else:  # r is not present in current tree
                 combined.append((None, r))
         # put whatever is left from the tree in
         for seqid in unmatched_recs:
-            combined.append((self.record_d[seqid], None))
+            combined.append(([self.record_d[seqid]], None))
 
         # create a ClusterTree to re-calc the loci/transcripts
         final_tree = defaultdict(lambda: {'+': ClusterTree(0, 0), '-':ClusterTree(0, 0)})
-        for i,(r1,r2) in enumerate(combined):
-            if r2 is None or (r1 is not None and r1.end-r1.start > r2.end-r2.start):
-                final_tree[r1.chr][r1.strand].insert(r1.start, r1.end, i)
-            else:
+        for i,(r1s,r2) in enumerate(combined):
+            if r1s is None:
                 final_tree[r2.chr][r2.strand].insert(r2.start, r2.end, i)
+            else:
+                if r2 is not None:
+                    rep = find_representative_in_iso_list(r1s + [r2])
+                else:
+                    rep = find_representative_in_iso_list(r1s)
+                final_tree[rep.chr][rep.strand].insert(rep.start, rep.end, i)
 
         self.write_cluster_tree_as_gff(final_tree, combined, group_filename, sample_prefix, output_prefix, fastq_filename2=fastq_filename)
 
@@ -231,24 +239,26 @@ class MegaPBTree(object):
             fastq_dict2 = MegaPBTree.read_fastq_to_dict(fastq_filename2)
         group_info2 = MegaPBTree.read_group(group_filename2, sample_prefix2)
 
-        # currently: rec_list is (r1, r2) where r1, r2 are records and could be None
+        # currently: rec_list is (r1s, r2) where r1s, r2 are records and could be None
         # make rec_list into list of MatchRec (ref_id, addon_id, representative rec, seqrec, group_info members)
         new_rec_list = []
-        for r1, r2 in rec_list:
+        for r1s, r2 in rec_list:
             if r2 is None:
-                new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id="NA", rec=r1, members=self.group_info[r1.seqid],
-                                                seqrec=self.fastq_dict[r1.seqid] if use_fq else None))
-            elif r1 is None:
+                for r1 in r1s:
+                    new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id="NA", rec=r1, members=self.group_info[r1.seqid],
+                                                    seqrec=self.fastq_dict[r1.seqid] if use_fq else None))
+            elif r1s is None:
                 new_rec_list.append(MatchRecord(ref_id="NA", addon_id=r2.seqid, rec=r2, members=group_info2[r2.seqid],
                                                 seqrec=fastq_dict2[r2.seqid] if use_fq else None))
             else:
-                if (r1.end - r1.start) > (r2.end - r2.start):
-                    new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id=r2.seqid, rec=r1, members=self.group_info[r1.seqid]+group_info2[r2.seqid],
-                                                    seqrec=self.fastq_dict[r1.seqid] if use_fq else None))
-                else:
-                    new_rec_list.append(MatchRecord(ref_id=r1.seqid, addon_id=r2.seqid, rec=r2, members=self.group_info[r1.seqid] + group_info2[r2.seqid],
-                                                    seqrec=fastq_dict2[r2.seqid] if use_fq else None))
-
+                rep = find_representative_in_iso_list(r1s + [r2])
+                all_members = group_info2[r2.seqid]
+                for r1 in r1s: all_members += self.group_info[r1.seqid]
+                new_rec_list.append(MatchRecord(ref_id=",".join(r1.seqid for r1 in r1s),
+                                                addon_id=r2.seqid,
+                                                rec=rep,
+                                                members=all_members,
+                                                seqrec=self.fastq_dict[rep.seqid] if use_fq else None))
         new_group_info = write_reclist_to_gff_n_info(new_rec_list, output_prefix, self.self_prefix, sample_prefix2, use_fq)
         return new_group_info
 

@@ -501,9 +501,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("config_file")
     parser.add_argument("field_to_use", choices=['norm_fl', 'count_fl'], default='count_fl', help="Which count field to use for chained sample (default: count_fl)")
-    parser.add_argument("--fuzzy_junction", default=5, type=int, help="Max allowed distance in junction to be considered identical (default: 5 bp)")
+    parser.add_argument("--fuzzy_junction", default=0, type=int, help="Max allowed distance in junction to be considered identical (default: 0 bp)")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_5merge", default=True, help="Don't collapse shorter 5' transcripts (default: off)")
-    parser.add_argument("--max_3_diff", type=int, default=100, help="Maximum 3' difference allowed (default: 100bp)")
+    parser.add_argument("--max_3_diff", type=int, default=30, help="Maximum 3' difference allowed (default: 30bp)")
     parser.add_argument("--cpus", type=int, default=8, help="Number of CPUs to use for multi-threading (default: 8)")
     args = parser.parse_args()
 
