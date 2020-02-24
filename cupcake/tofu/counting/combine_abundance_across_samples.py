@@ -252,6 +252,7 @@ class MegaPBTree(object):
                                                 seqrec=fastq_dict2[r2.seqid] if use_fq else None))
             else:
                 for r1 in r1s:
+                    if len(r1s)>1: print("matching {0} to {1}".format(r1, r2), file=sys.stderr)
                     rep = find_representative_in_iso_list([r1, r2])
                     new_rec_list.append(MatchRecord(ref_id=r1.seqid,
                                                     addon_id=r2.seqid,
