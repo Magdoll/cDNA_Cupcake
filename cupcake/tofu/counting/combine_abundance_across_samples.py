@@ -251,14 +251,21 @@ class MegaPBTree(object):
                 new_rec_list.append(MatchRecord(ref_id="NA", addon_id=r2.seqid, rec=r2, members=group_info2[r2.seqid],
                                                 seqrec=fastq_dict2[r2.seqid] if use_fq else None))
             else:
-                rep = find_representative_in_iso_list(r1s + [r2])
-                all_members = group_info2[r2.seqid]
-                for r1 in r1s: all_members += self.group_info[r1.seqid]
-                new_rec_list.append(MatchRecord(ref_id=",".join(r1.seqid for r1 in r1s),
-                                                addon_id=r2.seqid,
-                                                rec=rep,
-                                                members=all_members,
-                                                seqrec=self.fastq_dict[rep.seqid] if use_fq else None))
+                for r1 in r1s:
+                    rep = find_representative_in_iso_list([r1, r2])
+                    new_rec_list.append(MatchRecord(ref_id=r1.seqid,
+                                                    addon_id=r2.seqid,
+                                                    rec=rep,
+                                                    members=self.group_info[r1.seqid]+group_info2[r2.seqid],
+                                                    seqrec=self.fastq_dict[rep.seqid] if use_fq else None))
+                #rep = find_representative_in_iso_list(r1s + [r2])
+                #all_members = group_info2[r2.seqid]
+                #for r1 in r1s: all_members += self.group_info[r1.seqid]
+                #new_rec_list.append(MatchRecord(ref_id=",".join(r1.seqid for r1 in r1s),
+                #                                addon_id=r2.seqid,
+                #                                rec=rep,
+                #                                members=all_members,
+                #                                seqrec=self.fastq_dict[rep.seqid] if use_fq else None))
         new_group_info = write_reclist_to_gff_n_info(new_rec_list, output_prefix, self.self_prefix, sample_prefix2, use_fq)
         return new_group_info
 
