@@ -58,17 +58,23 @@ table.loci_top10 <- tableGrob(t.loci[1:10], rows=rownames(t.loci)[1:10], cols=c(
 grid.arrange(p.loci_hist, table.loci_top10, ncol=1)
 
 # draw: UMI and BC motifs
-p.logo.umi <- ggseqlogo(substring(as.character(x$UMI), 2, 9), method='prob')
+p.logo.umi <- ggseqlogo(substring(as.character(x$UMI), 1, 8), method='prob')
 p.logo.umi.text <- textGrob("Frequency of UMI base at each position", 
 							gp=gpar(fontface="italic", fontsize=12), 
 							vjust=0)
-p.logo.bc  <- ggseqlogo(as.character(x$BC), method='prob')
-p.logo.bc.text <- textGrob("Frequency of BC base at each position", 
-						   gp=gpar(fontface="italic", fontsize=12), 
-						   vjust=0)
-grid.arrange(p.logo.umi.text, p.logo.umi, 
-			              p.logo.bc.text, p.logo.bc,
-						  ncol=1)
+if (any(!is.na(x$BC))) {
+  p.logo.bc  <- ggseqlogo(as.character(x$BC), method='prob')
+  p.logo.bc.text <- textGrob("Frequency of BC base at each position", 
+                             gp=gpar(fontface="italic", fontsize=12), 
+                             vjust=0)
+  grid.arrange(p.logo.umi.text, p.logo.umi, 
+               p.logo.bc.text, p.logo.bc,
+               ncol=1)
+} else
+{
+  grid.arrange(p.logo.umi.text, p.logo.umi,ncol=1);
+}
+
 
 dev.off()
 

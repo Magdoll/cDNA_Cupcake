@@ -332,6 +332,8 @@ class gmapRecord:
         self.cds_exons = []
         self.scores = []
 
+        #pdb.set_trace()
+        self.geneid = None
         # handle gene ids specially for PB.X.Y and PBfusion.X.Y
         if geneid is not None:
             self.geneid = geneid
@@ -563,13 +565,16 @@ class collapseGFFReader(gmapGFFReader):
         chr = raw[0]
         strand = raw[6] 
         seqid = None
+        geneid = None
         for stuff in raw[8].split(';'):
-            a, b = stuff.strip().split()
-            if a == 'transcript_id':
-                seqid = b[1:-1]
-                break
-      
-        rec = gmapRecord(chr, coverage=None, identity=None, strand=strand, seqid=seqid)
+            if len(stuff.strip()) > 0:
+                a, b = stuff.strip().split()
+                if a == 'transcript_id':
+                    seqid = b[1:-1]
+                if a == 'gene_id':
+                    geneid = b[1:-1]
+
+        rec = gmapRecord(chr, coverage=None, identity=None, strand=strand, seqid=seqid, geneid=geneid)
         
         while True:
             cur = self.f.tell()

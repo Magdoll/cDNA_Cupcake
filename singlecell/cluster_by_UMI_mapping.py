@@ -1,4 +1,5 @@
 import os, sys, gzip, subprocess
+import csv
 from csv import DictReader, DictWriter
 from collections import defaultdict
 from multiprocessing import Process
@@ -8,6 +9,8 @@ from Bio import SeqIO
 import pysam
 from bx.intervals.cluster import ClusterTree
 import cupcake.io.BioReaders as BioReaders
+
+csv.field_size_limit(100000000)
 
 def collect_cluster_results_multithreaded(group_csv, out_dir, output_prefix, use_BC, chunks):
     indices = set()
@@ -37,8 +40,8 @@ def collect_cluster_results_multithreaded(group_csv, out_dir, output_prefix, use
     csv_files = [output_prefix+'.'+str(i)+'.clustered_transcript.csv' for i in range(chunks)]
 
     cmd_cat_fasta = "cat {0} > {1}.clustered_transcript.fasta".format(" ".join(fasta_files), output_prefix)
-    cmd_cat_csv1 = "echo \"index,UMI,BC,locus,cluster,ccs_id\" > {0}.clustered_transcript.csv".format(output_prefix)
-    cmd_cat_csv2 = "cat {0} > {1}.clustered_transcript.csv".format(" ".join(csv_files), output_prefix)
+    cmd_cat_csv1 = "echo \"index,UMI,BC,locus,cluster,ccs_id\" > {0}.clustered_transcript.header".format(output_prefix)
+    cmd_cat_csv2 = "cat {0}.clustered_transcript.header {1} > {0}.clustered_transcript.csv".format(output_prefix, " ".join(csv_files))
 
     try:
         subprocess.check_call(cmd_cat_fasta, shell=True)
@@ -297,7 +300,6 @@ def run(args):
                                 use_BC=args.useBC)
 
     write_records_to_bam_multithreaded(args.flnc_bam, m, args.output_prefix, cpus=1, chunks=20)
-
     f.close()
 
 if __name__ == "__main__":
