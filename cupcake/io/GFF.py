@@ -399,12 +399,27 @@ class gmapGFFReader(object):
             if not self.f.readline().startswith('#') or self.f.tell()==cur: # first non-# seen or EOF
                 self.f.seek(cur)
                 break
+        self.sanity_format_check()
         
     def __iter__(self):
         return self
     
     def __next__(self):
-        return self.read()            
+        return self.read()
+
+    def sanity_format_check(self):
+        """
+        GFF3 formats are supposed to be tab-delimited and 9 required fields
+        https://learn.gencore.bio.nyu.edu/ngs-file-formats/gff3-format/
+        """
+        cur = self.f.tell()
+        raw = self.f.readline().strip().split('\t')
+        if len(raw) != 9:
+            print("ERROR:Sanity checking {0} is GFF3 format: expected 9 tab-delimited fields but saw {1}! Abort!".format(\
+                self.filename, len(raw)))
+            sys.exit(-1)
+        self.f.seek(cur)
+
             
     def read(self):
         """
