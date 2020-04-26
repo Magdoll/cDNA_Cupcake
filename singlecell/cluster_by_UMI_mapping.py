@@ -36,10 +36,10 @@ def collect_cluster_results_multithreaded(group_csv, out_dir, output_prefix, use
         p.join()
 
     # fasta file concatenate
-    fasta_files = [output_prefix+'.'+str(i)+'.clustered_transcript.fasta' for i in range(chunks)]
+    fasta_files = [output_prefix+'.'+str(i)+'.clustered_transcript.rep.fasta' for i in range(chunks)]
     csv_files = [output_prefix+'.'+str(i)+'.clustered_transcript.csv' for i in range(chunks)]
 
-    cmd_cat_fasta = "cat {0} > {1}.clustered_transcript.fasta".format(" ".join(fasta_files), output_prefix)
+    cmd_cat_fasta = "cat {0} > {1}.clustered_transcript.rep.fasta".format(" ".join(fasta_files), output_prefix)
     cmd_cat_csv1 = "echo \"index,UMI,BC,locus,cluster,ccs_id\" > {0}.clustered_transcript.header".format(output_prefix)
     cmd_cat_csv2 = "cat {0}.clustered_transcript.header {1} > {0}.clustered_transcript.csv".format(output_prefix, " ".join(csv_files))
 
@@ -63,7 +63,8 @@ def collect_cluster_results(group_csv, out_dir, output_prefix, use_BC=False, ind
     transcript/0 --> 1-TCAAGGTC-transcript/0
     # however singletons (shouldn't have much post cluster) will keep the CCS ID which is ok
     """
-    f_out = open(output_prefix + '.clustered_transcript.fasta', 'w')
+    f_out_rep = open(output_prefix + '.clustered_transcript.rep.fasta', 'w')
+    f_out_not = open(output_prefix + '.clustered_transcript.not_rep.fasta', 'w')
     f_csv = open(output_prefix + '.clustered_transcript.csv', 'w')
     writer = DictWriter(f_csv, fieldnames=['index', 'UMI', 'BC', 'locus', 'cluster', 'ccs_id'], delimiter=',')
     #writer.writeheader()
@@ -96,15 +97,20 @@ def collect_cluster_results(group_csv, out_dir, output_prefix, use_BC=False, ind
             bad.append(report)
             continue
 
+        hq_count = 0
         if os.path.exists(hq):
             with gzip.open(hq, 'rt') as handle:
                 for seqrec in SeqIO.parse(handle, 'fasta'):
-                    f_out.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
+                    if hq_count == 0:
+                        f_out_rep.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
+                    else:
+                        f_out_not.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
+                    hq_count += 1
 
         if os.path.exists(lq):
             with gzip.open(lq, 'rt') as handle:
                 for seqrec in SeqIO.parse(handle, 'fasta'):
-                    f_out.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
+                    f_out_not.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
 
         info = {'index': index,
                 'UMI': r['UMI'],
@@ -123,13 +129,14 @@ def collect_cluster_results(group_csv, out_dir, output_prefix, use_BC=False, ind
         if os.path.exists(single):
             with gzip.open(single, 'rt') as handle:
                 for seqrec in SeqIO.parse(handle, 'fasta'):
-                    f_out.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
+                    f_out_not.write(">{i}-{u}-{n}\n{s}\n".format(i=index, u=umi_key, n=seqrec.id, s=seqrec.seq))
                     info['ccs_id'] = seqrec.id
                     writer.writerow(info)
 
-    f_out.close()
+    f_out_not.close()
+    f_out_rep.close()
     f_csv.close()
-    return bad, f_out.name, f_csv.name
+    return bad, f_out_rep.name, f_csv.name
 
 def write_records_to_bam_multithreaded(flnc_tagged_bam, map_seqid_to_group, output_prefix, cpus=1, chunks=4):
 
