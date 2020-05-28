@@ -23,6 +23,7 @@ def main():
         for r in reader:
             if r.sID == '*': continue 
             r.strand = r.flag.strand
+            r.geneid = r.qID
             r.seqid = r.qID
             r.chr = r.sID
             r.ref_exons = r.segments

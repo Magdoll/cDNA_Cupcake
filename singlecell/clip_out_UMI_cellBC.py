@@ -5,14 +5,17 @@ from csv import DictReader, DictWriter
 import pysam
 import pdb
 
+VALID_CIGAR_SYMBOL = ['I', 'D']
+
 def iter_cigar_string(cigar_string):
+    # ex: 1=1X2=1X1=1D5=8D3=27I
     num = cigar_string[0]
     for s in cigar_string[1:]:
-        if str.isalpha(s):
+        if str.isdigit(s):
+            num += s
+        else:
             yield int(num), s
             num = ''
-        else:
-            num += s
 
 def find_Aend(seq, min_a_len=8):
     """

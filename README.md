@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 04.26.2020
+Last Updated: 05.28.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 12.0.0
+Current version: 12.1.0
 
 **If you use Python 2.7, please use the branch [Py2_v8.7.x](https://github.com/Magdoll/cDNA_Cupcake/tree/Py2_v8.7.x). Note that however, the Py2 version will NOT have any new features, only bug fixes! Users are encouraged to migrate to Python 3.7 now.**
 
@@ -64,30 +64,29 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
-2020.04.26 updated to v12.0.0. `clip_out_UMI_cellBC.py` now supports new mode `G5-clip`.
-
-2020.03.12 updated to v11.0.0. major chaining bug fixed for `chain_samples.py`.
+2020.05.28 updated to v12.1.0. fixed bug for `clip_out_UMI_cellBC.py` handling cigar strings.
 
 <details>
    <summary>Click to see older version logs</summary>
+   
+    2020.01.31 updated to v10.0.1. fixed typo in `collapse_isoforms_by_sam.py`
+    
+    2020.01.27 updated to v10.0.0. `chain_samples.py` now supported multithreading via `--cpus` option, also fixed chain bugs related to 3' differences.
+    
+    2019.12.30 updated to v9.2.0. fixed support for running `run_preCluster.py` that is used by Cogent.
+    
+    2019.12.18 updated to v9.1.1. changed `bcbiogff` dependency to `bcbio-gff` in `setup.py`.
+    
+    2019.12.18 updated to v9.1.0. added fasta support for `filter_away_subset.py` and `filter_by_count.py`.
+    
+    2019.12.09 updated to v9.0.3. fixed geneid display issue with PB.X.Y in GFF output for collapse.
+    
+    2019.10.02 updated to v9.0.2. updated collapse script series parameters to fit with isoseq3 output.
+    
+    2019.10.02 updated to v9.0.1. bug fix on fasta output in `dedup_FLNC_per_cluster.py`. removed pbcore dependency so Py3 fully usable for single cell scripts!
+    
+    2019.09.25 updated to v8.7.0. `clip_out_UMI_cellBC.py` supports unusual 10X 5' end single cell schema.
 
-	2020.01.31 updated to v10.0.1. fixed typo in `collapse_isoforms_by_sam.py`
-
-	2020.01.27 updated to v10.0.0. `chain_samples.py` now supported multithreading via `--cpus` option, also fixed chain bugs related to 3' differences.
-
-	2019.12.30 updated to v9.2.0. fixed support for running `run_preCluster.py` that is used by Cogent.
-
-	2019.12.18 updated to v9.1.1. changed `bcbiogff` dependency to `bcbio-gff` in `setup.py`.
-
-	2019.12.18 updated to v9.1.0. added fasta support for `filter_away_subset.py` and `filter_by_count.py`.
-
-	2019.12.09 updated to v9.0.3. fixed geneid display issue with PB.X.Y in GFF output for collapse.
-
-	2019.10.02 updated to v9.0.2. updated collapse script series parameters to fit with isoseq3 output.
-
-	2019.10.02 updated to v9.0.1. bug fix on fasta output in `dedup_FLNC_per_cluster.py`. removed pbcore dependency so Py3 fully usable for single cell scripts!
-
-	2019.09.25 updated to v8.7.0. `clip_out_UMI_cellBC.py` supports unusual 10X 5' end single cell schema.
     
     2019.09.24 updated to v8.6. `cupcake.io.GFF.py` now supports `gene_id` write out.
     
