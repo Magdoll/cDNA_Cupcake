@@ -26,7 +26,7 @@ def read_group_info(group_filename):
             d[m] = pbid
     return d
 
-def collate_gene_info(group_filename, csv_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None, no_extra_base=False):
+def collate_gene_info(group_filename, csv_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None, no_extra_base=False, is_clustered=False):
     """
     <id>, <pbid>, <length>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <ORFgroup NA|NoORF|groupID>, <UMI>, <BC>
     """
@@ -53,7 +53,13 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
         if pbid not in sqanti_info:
             print("ignoring ID {0} cuz not in classification file.".format(pbid), file=sys.stderr)
             continue
-        if no_extra_base and  umi_bc_info[ccs_id]['extra']!='NA':
+
+        if is_clustered:
+            # id: 1-ATCGAATGT-GCTTCTTTCACCTATCGATGATGGCTCAT-m64015_200531_015713/110297924/ccs
+            _index, _umi, _bc, _ccs_id = ccs_id.split('-')
+            ccs_id = _ccs_id
+
+        if no_extra_base and (not is_clustered and umi_bc_info[ccs_id]['extra']!='NA'):
             print("ignoring ID {0} cuz extra bases.".format(pbid), file=sys.stderr)
             continue
         rec = {'id': ccs_id, 'pbid': pbid}
@@ -61,8 +67,13 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
         rec['category'] = sqanti_info[pbid]['structural_category']
         rec['transcript'] = sqanti_info[pbid]['associated_transcript']
         rec['gene'] = sqanti_info[pbid]['associated_gene']
-        rec['UMI'] = umi_bc_info[ccs_id]['UMI']
-        rec['BC'] = umi_bc_info[ccs_id]['BC']
+
+        if is_clustered:
+            rec['UMI'] = _umi
+            rec['BC'] = _bc
+        else:
+            rec['UMI'] = umi_bc_info[ccs_id]['UMI']
+            rec['BC'] = umi_bc_info[ccs_id]['BC']
         if ontarget_filename is None:
             rec['ontarget'] = 'NA'
         else:
@@ -91,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--ontarget_filename", help="(Optional) on target information text")
     parser.add_argument("-p", "--dedup_ORF_prefix", help="(Optional) dedup-ed ORF group prefix, must have <pre>.faa and <pre>.group.txt")
     parser.add_argument("--no-extra-base", dest='no_extra_base', action="store_true", default=False, help="Drop all reads where there are extra bases")
+    parser.add_argument("--is_clustered", action="store_true", default=False, help="group.txt contains post-UMI clustering result")
 
     args = parser.parse_args()
 
@@ -122,4 +134,4 @@ if __name__ == "__main__":
             print("Dedup {0}.faa not found. Abort!".format(args.dedup_ORF_prefix), file=sys.stderr)
             sys.exit(-1)
 
-    collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base)
+    collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base, args.is_clustered)

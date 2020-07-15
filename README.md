@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 05.28.2020
+Last Updated: 07.15.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 12.1.0
+Current version: 12.2.0
 
 **If you use Python 2.7, please use the branch [Py2_v8.7.x](https://github.com/Magdoll/cDNA_Cupcake/tree/Py2_v8.7.x). Note that however, the Py2 version will NOT have any new features, only bug fixes! Users are encouraged to migrate to Python 3.7 now.**
 
@@ -63,6 +63,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.07.15 updated to v12.2.0. fixed bug for `clip_out_UMI_cellBC.py` for MS characters - switched to unix dialect.
 
 2020.05.28 updated to v12.1.0. fixed bug for `clip_out_UMI_cellBC.py` handling cigar strings.
 

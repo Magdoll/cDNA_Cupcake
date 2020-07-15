@@ -246,6 +246,7 @@ def sep_by_UMI(records, umi_bc_dict, out_dir, f_out, map_seqid_to_group, loci_in
                     'UMI': umi,
                     'BC': bc,
                     'locus': "{0}:{1}-{2}".format(chrom,s,e),
+                    'size': len(members_indices),
                     'members': ",".join(member_ids)}
             f_out.writerow(info)
             d = os.path.join(out_dir, str(loci_index), umi_key)
@@ -298,7 +299,7 @@ def run(args):
     umi_bc_dict = dict((r['id'],r) for r in DictReader(open(args.umi_bc_csv),delimiter='\t'))
 
     f = open(args.output_prefix + '_founder_info.csv', 'w')
-    f_out = DictWriter(f, fieldnames=['index', 'UMI', 'BC', 'locus' ,'members'])
+    f_out = DictWriter(f, fieldnames=['index', 'UMI', 'BC', 'locus' ,'size', 'members'])
     f_out.writeheader()
     m = iter_sorted_gmap_record(sam_filename=args.sorted_sam,
                                 umi_bc_dict=umi_bc_dict,
