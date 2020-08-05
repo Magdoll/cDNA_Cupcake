@@ -2,7 +2,7 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 07.15.2020
+Last Updated: 08.05.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
@@ -63,6 +63,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.08.05 updated to v12.3.0. fixed bug for `demux_isoseq_with_genome.py` to work with mapped fasta output in SL9.
 
 2020.07.15 updated to v12.2.0. fixed bug for `clip_out_UMI_cellBC.py` for MS characters - switched to unix dialect.
 

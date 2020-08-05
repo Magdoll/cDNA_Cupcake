@@ -24,17 +24,22 @@ def link_files(src_dir, out_dir='./'):
     Locate mapped.fastq, read-stat, classify report link to current directory
     """
     # location for mapped fastq in IsoSeq3
-    mapped_fastq = os.path.join(os.path.abspath(src_dir), 'outputs', 'collapse_isoforms.fastq')
+    mapped_fastq = os.path.join(os.path.abspath(src_dir), 'outputs', 'collapse_isoforms.fastq')  # for <SL8
+    mapped_fasta = os.path.join(os.path.abspath(src_dir), 'outputs', 'collapse_isoforms.fasta')  # SL8+ only fasta
     mapped_gff = os.path.join(os.path.abspath(src_dir), 'outputs', 'collapse_isoforms.gff')
     read_stat = os.path.join(os.path.abspath(src_dir), 'outputs', 'collapse_isoforms.read_stat.txt')
     primer_csv = os.path.join(os.path.abspath(src_dir), 'outputs', 'flnc.report.csv')
 
     if os.path.exists(mapped_fastq):
         print("Detecting IsoSeq task directories...", file=sys.stderr)
+        return out_dir, mapped_fastq, read_stat, primer_csv
+    elif os.path.exists(mapped_fasta):
+        print("Detecting IsoSeq task directories...", file=sys.stderr)
+        return out_dir, mapped_fasta, read_stat, primer_csv
     else:
         print("Cannot find expected files (ex: collapse_isoforms.fastq) in job directory! Does not look like a Iso-Seq job!", file=sys.stderr)
         sys.exit(-1)
-    return out_dir, mapped_fastq, read_stat, primer_csv
+
 
 def read_read_stat(read_stat, classify_info):
     """
