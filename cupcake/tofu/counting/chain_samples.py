@@ -148,6 +148,9 @@ def chain_split_file(ref_gff, ref_group, ref_name, addon_gff, addon_group, addon
                 i += 1
                 f_gff.close()
                 f_group.close()
+                if i >= n_chunks:
+                    assert counter >= len(recs)
+                    break
                 split_files.append((f_gff.name, f_group.name))
                 f_gff = open(addon_gff+'.split'+str(i), 'w')
                 f_group = open(addon_group + '.split' + str(i), 'w')
