@@ -225,8 +225,8 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--min-coverage", dest="min_aln_coverage", type=float, default=.99, help="Minimum alignment coverage (default: 0.99)")
     parser.add_argument("-i", "--min-identity", dest="min_aln_identity", type=float, default=.95, help="Minimum alignment identity (default: 0.95)")
     parser.add_argument("--max_fuzzy_junction", default=5, type=int, help="Max fuzzy junction dist (default: 5 bp)")
-    parser.add_argument("--max_5_diff", default=1000, help="Maximum allowed 5' difference if on same exon (default: 1000 bp)")
-    parser.add_argument("--max_3_diff", default=100, help="Maximum allowed 3' difference if on same exon (default: 100 bp)")
+    parser.add_argument("--max_5_diff", default=1000, type=int, help="Maximum allowed 5' difference if on same exon (default: 1000 bp)")
+    parser.add_argument("--max_3_diff", default=100, type=int, help="Maximum allowed 3' difference if on same exon (default: 100 bp)")
     parser.add_argument("--flnc_coverage", dest="flnc_coverage", type=int, default=-1, help="Minimum # of FLNC reads, only use this for aligned FLNC reads, otherwise results undefined!")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
 
