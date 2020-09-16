@@ -130,6 +130,7 @@ def chain_split_file(ref_gff, ref_group, ref_name, addon_gff, addon_group, addon
 
     n = len(recs)
     chunk_size = (n//n_chunks) + (n%n_chunks>0)
+    #print("# of recs: {0}, cpus: {1}, chunk_size: {2}".format(n, n_chunks, chunk_size))
 
     split_files = []
     i = 0
@@ -144,14 +145,15 @@ def chain_split_file(ref_gff, ref_group, ref_name, addon_gff, addon_group, addon
                     GFF.write_collapseGFF_format(f_gff, recs[cur])
                     f_group.write("{0}\t{1}\n".format(recs[cur].seqid, ",".join(addon_group_info[recs[cur].seqid])))
                     counter += 1
+            # note: becuz we are limited by how the records are organized by (chrom, strand)
+            # we may not end up using all the chunks, ex: if all records are on the same locus, we end up writing everything to one split file
             if counter >= (i+1)*chunk_size:
                 i += 1
                 f_gff.close()
                 f_group.close()
-                if i >= n_chunks:
-                    assert counter >= len(recs)
-                    break
                 split_files.append((f_gff.name, f_group.name))
+                if i >= n_chunks or counter >= len(recs):
+                    break
                 f_gff = open(addon_gff+'.split'+str(i), 'w')
                 f_group = open(addon_group + '.split' + str(i), 'w')
     if not f_gff.closed:
@@ -168,9 +170,11 @@ def chain_split_file(ref_gff, ref_group, ref_name, addon_gff, addon_group, addon
         result_prefixes.append((ref_name, addon_name+'.'+str(i)))
     for p in pools:
         p.join()
+    #print("split files: {0}, result_prefix: {1}".format(split_files, result_prefixes))
     return result_prefixes, split_files
 
 def chain_helper(ref_gff, ref_group, addon_gff, addon_group, name1, name2, fuzzy_junction, allow_5merge, max_3_diff):
+    #print("chain_helper called w: ref {0}, add on {1}, output: tmp_{2}".format(ref_gff, addon_gff, name2))
     o = sp.MegaPBTree(ref_gff, ref_group, self_prefix=name1, \
                       internal_fuzzy_max_dist=fuzzy_junction, \
                       allow_5merge=allow_5merge, \

@@ -65,7 +65,10 @@ def write_reclist_to_gff_n_info(rec_list, final_prefix, ref_name, addon_name, us
     new_group_info = {}
 
     pb_i = 0
+
     for _chr in tree_keys:
+        # remember to convert potential integer chromsomes keys back to string now that we sorted them!
+        _chr = str(_chr)
         for _strand in ('+', '-'):
             for _start,_end,_indices in tree[_chr][_strand].getregions():
                 # further sort these records by (start, end, num_exons)
@@ -199,7 +202,7 @@ class MegaPBTree(object):
         unmatched_recs = set(self.record_d.keys())
 
         for r in GFF.collapseGFFReader(gff_filename):
-            match_rec_list = [r for r in self.match_record_to_tree(r)]
+            match_rec_list = [x for x in self.match_record_to_tree(r)]
             if len(match_rec_list) > 0:  # found match(es)! put longer of r1/r2 in
                 #if len(match_rec_list) > 1: pdb.set_trace()  #DEBUG
                 combined.append((match_rec_list, r))
@@ -267,6 +270,7 @@ class MegaPBTree(object):
                 #                                rec=rep,
                 #                                members=all_members,
                 #                                seqrec=self.fastq_dict[rep.seqid] if use_fq else None))
+        #pdb.set_trace()
         new_group_info = write_reclist_to_gff_n_info(new_rec_list, output_prefix, self.self_prefix, sample_prefix2, use_fq)
         return new_group_info
 
