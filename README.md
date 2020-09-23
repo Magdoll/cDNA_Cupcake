@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 09.15.2020
+Last Updated: 09.23.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 12.5.0
+Current version: 13.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -60,6 +60,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.09.23 updated to v13.0.0. adding support for `isoseq3 dedup`
 
 2020.09.15 updated to v12.5.0. fixed bug for `chain_samples.py` where chromosomes are numeric (ex: 12 instead of chr12).
 

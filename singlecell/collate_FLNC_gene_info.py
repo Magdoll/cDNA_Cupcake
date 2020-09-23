@@ -9,10 +9,11 @@ Given:
 
 Output a collated infor file that is:
 
-   <ccs>, <pbid>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <UMI>, <BC>
+   <ccs>, <pbid>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <UMI>, <BC>, <UMIrev>, <BCrev>
 """
 
 import os, sys
+from Bio.Seq import Seq
 from csv import DictReader, DictWriter
 
 def read_group_info(group_filename):
@@ -30,7 +31,7 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
     """
     <id>, <pbid>, <length>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <ORFgroup NA|NoORF|groupID>, <UMI>, <BC>
     """
-    FIELDS = ['id', 'pbid', 'length', 'transcript', 'gene', 'category', 'ontarget', 'ORFgroup', 'UMI', 'BC']
+    FIELDS = ['id', 'pbid', 'length', 'transcript', 'gene', 'category', 'ontarget', 'ORFgroup', 'UMI', 'UMIrev', 'BC', 'BCrev']
 
     group_info = read_group_info(group_filename)
     umi_bc_info = dict((r['id'], r) for r in DictReader(open(csv_filename), delimiter='\t'))
@@ -74,6 +75,8 @@ def collate_gene_info(group_filename, csv_filename, class_filename, output_filen
         else:
             rec['UMI'] = umi_bc_info[ccs_id]['UMI']
             rec['BC'] = umi_bc_info[ccs_id]['BC']
+        rec['UMIrev'] = Seq(rec['UMI']).reverse_complement()
+        rec['BCrev'] = Seq(rec['BC']).reverse_complement()
         if ontarget_filename is None:
             rec['ontarget'] = 'NA'
         else:
