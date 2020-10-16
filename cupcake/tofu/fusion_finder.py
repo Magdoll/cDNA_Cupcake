@@ -21,14 +21,23 @@ from cupcake.tofu.compare_junctions import compare_junctions
 from cupcake.tofu.get_abundance_post_collapse import get_abundance_post_collapse
 
 
-def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_filename, is_fq=False, pick_least_err_instead=False):
+def get_isoform_index(in_order_ranges, chrom, start, end):
+    """
+    in_order_ranges: list of in order (chrom, start, end)
+
+    NOTE: ranges can shift aftering merging multiple fusion candidates, so we're not asking for precise, just overlap
+    """
+    for i, (chrom2, start2, end2) in enumerate(in_order_ranges):
+        if chrom2==chrom and (start2 <= start < end2 or start <= start2 < end or \
+                start2 <= end < end2 or start <= end2 < end):
+            return i
+    return None
+
+
+def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_filename, fusion_candidate_ranges, is_fq=False):
     """
     For each group, select the representative record
-
-    If is FASTA file (is_fa False) -- then always pick the longest one
-    If is FASTQ file (is_fq True) -- then
-          If pick_least_err_instead is True, pick the one w/ least number of expected base errors
-          Else, pick the longest one
+    Always pick the longest one!
     """
     if is_fq:
         fd = LazyFastqReader(fa_fq_filename)
@@ -37,40 +46,19 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
         fd = LazyFastaReader(fa_fq_filename)
         fout = open(output_filename, 'w')
 
-
-#    for line in open(gff_filename):
-#        # ex: chr1    PacBio  transcript      27567   29336   .       -       .       gene_id "PBfusion.1"; transcript_id "PBfusion.1.1";
-#        raw = line.strip().split('\t')
-#        if raw[2] == 'transcript':
-#            # check if this is first or 2+ part of fusion
-#            tid = raw[-1].split('; ')[1].split()[1][1:-2] # ex: tid = PBfusion.1.1
-#            gid = tid[:tid.rfind('.')] # ex: gid = PBfusion.1
-#            if tid.endswith('.1'):
-#                coords[gid] = "{0}:{1}-{2}({3})".format(raw[0], raw[3], raw[4], raw[6])
-#            else:
-#                assert gid in coords
-#                coords[gid] += "+{0}:{1}-{2}({3})".format(raw[0], raw[3], raw[4], raw[6])
-
     rep_info = {}
     id_to_rep = {}
     for line in open(group_filename):
         pb_id, members = line.strip().split('\t')
-        print("Picking representative sequence for", pb_id, file=sys.stderr)
+        print("Picking representative sequence for", pb_id, file=sys.stdout)
         best_id = None
         best_seq = None
-        best_qual = None
-        best_err = 9999999
-        err = 9999999
         max_len = 0
         for x in members.split(','):
-            if is_fq and pick_least_err_instead:
-                err = sum(i**-(i/10.) for i in fd[x].letter_annotations['phred_quality'])
-            if (is_fq and pick_least_err_instead and err < best_err) or ((not is_fq or not pick_least_err_instead) and len(fd[x].seq) >= max_len):
+            if len(fd[x].seq) >= max_len:
                 best_id = x
                 best_seq = fd[x].seq
-                if is_fq:
-                    best_qual = fd[x].letter_annotations['phred_quality']
-                    best_err = err
+                best_qual = fd[x].letter_annotations['phred_quality'] if is_fq else None
                 max_len = len(fd[x].seq)
         rep_info[pb_id] = (best_id, best_seq, best_qual)
         id_to_rep[best_id] = pb_id
@@ -81,18 +69,13 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
     for r in BioReaders.GMAPSAMReader(sam_filename, True):
         if r.qID in id_to_rep:
             pb_id = id_to_rep[r.qID]
-            best_id, best_seq, best_qual = rep_info[pb_id]
-
             # make coordinates & write the SAM file
+            isoform_index = get_isoform_index(fusion_candidate_ranges[r.qID], r.sID, r.sStart, r.sEnd)
             if r.qID not in coords:
-                # this is the .1 portion
-                coords[r.qID] = "{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
-                isoform_index = 1
-                record_storage[pb_id] = [r]
-            else:
-                # this is the .2 portion, or even .3, .4....! handle fusions with > 2 loci correctly
-                coords[r.qID] += "+{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
-                record_storage[pb_id].append(r)
+                coords[r.qID] = [None] * len(fusion_candidate_ranges[r.qID])
+                record_storage[pb_id] = [None] * len(fusion_candidate_ranges[r.qID])
+            coords[r.qID][isoform_index] = "{0}:{1}-{2}({3})".format(r.sID, r.sStart, r.sEnd, r.flag.strand)
+            record_storage[pb_id][isoform_index] = r
 
     for pb_id, records in record_storage.items():
         for i,r in enumerate(records):
@@ -106,7 +89,7 @@ def pick_rep(fa_fq_filename, sam_filename, gff_filename, group_filename, output_
 
     for pb_id in rep_info:
         best_id, best_seq, best_qual = rep_info[pb_id]
-        _id_ = "{0}|{1}|{2}".format(pb_id, coords[best_id], best_id)
+        _id_ = "{0}|{1}|{2}".format(pb_id, "+".join(coords[best_id]), best_id)
         _seq_ = best_seq
         if is_fq:
             SeqIO.write(SeqRecord(_seq_, id=_id_, letter_annotations={'phred_quality':best_qual}), fout, 'fastq')
@@ -224,7 +207,7 @@ def iter_gmap_sam_for_fusion(gmap_sam_filename, fusion_candidates, transfrag_len
 
     for r in iter:
         if len(records) >= 1 and (r.sID==records[-1].sID and r.sStart < records[-1].sStart):
-            print("SAM file is NOT sorted. ABORT!", file=sys.stderr)
+            print("ERROR: SAM file is NOT sorted. ABORT!", file=sys.stderr)
             sys.exit(-1)
         if len(records) >= 1 and (r.sID != records[0].sID or r.sStart > records[-1].sEnd):
             yield(sep_by_strand(records))
@@ -238,13 +221,14 @@ def iter_gmap_sam_for_fusion(gmap_sam_filename, fusion_candidates, transfrag_len
 
 def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05, min_locus_coverage_bp=1, min_total_coverage=.99, min_dist_between_loci=10000):
     """
-    Return list of fusion candidates qIDs
+    Return dict of
+       fusion candidate qID --> list (in order) of the fusion ranges (ex: (chr3,100,200), (chr1,500,1000))
     (1) must map to 2 or more loci
     (2) minimum coverage for each loci is 5% AND minimum coverage in bp is >= 1 bp
     (3) total coverage is >= 95%
     (4) distance between the loci is at least 10kb
     """
-    TmpRec = namedtuple('TmpRec', ['qCov', 'qLen', 'qStart', 'qEnd', 'sStart', 'sEnd', 'iden'])
+    TmpRec = namedtuple('TmpRec', ['qCov', 'qLen', 'qStart', 'qEnd', 'sStart', 'sEnd', 'iden', 'chrom'])
     def total_coverage(tmprecs):
         tree = ClusterTree(0, 0)
         for r in tmprecs: tree.insert(r.qStart, r.qEnd, -1)
@@ -255,12 +239,11 @@ def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05,
     for r in reader:
         if r.sID == '*': continue
         if r.flag.strand == '+':
-            d[r.qID].append(TmpRec(qCov=r.qCoverage, qLen=r.qLen, qStart=r.qStart, qEnd=r.qEnd, sStart=r.sStart, sEnd=r.sEnd, iden=r.identity))
+            d[r.qID].append(TmpRec(qCov=r.qCoverage, qLen=r.qLen, qStart=r.qStart, qEnd=r.qEnd, sStart=r.sStart, sEnd=r.sEnd, iden=r.identity, chrom=r.sID))
         else:
-            d[r.qID].append(TmpRec(qCov=r.qCoverage, qLen=r.qLen, qStart=r.qLen-r.qEnd, qEnd=r.qLen-r.qStart, sStart=r.sStart, sEnd=r.sEnd, iden=r.identity))
-    fusion_candidates = []
+            d[r.qID].append(TmpRec(qCov=r.qCoverage, qLen=r.qLen, qStart=r.qLen-r.qEnd, qEnd=r.qLen-r.qStart, sStart=r.sStart, sEnd=r.sEnd, iden=r.identity, chrom=r.sID))
+    fusion_candidates = {}
     for k, data in d.items():
-#        if k.startswith('i3_c68723/f6p549'): pdb.set_trace()
         if len(data) > 1 and \
             all(a.iden>=.95 for a in data) and \
             all(a.qCov>=min_locus_coverage for a in data) and \
@@ -268,10 +251,16 @@ def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05,
             total_coverage(data)*1./data[0].qLen >= min_total_coverage and \
             all(max(a.sStart,b.sStart)-min(a.sEnd,b.sEnd)>=min_dist_between_loci \
                            for a,b in itertools.combinations(data, 2)):
-                    fusion_candidates.append(k)
+                    data.sort(key=lambda x: x.qStart)
+                    #pdb.set_trace()
+                    fusion_candidates[k] = [(a.chrom,a.sStart,a.sEnd) for a in data]
     return fusion_candidates
 
-def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_csv=None, is_fq=False, allow_extra_5_exons=True, skip_5_exon_alt=True, prefix_dict_pickle_filename=None, min_locus_coverage=.05, min_total_coverage=.99, min_locus_coverage_bp=1, min_dist_between_loci=10000):
+def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_csv=None,
+                is_fq=False, allow_extra_5_exons=True, skip_5_exon_alt=True,
+                min_locus_coverage=.05, min_total_coverage=.99,
+                min_locus_coverage_bp=1, min_dist_between_loci=10000,
+                is_flnc=False):
     """
     (1) identify fusion candidates (based on mapping, total coverage, identity, etc)
     (2) group/merge the fusion exons, using an index to point to each individual part
@@ -303,32 +292,24 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
                     merged_i += 1
 
     # step (3). use BranchSimple to write a temporary file
-#    f_good = open(output_prefix + '.gff', 'w')
     f_group = open('branch_tmp.group.txt', 'w')
-#    f_bad = f_good
     gene_index = 1
     already_seen = set()
     for qid,indices in compressed_records_pointer_dict.items():
         combo = tuple(indices)
         if combo in already_seen:
-            print("combo seen:", combo)
-            #raw_input("")
+            #print("combo seen:", combo)
             continue
         already_seen.add(combo)
-#        if gene_index == 7:
-#            pdb.set_trace()
-        for isoform_index,i in enumerate(indices):
+
+        # print the fusion transcript in order of the transcription
+        for i in indices:
             bs.cuff_index = gene_index # for set to the same
             records = merged_exons[i]
-            f_group.write("{p}.{i}.{j}\t{ids}\n".format(p="PBfusion", i=gene_index, j=isoform_index, ids=",".join(r.qID for r in records)))
-#            bs.process_records(records, allow_extra_5_exons, skip_5_exon_alt, \
-#                    f_good, f_bad, f_group, tolerate_end=100, \
-#                    starting_isoform_index=isoform_index, gene_prefix='PBfusion')
+            isoform_index = get_isoform_index(fusion_candidates[qid], records[0].sID, records[0].sStart, records[0].sEnd)
+            f_group.write("{p}.{i}.{j}\t{ids}\n".format(p="PBfusion", i=gene_index, j=isoform_index+1, ids=",".join(r.qID for r in records)))
         gene_index += 1
-#    f_good.close()
-#    f_bad.close()
     f_group.close()
-
 
     # step (4). read the tmp file and modify to display per fusion gene
     # IMPORTANT: sometimes a fusion can involve more than 2 loci!
@@ -363,15 +344,23 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
         output_filename = output_prefix + '.rep.fq'
     else:
         output_filename = output_prefix + '.rep.fa'
-    pick_rep(fa_or_fq_filename, sam_filename, gff_filename, group_filename, output_filename, is_fq=is_fq, pick_least_err_instead=False)
+    pick_rep(fa_or_fq_filename, sam_filename, gff_filename, group_filename, output_filename, fusion_candidates, is_fq=is_fq)
 
-    print("{0} fusion candidates identified.".format(count), file=sys.stderr)
-    print("Output written to: {0}.gff, {0}.group.txt, {1}".format(output_prefix, output_filename), file=sys.stderr)
+    print("{0} fusion candidates identified.".format(count), file=sys.stdout)
+    print("Output written to: {0}.gff, {0}.group.txt, {1}".format(output_prefix, output_filename), file=sys.stdout)
 
     # (optional) step 5. get count information
     if cluster_report_csv is not None:
         get_abundance_post_collapse(output_prefix, cluster_report_csv, output_prefix)
-        print("Count information written to: {0}.abundance.txt".format(output_prefix), file=sys.stderr)
+        print("Count information written to: {0}.abundance.txt".format(output_prefix), file=sys.stdout)
+    elif is_flnc:
+        print("Input is FLNC. Outputting FLNC counts per fusion.")
+        with open(output_prefix+'.abundance.txt', 'w') as f:
+            f.write("pbid\tcount_fl\n")
+            for pbid, members in group_info.items():
+                f.write("{0}\t{1}\n".format(pbid, len(members)))
+        print("Count information written to: {0}.abundance.txt".format(output_prefix), file=sys.stdout)
+
 
 
 if __name__ == "__main__":
@@ -383,8 +372,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sam", required=True, help="Sorted GMAP SAM filename")
     parser.add_argument("-o", "--prefix", required=True, help="Output filename prefix")
     parser.add_argument("--cluster_report_csv", help="cluster_report.csv, optional, if given will generate count info.")
+    parser.add_argument("--is_flnc", action="store_true", default=False, help="Input are individual FLNC reads. If this option used, --cluster_report_csv should not be called. An FLNC-based count file will be output. (default: off)")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
-    #parser.add_argument("--prefix_dict_pickle_filename", default=None, help="Quiver HQ/LQ Pickle filename for generating count information (optional)")
     parser.add_argument("-c", "--min_locus_coverage", type=float, default=0.05, help="Minimum per-locus coverage in percentage (default: 0.05)")
     parser.add_argument("--min_locus_coverage_bp", type=int, default=1, help="Minimum per-locus coverage in bp (default: 1 bp)")
     parser.add_argument("-t", "--min_total_coverage", type=float, default=0.99, help="Minimum total coverage (default: 0.99)")
@@ -392,11 +381,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if args.is_flnc and args.cluster_report_csv is not None:
+        print("ERROR: Cannot use both --is_flnc and --cluster_report_csv at the same time. Abort!", file=sys.stderr)
+        sys.exit(-1)
+
     fusion_main(args.input, args.sam, args.prefix, args.cluster_report_csv,
                 is_fq=args.fq, allow_extra_5_exons=args.allow_extra_5exon,
                 skip_5_exon_alt=False,
                 min_locus_coverage=args.min_locus_coverage, min_locus_coverage_bp=args.min_locus_coverage_bp,
                 min_total_coverage=args.min_total_coverage,
-                min_dist_between_loci=args.min_dist_between_loci)
+                min_dist_between_loci=args.min_dist_between_loci,
+                is_flnc=args.is_flnc)
 
 
