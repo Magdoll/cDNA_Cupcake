@@ -61,7 +61,7 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
-2020.10.17 updated to v14.1.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
+2020.10.17 updated to v14.2.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
 
 2020.10.14 updated to v14.0.0. `fusion_finder.py` now outputs fusions in transcription order.
 

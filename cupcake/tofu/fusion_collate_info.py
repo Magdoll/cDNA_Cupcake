@@ -147,18 +147,14 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
             left_cds_exon_count = 'NA'
             right_cds_exon_count = 'NA'
 
+        left_orf, right_orf = 'NA', 'NA'
         if orf_faa is not None:
             seqid1 = gff_info[0][1].seqid
             seqid2 = gff_info[-1][1].seqid
             if seqid1 in orf_dict:
                 left_orf = str(orf_dict[seqid1].seq)
-            else:
-                left_orf = 'NA'
             if seqid2 in orf_dict:
                 right_orf = str(orf_dict[seqid2].seq)
-            else:
-                right_orf = 'NA'
-
 
         info = {'UniqueID': pbid,
                 'FusionName': "--".join([_r['associated_gene'] for (_index,_r) in iso_dict]),
