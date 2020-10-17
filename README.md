@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 10.14.2020
+Last Updated: 10.17.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 14.0.0
+Current version: 14.1.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -61,7 +61,9 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
-2020.10.14 updated to v14.0.0. `fusion_finder.py` supports FL counts via `--is_flnc` and now outputs fusions in transcription order.
+2020.10.17 updated to v14.1.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
+
+2020.10.14 updated to v14.0.0. `fusion_finder.py` now outputs fusions in transcription order.
 
 2020.09.23 updated to v13.0.0. adding support for `isoseq3 dedup`
 
