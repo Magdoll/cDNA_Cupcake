@@ -33,7 +33,12 @@ def sample_sanity_check(group_filename, gff_filename, count_filename, fastq_file
     ids1 = [line.strip().split()[0] for line in open(group_filename)]
     ids2 = [fusion_id for fusion_id,rs in GFF.collapseGFFFusionReader(gff_filename)]
     f = open(count_filename)
-    for i in range(14): f.readline() # just through the header
+    while True:
+        # advance through the headers which start with #
+        cur = f.tell()
+        if not f.readline().startswith('#') or f.tell() == cur:  # first non-# seen or EOF
+            f.seek(cur)
+            break
     ids3 = [r['pbid'] for r in DictReader(f, delimiter='\t')]
     if len(set(ids2).difference(ids1))>0 or len(set(ids2).difference(ids3))>0:
         raise Exception("Sanity check failed! Please make sure the PBIDs listed in {1} are also in {0} and {2}".format(\
