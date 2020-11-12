@@ -11,7 +11,7 @@ fusion_pbid = re.compile('PBfusion.(\d+).(\d+)')
 Run after fusion_finder.py + SQANTI3 classification
 """
 
-FIELDS = ['UniqueID', 'FusionName', 'LeftGeneName', 'LeftGeneID', 'LeftBreakpoint', 'LeftFlankingSequence',
+FIELDS = ['UniqueID', 'FusionName', 'LeftDiffToGeneTSS', 'LeftGeneName', 'LeftGeneID', 'LeftBreakpoint', 'LeftFlankingSequence',
           'RightGeneName', 'RightGeneID', 'RightBreakpoint', 'RightFlankingSequence',
           'JunctionSupport', 'SpanningReads', 'ReadCountScore',
           'Sequence', 'LeftORF', 'RightORF', 'LeftExonCount', 'RightExonCount',
@@ -48,9 +48,8 @@ def get_breakpoint_n_seq(r1, r2, genome_dict=None, flanking_size=50):
 def collate_info(fusion_prefix, class_filename, genepred_filename,
                  total_fl_count=None,
                  config_filename=None,
-                 cds_gff_filename=None,
                  genome_dict=None,
-                 orf_faa=None,
+                 cds_gff_filename=None,
                  min_fl_count=2):
 
     global_info = {}   # holding information for general information
@@ -67,6 +66,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
 
 
     d = defaultdict(lambda: {}) # PBfusion.X --> isoform index -> sqanti3 record
+    orf_dict = {}
     # read SQANTI3 classification file
     for r in DictReader(open(class_filename), delimiter='\t'):
         m = fusion_pbid.match(r['isoform'])
@@ -75,6 +75,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
             sys.exit(-1)
         gene_index, isoform_index = m.group(1), m.group(2)
         d[gene_index][isoform_index] = r
+        orf_dict[r['isoform']] = r['ORF_seq']
 
     # get sequences
     seq_dict = dict((r.id.split('|')[0], r.seq) for r in SeqIO.parse(open(fusion_prefix + '.rep.fa'),'fasta'))
@@ -89,12 +90,6 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
     if total_fl_count is None:
         print("Total FL count not given --- using the sum FL count from fusions only instead.", file=sys.stdout)
         total_fl_count = sum(count_d.values())
-
-    # get ORF sequence if available
-    orf_dict = None
-    if orf_faa is not None:
-        orf_dict = SeqIO.to_dict(SeqIO.parse(open(orf_faa), 'fasta'))
-        print("Read ORF faa file {0}. ORF information will be added.".format(orf_faa))
 
     # get breakpoint information
     gff_d = defaultdict(lambda: {}) # PBfusion.X --> isoform index -> sqanti3 record
@@ -125,7 +120,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
     for gene_index, iso_dict in d.items():
         iso_dict = list(iso_dict.items())  # (isoform index, classification record)
         iso_dict.sort(key=lambda x: x[0])
-        has_novel = any(r['associated_gene'].startswith('novelGene') or r['associated_gene']=='' for junk,r in iso_dict)
+        has_novel = any(r['associated_gene'].startswith('novel') or r['associated_gene']=='' for junk,r in iso_dict)
         pbid = 'PBfusion.' + str(gene_index)
 
         gff_info = list(gff_d[gene_index].items())
@@ -139,6 +134,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
         right_exon_count = len(rec2.ref_exons)
         gene1 = iso_dict[0][1]['associated_gene']
         gene2 = iso_dict[-1][1]['associated_gene']
+        diff_tss = iso_dict[0][1]['diff_to_gene_TSS']	
 
         if cds_gff_filename is not None:
             left_cds_exon_count = len(rec1.cds_exons)
@@ -148,16 +144,15 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
             right_cds_exon_count = 'NA'
 
         left_orf, right_orf = 'NA', 'NA'
-        if orf_faa is not None:
+        if orf_dict is not None:
             seqid1 = gff_info[0][1].seqid
             seqid2 = gff_info[-1][1].seqid
-            if seqid1 in orf_dict:
-                left_orf = str(orf_dict[seqid1].seq)
-            if seqid2 in orf_dict:
-                right_orf = str(orf_dict[seqid2].seq)
+            left_orf = orf_dict[seqid1]
+            right_orf = orf_dict[seqid2]
 
         info = {'UniqueID': pbid,
                 'FusionName': "--".join([_r['associated_gene'] for (_index,_r) in iso_dict]),
+				'LeftDiffToGeneTSS': diff_tss,
                 'LeftGeneName': gene1,
                 'LeftGeneID': gene_to_id[gene1] if gene1 in gene_to_id else 'NA',
                 'LeftBreakpoint': left_breakpoint,
@@ -177,7 +172,9 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
                 'LeftCDSExonCount': left_cds_exon_count,
                 'RightCDSExonCount': right_cds_exon_count}
         info.update(global_info)
-        if has_novel or info['SpanningReads'] < min_fl_count or gene1==gene2:
+        if has_novel or \
+                gene1==gene2 or \
+                (info['SpanningReads'] < min_fl_count):
             writer_bad.writerow(info)
         else:
             writer.writerow(info)
@@ -193,8 +190,6 @@ if __name__ == "__main__":
     parser.add_argument("--total_fl_count", type=int, default=None, help="(optional) Total FL count used to normalize fusion counts")
     parser.add_argument("--config", help="(optional) Additional information to include in the output")
     parser.add_argument("--genome", help="(optional) Reference genome")
-    parser.add_argument("--cds_gff", help="(optional) GFF with CDS annotated")
-    parser.add_argument("--orf_faa", help="(optional) ORF FAA sequence")
     parser.add_argument("--min_fl_count", type=int, default=2, help="Minimum FL count (default: 2)")
 
     args = parser.parse_args()
@@ -209,6 +204,4 @@ if __name__ == "__main__":
                  total_fl_count=args.total_fl_count,
                  config_filename=args.config,
                  genome_dict=genome_dict,
-                 orf_faa=args.orf_faa,
-                 cds_gff_filename=args.cds_gff,
                  min_fl_count=args.min_fl_count)

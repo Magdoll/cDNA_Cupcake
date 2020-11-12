@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 10.17.2020
+Last Updated: 11.12.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 14.1.0
+Current version: 15.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -60,6 +60,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.11.12 updated to v15.0.0. summarized VCF file from `collect_all_vcf.py` in IsoPhase now will output a `SAMPLE` column.
 
 2020.10.17 updated to v14.2.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
 
