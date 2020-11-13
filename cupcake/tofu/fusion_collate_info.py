@@ -11,7 +11,7 @@ fusion_pbid = re.compile('PBfusion.(\d+).(\d+)')
 Run after fusion_finder.py + SQANTI3 classification
 """
 
-FIELDS = ['UniqueID', 'FusionName', 'LeftDiffToGeneTSS', 'LeftGeneName', 'LeftGeneID', 'LeftBreakpoint', 'LeftFlankingSequence',
+FIELDS = ['UniqueID', 'FusionName', 'LeftGeneName', 'LeftGeneID', 'LeftBreakpoint', 'LeftFlankingSequence',
           'RightGeneName', 'RightGeneID', 'RightBreakpoint', 'RightFlankingSequence',
           'JunctionSupport', 'SpanningReads', 'ReadCountScore',
           'Sequence', 'LeftORF', 'RightORF', 'LeftExonCount', 'RightExonCount',
@@ -81,7 +81,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
     seq_dict = dict((r.id.split('|')[0], r.seq) for r in SeqIO.parse(open(fusion_prefix + '.rep.fa'),'fasta'))
 
     # get count information
-    count_d = {}
+    count_d = defaultdict(lambda: 'NA')
     count_filename = fusion_prefix + '.abundance.txt'
     if os.path.exists(count_filename):
         for r in DictReader(open(count_filename), delimiter='\t'):
@@ -120,7 +120,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
     for gene_index, iso_dict in d.items():
         iso_dict = list(iso_dict.items())  # (isoform index, classification record)
         iso_dict.sort(key=lambda x: x[0])
-        has_novel = any(r['associated_gene'].startswith('novel') or r['associated_gene']=='' for junk,r in iso_dict)
+        has_novel = any(r['associated_gene'].startswith('novelGene') or r['associated_gene']=='' for junk,r in iso_dict)
         pbid = 'PBfusion.' + str(gene_index)
 
         gff_info = list(gff_d[gene_index].items())
@@ -134,7 +134,6 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
         right_exon_count = len(rec2.ref_exons)
         gene1 = iso_dict[0][1]['associated_gene']
         gene2 = iso_dict[-1][1]['associated_gene']
-        diff_tss = iso_dict[0][1]['diff_to_gene_TSS']	
 
         if cds_gff_filename is not None:
             left_cds_exon_count = len(rec1.cds_exons)
@@ -152,7 +151,6 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
 
         info = {'UniqueID': pbid,
                 'FusionName': "--".join([_r['associated_gene'] for (_index,_r) in iso_dict]),
-				'LeftDiffToGeneTSS': diff_tss,
                 'LeftGeneName': gene1,
                 'LeftGeneID': gene_to_id[gene1] if gene1 in gene_to_id else 'NA',
                 'LeftBreakpoint': left_breakpoint,
@@ -163,7 +161,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
                 'RightFlankingSequence': right_seq,
                 'JunctionSupport': 'NA',
                 'SpanningReads': count_d[pbid],
-                'ReadCountScore': count_d[pbid]*(10**6)/total_fl_count,
+                'ReadCountScore': count_d[pbid]*(10**6)/total_fl_count  if count_d[pbid] is not 'NA' else 'NA',
                 'Sequence': seq_dict[pbid],
                 'LeftORF': left_orf,
                 'RightORF': right_orf,
@@ -174,7 +172,7 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
         info.update(global_info)
         if has_novel or \
                 gene1==gene2 or \
-                (info['SpanningReads'] < min_fl_count):
+                (info['SpanningReads']!='NA' and info['SpanningReads'] < min_fl_count):
             writer_bad.writerow(info)
         else:
             writer.writerow(info)

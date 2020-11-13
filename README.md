@@ -6,7 +6,7 @@ Last Updated: 11.12.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 15.0.0
+Current version: 15.1.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -60,6 +60,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.11.12 updated to v15.1.0. `fusion_collate_info.py` can now work without .abundance.txt
 
 2020.11.12 updated to v15.0.0. summarized VCF file from `collect_all_vcf.py` in IsoPhase now will output a `SAMPLE` column.
 
