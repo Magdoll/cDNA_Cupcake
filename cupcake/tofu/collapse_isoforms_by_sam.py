@@ -211,6 +211,15 @@ def main(args):
     else:
         pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=True, bad_gff_filename=f_bad.name)
 
+    if args.gen_mol_count:
+        outfile = args.prefix + '.collapsed.abundance.txt'
+        with open(outfile, 'w') as f:
+            f.write("pbid\tcount_fl\n")
+            for line in open(f_txt.name):
+                pbid, members = line.strip().split()
+                f.write("{0}\t{1}\n".format(pbid, members.count(',')+1))
+
+
     print("Ignored IDs written to: {0}".format(ignored_fout.name), file=sys.stdout)
     print("Output written to: {0}\n{1}\n{2}\n{3}\n".format(f_good.name, f_txt.name, outfile, args), file=sys.stdout)
 
@@ -228,6 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_5_diff", default=1000, type=int, help="Maximum allowed 5' difference if on same exon (default: 1000 bp)")
     parser.add_argument("--max_3_diff", default=100, type=int, help="Maximum allowed 3' difference if on same exon (default: 100 bp)")
     parser.add_argument("--flnc_coverage", dest="flnc_coverage", type=int, default=-1, help="Minimum # of FLNC reads, only use this for aligned FLNC reads, otherwise results undefined!")
+    parser.add_argument("--gen_mol_count", action="store_true", default=False, help="Generate a .abundance.txt file based on the number of input sequences collapsed. Use only if input is FLNC or UMI-dedup output (default: off)")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
 
     args = parser.parse_args()

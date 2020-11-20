@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 11.12.2020
+Last Updated: 11.20.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 15.1.0
+Current version: 16.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -60,6 +60,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.11.20 updated to v16.0.0. `collapse_isoforms_by_sam.py` has `--gen_mol_count` option to output .abundance.txt output (for FLNC or UMI-based isoseq3 dedup mappings)
 
 2020.11.12 updated to v15.1.0. `fusion_collate_info.py` can now work without .abundance.txt
 
