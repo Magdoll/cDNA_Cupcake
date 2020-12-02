@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 11.20.2020
+Last Updated: 12.2.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 16.0.0
+Current version: 17.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -57,9 +57,13 @@ A brief list of currently listed scripts are:
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
 * `chain_samples.py`: Chaining together multiple samples.
 * `fusion_finder.py`: Finding fusion genes.
+* `fusion_collate_info.py`: Collate fusion information after running SQANTI(3).
+* `color_bed12_post_sqanti.py`: Color BED12 files using FL counts after running SQANTI(3).
 
 
 ## Version Changes
+
+2020.12.02 updated to v17.0.0. added `color_bed12_post_sqanti.py`
 
 2020.11.20 updated to v16.0.0. `collapse_isoforms_by_sam.py` has `--gen_mol_count` option to output .abundance.txt output (for FLNC or UMI-based isoseq3 dedup mappings)
 
@@ -67,25 +71,25 @@ A brief list of currently listed scripts are:
 
 2020.11.12 updated to v15.0.0. summarized VCF file from `collect_all_vcf.py` in IsoPhase now will output a `SAMPLE` column.
 
-2020.10.17 updated to v14.2.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
-
-2020.10.14 updated to v14.0.0. `fusion_finder.py` now outputs fusions in transcription order.
-
-2020.09.23 updated to v13.0.0. adding support for `isoseq3 dedup`
-
-2020.09.15 updated to v12.5.0. fixed bug for `chain_samples.py` where chromosomes are numeric (ex: 12 instead of chr12).
-
-2020.08.12 updated to v12.4.0. fixed bug for `chain_samples.py` for a chunk sizing bug.
-
-2020.08.05 updated to v12.3.0. fixed bug for `demux_isoseq_with_genome.py` to work with mapped fasta output in SL9.
-
-2020.07.15 updated to v12.2.0. fixed bug for `clip_out_UMI_cellBC.py` for MS characters - switched to unix dialect.
-
-2020.05.28 updated to v12.1.0. fixed bug for `clip_out_UMI_cellBC.py` handling cigar strings.
-
 <details>
    <summary>Click to see older version logs</summary>
    
+    2020.10.17 updated to v14.2.0. added `fusion_collate_info.py` which was missing in v14.0.0 causing install failure.
+   
+    2020.10.14 updated to v14.0.0. `fusion_finder.py` now outputs fusions in transcription order.
+   
+    2020.09.23 updated to v13.0.0. adding support for `isoseq3 dedup`
+   
+    2020.09.15 updated to v12.5.0. fixed bug for `chain_samples.py` where chromosomes are numeric (ex: 12 instead of chr12).
+   
+    2020.08.12 updated to v12.4.0. fixed bug for `chain_samples.py` for a chunk sizing bug.
+   
+    2020.08.05 updated to v12.3.0. fixed bug for `demux_isoseq_with_genome.py` to work with mapped fasta output in SL9.
+   
+    2020.07.15 updated to v12.2.0. fixed bug for `clip_out_UMI_cellBC.py` for MS characters - switched to unix dialect.
+   
+    2020.05.28 updated to v12.1.0. fixed bug for `clip_out_UMI_cellBC.py` handling cigar strings.
+
     2020.01.31 updated to v10.0.1. fixed typo in `collapse_isoforms_by_sam.py`
     
     2020.01.27 updated to v10.0.0. `chain_samples.py` now supported multithreading via `--cpus` option, also fixed chain bugs related to 3' differences.
