@@ -5,7 +5,7 @@ from Cython.Build import cythonize
 
 
 __author__ = "etseng@pacb.com"
-version = "17.0.0"
+version = "18.0.0"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -52,6 +52,7 @@ setup(
                'cupcake/tofu/counting/chain_fusion_samples.py',
                'cupcake/tofu/counting/summarize_sample_GFF_junctions.py',
                'cupcake/tofu/counting/scrub_sample_GFF_junctions.py',
+               'cupcake/tofu/simple_stats_post_collapse.py',
                'cupcake2/tofu2/ice_pbdagcon2.py',
                'cupcake2/tofu2/run_preCluster.py',
                'cupcake2/tofu2/run_IceInit2.py',

@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 12.2.2020
+Last Updated: 12.14.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 17.0.0
+Current version: 18.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -55,15 +55,19 @@ A brief list of currently listed scripts are:
 * `get_abundance_post_collapse.py`: Obtain count information post collapse to unique isoforms.
 * `filter_by_count.py`: Filter collapse result by FL count information.
 * `filter_away_subset.py`: Filter away 5' degraded isoforms.
+* `simple_stats_post_collapse.py`: Generating simple stats file to plot in R later.
 * `chain_samples.py`: Chaining together multiple samples.
 * `fusion_finder.py`: Finding fusion genes.
 * `fusion_collate_info.py`: Collate fusion information after running SQANTI(3).
 * `color_bed12_post_sqanti.py`: Color BED12 files using FL counts after running SQANTI(3).
 
 
+
 ## Version Changes
 
-2020.12.02 updated to v17.0.0. added `color_bed12_post_sqanti.py`
+2020.12.14 updated to v18.0.0. added `simple_stats_post_collapse.py`.
+
+2020.12.03 updated to v17.1.0. added `color_bed12_post_sqanti.py`
 
 2020.11.20 updated to v16.0.0. `collapse_isoforms_by_sam.py` has `--gen_mol_count` option to output .abundance.txt output (for FLNC or UMI-based isoseq3 dedup mappings)
 

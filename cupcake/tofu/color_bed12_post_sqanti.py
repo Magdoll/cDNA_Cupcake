@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
 
+import pdb
 import os, sys, math
 from csv import DictReader
 from collections import defaultdict, Counter
@@ -33,7 +34,7 @@ def shade_isoforms_for_gene_group(records, bed_info, bed_writers):
         info = bed_info[r['isoform']]
         for k in cpm_fields:
             if r[k] > 0:
-                rgb_index = min(NUM_RGB-1, math.ceil(math.log2(max_cpm_dict[k]/r[k] * 3)))
+                rgb_index = min(NUM_RGB-1, math.ceil(math.log2(max_cpm_dict[k]/r[k])*3))
             else:
                 rgb_index = NUM_RGB-1
             # 0: chrom, 1: start, 2: end <-- no need to change
@@ -64,10 +65,6 @@ def shaded_bed12_post_sqanti(sqanti_class_filename, input_bed12, output_prefix, 
             assert k.startswith('FL.')
             CPM_fieldnames["CPM."+k[3:]] = k
 
-    bed_writers = {}
-    for cpm_k in CPM_fieldnames:
-        bed_writers[cpm_k] = open(output_prefix + '.' + cpm_k + '.bed12', 'w')
-
     # group SQANTI3 classification file by `associated_gene`
     records_by_gene = defaultdict(lambda: [])
     total_fl_count_dict = Counter()
@@ -75,6 +72,19 @@ def shaded_bed12_post_sqanti(sqanti_class_filename, input_bed12, output_prefix, 
         records_by_gene[r['associated_gene']].append(r)
         for cpm_k, fl_k in CPM_fieldnames.items():
             total_fl_count_dict[cpm_k] += int(r[fl_k]) if r[fl_k]!='NA' else 0
+
+    for cpm_k in total_fl_count_dict:
+        if total_fl_count_dict[cpm_k] == 0:
+            print("No counts observed in column `{0}`. Ignore!".format(CPM_fieldnames[cpm_k]), file=sys.stderr)
+            del CPM_fieldnames[cpm_k]
+
+    print("Generating count RGB for columns:".format(",".join(CPM_fieldnames.keys())))
+    bed_writers = {}
+    for cpm_k in CPM_fieldnames:
+        outfile = output_prefix + '.' + cpm_k + '.bed12'
+        print("Writing output to {0}....".format(outfile), file=sys.stdout)
+        bed_writers[cpm_k] = open(outfile, 'w')
+        bed_writers[cpm_k].write("track name=PacBioColored itemRgb=On\n")
 
     # calculate FL CPM
     for gene, records in records_by_gene.items():
