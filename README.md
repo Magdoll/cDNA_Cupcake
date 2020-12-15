@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 12.14.2020
+Last Updated: 12.15.2020
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 18.0.0
+Current version: 18.1.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2020.12.15 updated to v18.1.0. fixed file splitting bug in `chain_samples.py`.
 
 2020.12.14 updated to v18.0.0. added `simple_stats_post_collapse.py`.
 

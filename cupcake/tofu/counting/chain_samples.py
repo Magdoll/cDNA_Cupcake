@@ -149,17 +149,27 @@ def chain_split_file(ref_gff, ref_group, ref_name, addon_gff, addon_group, addon
             # we may not end up using all the chunks, ex: if all records are on the same locus, we end up writing everything to one split file
             if counter >= (i+1)*chunk_size:
                 i += 1
+                n = f_gff.tell()
                 f_gff.close()
                 f_group.close()
-                split_files.append((f_gff.name, f_group.name))
+                if n == 0: # didn't write any records, delete these
+                    os.remove(f_gff.name)
+                    os.remove(f_group.name)
+                else:
+                    split_files.append((f_gff.name, f_group.name))
                 if i >= n_chunks or counter >= len(recs):
                     break
                 f_gff = open(addon_gff+'.split'+str(i), 'w')
                 f_group = open(addon_group + '.split' + str(i), 'w')
     if not f_gff.closed:
+        n = f_gff.tell()
         f_gff.close()
         f_group.close()
-        split_files.append((f_gff.name, f_group.name))
+        if n == 0: # didn't write any records, delete these
+            os.remove(f_gff.name)
+            os.remove(f_group.name)
+        else:
+            split_files.append((f_gff.name, f_group.name))
 
     result_prefixes = []
     pools = []
