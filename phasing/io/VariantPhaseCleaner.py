@@ -17,6 +17,7 @@ we have:
 start with assumption of 2 allele:
 how do we find the center
 """
+import pdb
 import os, sys
 import itertools
 import numpy as np
@@ -142,6 +143,7 @@ def infer_haplotypes_via_min_diff(haplotype_strings, hap_count, ploidy, max_diff
     3. add in hap1 as second most frequent, calc sum of diffs.
     4. ...repeat until sum of diffs gets worse, or ploidy reached, or the next haplotype is less than <min_percent> reads .
     """
+    #pdb.set_trace()
     # we are to ignore all partial haps
     partial_haps = [i for i in range(len(haplotype_strings)) if any(s=='?' for s in haplotype_strings[i])]
     for k in partial_haps:

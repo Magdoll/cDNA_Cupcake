@@ -219,7 +219,7 @@ def iter_gmap_sam_for_fusion(gmap_sam_filename, fusion_candidates, transfrag_len
         yield(sep_by_strand(records))
 
 
-def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05, min_locus_coverage_bp=1, min_total_coverage=.99, min_dist_between_loci=10000):
+def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05, min_locus_coverage_bp=1, min_total_coverage=.99, min_dist_between_loci=10000, min_identity=0.95):
     """
     Return dict of
        fusion candidate qID --> list (in order) of the fusion ranges (ex: (chr3,100,200), (chr1,500,1000))
@@ -245,7 +245,7 @@ def find_fusion_candidates(sam_filename, query_len_dict, min_locus_coverage=.05,
     fusion_candidates = {}
     for k, data in d.items():
         if len(data) > 1 and \
-            all(a.iden>=.95 for a in data) and \
+            all(a.iden>=min_identity for a in data) and \
             all(a.qCov>=min_locus_coverage for a in data) and \
             all(a.qCov*a.qLen >= min_locus_coverage_bp for a in data) and \
             total_coverage(data)*1./data[0].qLen >= min_total_coverage and \
@@ -260,6 +260,7 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
                 is_fq=False, allow_extra_5_exons=True, skip_5_exon_alt=True,
                 min_locus_coverage=.05, min_total_coverage=.99,
                 min_locus_coverage_bp=1, min_dist_between_loci=10000,
+                min_identity=0.95,
                 is_flnc=False):
     """
     (1) identify fusion candidates (based on mapping, total coverage, identity, etc)
@@ -279,7 +280,7 @@ def fusion_main(fa_or_fq_filename, sam_filename, output_prefix, cluster_report_c
 
     # step (1). identify fusion candidates
     bs = branch_simple2.BranchSimple(fa_or_fq_filename, is_fq=is_fq)
-    fusion_candidates = find_fusion_candidates(sam_filename, bs.transfrag_len_dict, min_locus_coverage, min_locus_coverage_bp, min_total_coverage, min_dist_between_loci)
+    fusion_candidates = find_fusion_candidates(sam_filename, bs.transfrag_len_dict, min_locus_coverage, min_locus_coverage_bp, min_total_coverage, min_dist_between_loci, min_identity=min_identity)
 
     # step (2). merge the fusion exons
     for recs in iter_gmap_sam_for_fusion(sam_filename, fusion_candidates, bs.transfrag_len_dict):
@@ -378,8 +379,11 @@ if __name__ == "__main__":
     parser.add_argument("--min_locus_coverage_bp", type=int, default=1, help="Minimum per-locus coverage in bp (default: 1 bp)")
     parser.add_argument("-t", "--min_total_coverage", type=float, default=0.99, help="Minimum total coverage (default: 0.99)")
     parser.add_argument("-d", "--min_dist_between_loci", type=int, default=10000, help="Minimum distance between loci, in bp (default: 10000)")
+    parser.add_argument("-i", "--min_identity", type=float, default=0.95, help="Minimum alignment identity (default: 0.95)")
 
     args = parser.parse_args()
+
+    assert 0 < args.min_identity <= 1
 
     if args.is_flnc and args.cluster_report_csv is not None:
         print("ERROR: Cannot use both --is_flnc and --cluster_report_csv at the same time. Abort!", file=sys.stderr)
@@ -391,6 +395,7 @@ if __name__ == "__main__":
                 min_locus_coverage=args.min_locus_coverage, min_locus_coverage_bp=args.min_locus_coverage_bp,
                 min_total_coverage=args.min_total_coverage,
                 min_dist_between_loci=args.min_dist_between_loci,
+                min_identity=args.min_identity,
                 is_flnc=args.is_flnc)
 
 

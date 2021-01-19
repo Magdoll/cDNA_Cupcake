@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/home/UNIXHOME/etseng/anacondaPy37/envs/anaCogentPy37/bin/python
 __author__ = 'etseng@pacb.com'
 
 import pdb
@@ -20,7 +20,7 @@ RGB_SCALE = ['0,0,0', '26,0,0', '51,0,0', '77,0,0', '102,0,0',
              '255,128,128', '255,153,153', '255,179,179', '255,204,204', '255,230,230']
 NUM_RGB = len(RGB_SCALE)
 
-def shade_isoforms_for_gene_group(records, bed_info, bed_writers):
+def shade_isoforms_for_gene_group(records, bed_info, bed_writers, ok_to_ignore=False):
     """
 
     :param isolist: list of SQANTI3 classification records which all come from same gene
@@ -31,6 +31,7 @@ def shade_isoforms_for_gene_group(records, bed_info, bed_writers):
     for k in cpm_fields:
         max_cpm_dict[k] = max(r[k] for r in records)
     for r in records:
+        if r['isoform'] not in bed_info and ok_to_ignore: continue
         info = bed_info[r['isoform']]
         for k in cpm_fields:
             if r[k] > 0:
@@ -48,7 +49,7 @@ def shade_isoforms_for_gene_group(records, bed_info, bed_writers):
             bed_writers[k].write("\t".join(info) + '\n')
 
 
-def shaded_bed12_post_sqanti(sqanti_class_filename, input_bed12, output_prefix, FL_fieldnames=['FL']):
+def shaded_bed12_post_sqanti(sqanti_class_filename, input_bed12, output_prefix, FL_fieldnames=['FL'], ok_to_ignore=False):
 
     # read input BED12 file into dict
     bed_info = {}   # isoform --> bed record
@@ -91,7 +92,7 @@ def shaded_bed12_post_sqanti(sqanti_class_filename, input_bed12, output_prefix, 
         for r in records:
             for cpm_k, fl_k in CPM_fieldnames.items():
                 r[cpm_k] = (int(r[fl_k]) if r[fl_k]!='NA' else 0) * (10**6) / total_fl_count_dict[cpm_k]
-        shade_isoforms_for_gene_group(records, bed_info, bed_writers)
+        shade_isoforms_for_gene_group(records, bed_info, bed_writers, ok_to_ignore)
 
 
 if __name__ == "__main__":
@@ -100,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("class_filename", help='SQANTI(3) classification filename')
     parser.add_argument("bed12_filename", help='Input BED12 filename (converted from same SQANTI3 input GTF)')
     parser.add_argument("output_prefix")
+    parser.add_argument("--ok_to_ignore", action="store_true", help="OK to ignore entries missing in bed file (default: off)")
 
     args = parser.parse_args()
 
@@ -113,4 +115,4 @@ if __name__ == "__main__":
         print("Expected column(s) 'FL' or 'FL.<sample>'! None found. Abort!")
         sys.exit(-1)
 
-    shaded_bed12_post_sqanti(args.class_filename, args.bed12_filename, args.output_prefix, fl_fieldnames)
+    shaded_bed12_post_sqanti(args.class_filename, args.bed12_filename, args.output_prefix, fl_fieldnames, args.ok_to_ignore)

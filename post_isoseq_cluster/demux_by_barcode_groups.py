@@ -33,10 +33,9 @@ def regroup_gff(pooled_gff, demux_count_file, output_prefix, out_group_dict, in_
 
     for r in DictReader(open(demux_count_file),delimiter=','):
         for k,v in r.items():
-            if k=='id': continue
-            if int(v) > 0: in_tissue[r['id']].add(k)
+            if k!='id' and int(v) > 0: in_tissue[r['id']].add(k)
 
-    in_tissue = dict(in_tissue)
+#    in_tissue = dict(in_tissue)
 
     handles = {}
     handles_fafq = {}

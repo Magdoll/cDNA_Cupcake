@@ -15,7 +15,8 @@ FIELDS = ['UniqueID', 'FusionName', 'LeftGeneName', 'LeftGeneID', 'LeftBreakpoin
           'RightGeneName', 'RightGeneID', 'RightBreakpoint', 'RightFlankingSequence',
           'JunctionSupport', 'SpanningReads', 'ReadCountScore',
           'Sequence', 'LeftORF', 'RightORF', 'LeftExonCount', 'RightExonCount',
-          'LeftCDSExonCount', 'RightCDSExonCount']
+          'LeftCDSExonCount', 'RightCDSExonCount',
+          'Comments']
 
 
 def get_breakpoint_n_seq(r1, r2, genome_dict=None, flanking_size=50):
@@ -26,7 +27,7 @@ def get_breakpoint_n_seq(r1, r2, genome_dict=None, flanking_size=50):
         else:
             left_seq = 'NA'
     else:
-        left_breakpoint = "{0}:{1}:-".format(r1.chr, r1.start)
+        left_breakpoint = "{0}:{1}:-".format(r1.chr, r1.start+1)
         if genome_dict is not None:
             left_seq = str(genome_dict[r1.chr][r1.start:r1.start+flanking_size].reverse_complement().seq)
         else:
@@ -50,7 +51,9 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
                  config_filename=None,
                  genome_dict=None,
                  cds_gff_filename=None,
-                 min_fl_count=2):
+                 min_fl_count=2,
+                 min_breakpoint_dist_kb=10,
+                 include_Mt_genes=False):
 
     global_info = {}   # holding information for general information
     if config_filename is not None:
@@ -168,11 +171,29 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
                 'LeftExonCount': left_exon_count,
                 'RightExonCount': right_exon_count,
                 'LeftCDSExonCount': left_cds_exon_count,
-                'RightCDSExonCount': right_cds_exon_count}
+                'RightCDSExonCount': right_cds_exon_count,
+                'Comments': 'PASS'}
         info.update(global_info)
-        if has_novel or \
-                gene1==gene2 or \
-                (info['SpanningReads']!='NA' and info['SpanningReads'] < min_fl_count):
+
+        left_chr, left_break, left_strand = left_breakpoint.split(':')
+        right_chr, right_break, right_strand = right_breakpoint.split(':')
+
+        if has_novel:
+            info['Comments'] = 'FAIL:NovelGene'
+        elif gene1==gene2:
+            info['Comments'] = 'FAIL:SameGene'
+        elif (info['SpanningReads']!='NA' and info['SpanningReads'] < min_fl_count):
+            info['Comments'] = 'FAIL:TooFewFLReads'
+        elif (not include_Mt_genes and (gene1.startswith('MT-') or gene2.startswith('MT-'))):
+            info['Comments'] = 'FAIL:MtGenes'
+        elif (left_chr==right_chr and abs(int(left_break)-int(right_break))/1000<=min_breakpoint_dist_kb):
+            info['Comments'] = 'FAIL:BreakpointTooClose'
+#        elif (left_exon_count==1 and left_orf=='NA'):
+#            info['Comments'] = 'PASS:LeftExonNoORF'
+#        elif (right_exon_count==1 and right_orf=='NA'):
+#            info['Comments'] = 'PASS:RightExonNoORF'
+
+        if info['Comments'].startswith('FAIL:'):
             writer_bad.writerow(info)
         else:
             writer.writerow(info)
@@ -185,10 +206,13 @@ if __name__ == "__main__":
     parser.add_argument("fusion_prefix", help="Prefix for fusion files (ex: my.fusion)")
     parser.add_argument("class_filename", help="SQANTI3 classification filename")
     parser.add_argument("genepred_filename", help="GenePred filename used by SQANTI3 classification")
+    parser.add_argument("--cds_gff", help="CDS GFF filename (optional)")
     parser.add_argument("--total_fl_count", type=int, default=None, help="(optional) Total FL count used to normalize fusion counts")
     parser.add_argument("--config", help="(optional) Additional information to include in the output")
     parser.add_argument("--genome", help="(optional) Reference genome")
     parser.add_argument("--min_fl_count", type=int, default=2, help="Minimum FL count (default: 2)")
+    parser.add_argument("--min_breakpoint_dist_kb", type=int, default=10, help="Minimum breakpoint distance, in kb (default: 10[kb])")
+    parser.add_argument("--include_Mt_genes", default=False, action="store_true", help="Include Mt genes (default: off)")
 
     args = parser.parse_args()
 
@@ -202,4 +226,7 @@ if __name__ == "__main__":
                  total_fl_count=args.total_fl_count,
                  config_filename=args.config,
                  genome_dict=genome_dict,
-                 min_fl_count=args.min_fl_count)
+                 cds_gff_filename=args.cds_gff,
+                 min_fl_count=args.min_fl_count,
+                 min_breakpoint_dist_kb=args.min_breakpoint_dist_kb,
+                 include_Mt_genes=args.include_Mt_genes)
