@@ -94,10 +94,21 @@ class MPileUPVariant(object):
         """
         for pos in self.record_by_pos:
             r = self.record_by_pos[pos]
-            if self.expected_strand == '+':
+            if self.expected_strand == '+-':
+                # for metagenomics, we don't care the strand
+                # so instead we will convert everything to upper case later in the counts
                 bases = 'ATCG'
-            else:
+            elif self.expected_strand == '+':
+                bases = 'ATCG'
+            elif self.expected_strand == '-':
                 bases = 'atcg'
+
+            if self.expected_strand == '+-':
+                # convert lower case to upper case
+                for k in 'atcg':
+                    if k in r.counts:
+                        r.counts[k.upper()] += r.counts[k]
+                        del r.counts[k]
 
             r.clean_counts = Counter(r.counts)
             keys = list(r.counts.keys())
@@ -140,6 +151,45 @@ class MPileUPVariant(object):
                 self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
                 self.ref_base[pos] = r.ref
 
+class MagMPileUPVariant(MPileUPVariant):
+    def __init__(self, record_list, min_cov, err_sub, expected_strand, pval_cutoff=0.01):
+        self.ref_name = {} # position --> ref contig
+        super().__init__(record_list, min_cov, err_sub, expected_strand, pval_cutoff)
+
+    def call_variant(self):
+        """
+        mirrors AminoAcidCaller::CallVariants() in
+        https://github.com/PacificBiosciences/minorseq/blob/develop/src/AminoAcidCaller.cpp
+
+        For each position (that has sufficient coverage),
+         do Fisher exact test w/ correction
+         if p-val < threshold, then store it.
+
+        Stores results in self.variant as:
+
+        self.variant[position] = desc list of (base, count).
+        NOTE: base must be either all in lower case (which means - strand)
+              or call upper case (+ strand).
+              If - strand and ('a', 10), it means the ref base in A on the + strand,
+              and the transcript should be T on the - strand.
+
+        Only positions with more than the ref base is stored.
+        """
+        for pos in self.positions_to_call:
+            r = self.record_by_pos[pos]
+            alt_variant = []
+            for base, count in r.clean_counts.most_common()[1:]:
+                assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
+                exp = r.clean_cov * self.err_sub
+                odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
+                pval *= self.number_of_tests
+                #print("LOG: at pos {0} p-val {1}".format(pos, pval))
+                if pval < self.pval_cutoff: # store variant if below cutoff
+                    alt_variant.append((base, count))
+            if len(alt_variant) > 0: # only record this variant if there's at least two haps
+                self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
+                self.ref_name[pos] = r.chr
+                self.ref_base[pos] = r.ref
 
 
 

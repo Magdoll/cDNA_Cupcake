@@ -4,6 +4,7 @@ import pdb
 from collections import defaultdict, namedtuple
 from csv import DictReader
 import vcf
+import pysam
 from Bio.Seq import Seq
 from Bio import SeqIO
 from cupcake.io.BioReaders import GMAPSAMReader
@@ -399,3 +400,330 @@ class Haplotypes(object):
                 rec.samples.append(vcf.model._Call(rec, _iso, samp_ft(*[genotype, counts])))
             f_vcf.write_record(rec)
         f_vcf.close()
+
+
+def get_base_to_base_mapping_from_aligned_pairs(reftuple, qLen, strand):
+    """
+    Returns: dict of 0-based position --> 0-based ref position
+    """
+    cur_genome_loc = reftuple[0][1]
+
+    mapping = {}
+    for qpos, rpos in reftuple:
+        if qpos is not None and rpos is not None:
+            mapping[qpos] = (rpos, True)
+        elif qpos is not None:
+            mapping[qpos] = (cur_genome_loc, None)
+        if rpos is not None: cur_genome_loc = rpos
+
+    if strand == '-':
+        mapping = dict((qLen-1-k, v) for k,v in mapping.items())
+
+    for k in mapping:
+        mapping[k] = mapping[k][0]
+
+    return mapping
+
+
+class MagVariantPhaser(object):
+    def __init__(self, vc):
+        """
+        :param vc: MPileUPVariant instance.
+        """
+        self.vc = vc
+        self.min_var_pos = min(vc.variant)  # mininum 0-based position of a called variant
+        self.max_var_pos = max(vc.variant)  # maximum 0-based position of a called variant
+        self.accepted_vars_by_pos = {} # 0-based pos --> list of accepted, (NOT strand sense) base
+        self.count_of_vars_by_pos = {} # 0-based pos --> (NOT strand sense, but ref-based) base --> count
+        self.accepted_pos = [] # sorted list of variant positions (0-based, ref)
+
+        # process vc.variant which is
+        # dict of 0-based pos --> desc list of (base, count)
+        # ex: {1565: [('a', 49), ('g', 36)]}
+        # lower case means at pos 1565, we expect - strand mapping and
+        # seq base is 'T' on the sense strand
+        # this converts to self.accepted_vars_by_pos[1565] = ['A', 'G']
+        # later, when we are matchin back to transcript seq, need to watch for strand!
+        for pos, vars in vc.variant.items():
+            self.accepted_vars_by_pos[pos] = [_base.upper() for _base,_count in vars]
+            self.count_of_vars_by_pos[pos] = dict((_base.upper(), _count) for _base,_count in vars)
+
+        self.accepted_pos = list(self.accepted_vars_by_pos.keys())
+        self.accepted_pos.sort()
+
+        self.haplotypes = MagHaplotypes(self.accepted_pos, [self.vc.ref_name[p] for p in self.accepted_pos], self.vc.ref_base, self.count_of_vars_by_pos)
+        self.seq_hap_info = {} # haplotype assignment, key: (CCS) seqid, value: haplotype index
+
+
+    def phase_variant(self, sam_filename, coordstr, output_prefix, partial_ok=False):
+        """
+        :param sam_filename: CCS SAM filename. Can be unsorted.
+        :param coordstr: list of [contig, start, end]
+        :param output_prefix: Output prefix. Writes to xxx.log.
+        :param partial_ok: default False. if True, (CCS) reads don't need to cover all SNP positions.
+
+        For each alignment:
+        1. discard if did not map to the strand expected
+        2. discard if did not map to the full range of variants (unless <partial_ok> is True)
+        3. discard if at var positions have non-called bases (outliers)
+        """
+        f_log = open(output_prefix+'.log', 'a+')
+
+        contig, start, end = coordstr
+
+        secondary_align_counts = 0
+        tot_align_counts = 0
+        with pysam.AlignmentFile(sam_filename, 'rb') as samfile:
+            for s in samfile.fetch(contig, start, end):
+                tot_align_counts += 1
+                if s.reference_name == '*':
+                    f_log.write("Ignore {0} because: unmapped.\n".format(s.query_name))
+                    continue
+                if not partial_ok and (s.reference_start > self.min_var_pos or s.reference_end < self.max_var_pos):
+                    f_log.write("Ignore {0} because: aln too short, from {1}-{2}.\n".format(s.query_name, s.referenc_start+1, s.reference_end))
+                    continue
+                if s.is_secondary:
+                    secondary_align_counts += 1
+                    continue
+                seqstr = s.query_sequence.upper()
+                i, msg = self.match_haplotype(s, seqstr, partial_ok)
+                if i is None: # read is rejected for reason listed in <msg>
+                    f_log.write("Ignore {0} because: {1}.\n".format(s.query_name, msg))
+                    continue
+                else:
+                    f_log.write("{0} phased: haplotype {1}={2}\n".format(s.query_name, i, self.haplotypes[i]))
+                    print("{0} has haplotype {1}:{2}".format(s.query_name, i, self.haplotypes[i]))
+                    self.seq_hap_info[s.query_name] = i
+        f_log.write(f'Encountered {secondary_align_counts} out of {tot_align_counts} read alignments')
+
+
+    def match_haplotype(self, r, s, partial_ok=False):
+        """
+        Match an alignment record to existing haplotypes or create a new one.
+        Helper function for self.phase_variant()
+        :param r: CCS alignment (pysam record)
+        :param s: CCS sequence (in strand), must be plain str and every base is upper case
+        :param partial_ok: default False. if True, (CCS) reads don't need to cover all SNP positions.
+
+        :return: (haplotype_index, msg) or (None, msg) if variants don't match w/ called SNPs
+        """
+        try:
+            assert type(s) is str and str.isupper(s)
+        except Exception as e:
+            print(f'exception: {s}')
+        # m: mapping of 0-based seq --> 0-based ref position
+        # rev_map: mapping of 0-based ref position --> 0-based seq
+        strand = '-' if r.is_reverse else '+'
+        m = get_base_to_base_mapping_from_aligned_pairs(r.get_aligned_pairs(), len(r.query_sequence), strand)
+        ref_m = dict((v,k) for k,v in m.items())
+
+        # go through each variant
+        # <hap> to represent the concatenated string of all variant positions for this seq
+        # ex: if there are three var positions, a hap would be "ATG" or "A?G" (if partial_ok is True), etc.
+        hap = ''
+        impute_later = False
+        for ref_pos in self.accepted_pos:
+            if ref_pos not in ref_m:
+                if partial_ok: # read does not cover one of the SNP positions, so use "?"
+                    hap += "?"
+                else:
+                    return None, "Does not have base at ref_pos {0}.\n".format(ref_pos)
+            else:
+                base = s[ref_m[ref_pos]]
+                if base in self.accepted_vars_by_pos[ref_pos]:
+                    hap += base
+                else: # contains a base at a variant position that is not called. Try to impute.
+                    hap += base
+                    impute_later = True
+
+        if all(b=='?' for b in hap):
+            return None, "Does not cover any variant base."
+
+        if impute_later:
+            impute_i = self.haplotypes.impute_haplotype(hap, min_score=3)
+            if impute_i is None:
+                return None, "Seq {0} contained non-called variant. Impute failed.\n".format(hap)
+            else:
+                return impute_i, "IMPUTED"
+        return self.haplotypes.match_or_add_haplotype(hap_string=hap)
+
+
+class MagHaplotypes(object):
+    """
+    Storing haplotypes for a loci.
+
+    self.haplotype[i] is the i-th haplotype.
+    if N = len(self.haplotype[i]), then there are N variants along the loci.
+    self.hap_var_positions[j] means that the j-th variant corressponds to (0-based) position on the ref genome.
+    """
+    def __init__(self, var_positions, chrs, ref_at_pos, count_of_vars_by_pos):
+        """
+        :param var_positions: sorted list of (0-based) variant positions
+        :param ref_at_pos: dict of (0-based) variant position --> ref base at this position
+        :param count_of_vars_by_pos: 0-based pos --> (NOT strand sense, but ref-based) base --> count
+        """
+        self.haplotypes = [] # haplotypes, where haplotypes[i] is the i-th distinct haplotype of all var concat
+        self.hap_var_positions = var_positions
+        self.ref_at_pos = ref_at_pos # dict of (0-based) pos --> ref base
+        self.alt_at_pos = None # init: None, later: dict of (0-based) pos --> unique list of alt bases
+        self.count_of_vars_by_pos = count_of_vars_by_pos
+        self.haplotype_vcf_index = None # init: None, later: dict of (hap index) --> (0-based) var pos --> phase (0 for ref, 1+ for alt)
+        self.chrs = chrs # contig names where chrs[i] is the i-th contig name
+
+        # sanity check: all variant positions must be present
+        self.sanity_check()
+
+    def __getitem__(self, ith):
+        """
+        Returns the <i>-th haplotype
+        """
+        return self.haplotypes[ith]
+
+    def __str__(self):
+        return """
+        var positions: {pp}
+        haplotypes: \n{h}
+        """.format(pp=",".join(map(str,self.hap_var_positions)),
+                   h="\n".join(self.haplotypes))
+
+    def sanity_check(self):
+        """
+        Sanity check the following:
+        -- variant positions are properly recorded and concordant
+        -- alt bases are truly alt and unique
+        -- all haplotypes are the same length
+        """
+        for pos in self.hap_var_positions:
+            assert pos in self.ref_at_pos
+
+        if self.alt_at_pos is not None:
+            for pos in self.alt_at_pos:
+                # ref base must not be in alt
+                assert self.ref_at_pos[pos] not in self.alt_at_pos[pos]
+                # alt bases must be unique
+                assert len(self.alt_at_pos[pos]) == len(set(self.alt_at_pos[pos]))
+
+        if len(self.haplotypes) >= 1:
+            n = len(self.haplotypes[0])
+            assert n == len(self.hap_var_positions)
+            for hap_str in self.haplotypes[1:]:
+                assert len(hap_str) == n
+
+
+    def match_or_add_haplotype(self, hap_string):
+        """
+        If <hap_string> is an existing haplotype, return the index.
+        Otherwise, add to known haplotypes and return the new index.
+
+        :return: <index>, "FOUND" or "NEW"
+        """
+        if hap_string in self.haplotypes:
+            i = self.haplotypes.index(hap_string)
+            return i, "FOUND"
+        else:
+            i = len(self.haplotypes)
+            self.haplotypes.append(hap_string)
+            return i, "NEW"
+
+    def impute_haplotype(self, hap_string, min_score):
+        """
+        :param hap_string: a hap string with '?'s.
+        :param min_sim: minimum similarity with existing haplotype to accept assignment
+        :return: <index> of an existing haplotype, or None if not sufficiently matched
+
+        Impute haplotype and only return a match if:
+        (a) score (similarity) is >= min_score
+        (b) the matching score for the best one is higher than the second best match
+        """
+        sim_tuple = namedtuple('sim_tuple', 'index score')
+        sims = [] # list of sim_tuple
+        hap_str_len = len(hap_string)
+        for i in range(len(self.haplotypes)):
+            # Liz note: currently NOT checking whether existing haplotypes have '?'. I'm assuming no '?'.
+            score = sum((hap_string[k]==self.haplotypes[i][k]) for k in range(hap_str_len))
+            if score > 0:
+                sims.append(sim_tuple(index=i, score=score))
+        if len(sims) == 0:
+            return None
+        sims.sort(key=lambda x: x.score, reverse=True)
+        if sims[0].score >= min_score and (len(sims)==1 or sims[0].score > sims[1].score):
+            return sims[0].index
+        else:
+            return None
+
+    def get_haplotype_vcf_assignment(self):
+        """
+        Must be called before self.write_haplotype_to_vcf()
+        This is preparing for writing out VCF. We need to know, for each variant position,
+        the ref base (already filled in self.ref_at_pos) and the alt bases (self.alt_at_pos).
+        For each haplotype in (self.haplotype), we need to know the whether the i-th variant is the
+        ref (index 0), or some alt base (index 1 and onwards).
+
+        Propagates two variables:
+
+        self.haplotype_vcf_index: hap index --> pos --> phase index (0 for ref, 1+ for alt)
+        self.alt_at_pos: dict of <0-based pos> --> alt bases (not is not ref) at this position
+        """
+        self.haplotype_vcf_index = [{} for i in range(len(self.haplotypes))]
+        self.alt_at_pos = {}
+
+        # what happens in the case of partial phasing
+        # ex: self.haplotypes[0] = "A?G", this means when it comes to the second pos, pos2,
+        # in the VCF we would want to write out .|. for diploid, . for haploid, etc
+        # so let's set self.haplotype_vcf_index[0][pos2] = '.' to indicate that
+
+        for i,pos in enumerate(self.hap_var_positions):
+            ref = self.ref_at_pos[pos]
+            # need to go through the haplotype bases, if ref is already represented, then don't put it in alt
+            self.alt_at_pos[pos] = []
+            for hap_i, hap_str in enumerate(self.haplotypes):
+                base = hap_str[i]
+                if base=='?': # means this haplotype does not cover this position!
+                    self.haplotype_vcf_index[hap_i][pos] = '.'
+                elif base==ref: # is the ref base
+                    self.haplotype_vcf_index[hap_i][pos] = 0
+                else: # is an alt base, see if it's already there
+                    if base in self.alt_at_pos[pos]:
+                        j = self.alt_at_pos[pos].index(base)
+                        self.haplotype_vcf_index[hap_i][pos] = j + 1 # always +1, buz alt starts at 1 (0 is ref)
+                    else:
+                        j = len(self.alt_at_pos[pos])
+                        self.alt_at_pos[pos].append(base)
+                        self.haplotype_vcf_index[hap_i][pos] = j + 1 # always +1, buz alt starts at 1 (0 is ref)
+            # in the case where partial_ok=False, it's possible some alt are never presented by a haplotype
+            # we must check that all variants are presented here
+            for _base in self.count_of_vars_by_pos[pos]:
+                if (_base not in self.ref_at_pos[pos]) and (_base not in self.alt_at_pos[pos]):
+                    self.alt_at_pos[pos].append(_base)
+
+
+    def write_haplotype_to_humanreadable(self, contig, f_human):
+        """
+        The following functions must first be called first:
+        -- self.get_haplotype_vcf_assignment
+        f_human : human readable tab file handle
+        """
+        if self.haplotype_vcf_index is None or self.alt_at_pos is None:
+            raise Exception("Must call self.get_haplotype_vcf_assignment() first!")
+
+        self.sanity_check()
+
+        # f_human.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+        for hap_index,hap_str in enumerate(self.haplotypes):
+            for pos_index,pos in enumerate(self.hap_var_positions):
+                i = self.haplotype_vcf_index[hap_index][pos]
+                if i == '.': # means this haplotype does not include this position, skip!
+                    continue
+                assert type(i) is int
+                f_human.write(f'{hap_str}\t{hap_index}\t{contig}\t')
+                f_human.write(str(pos+1)+'\t')
+                f_human.write(str(pos_index+1)+'\t')
+                if i == 0:
+                    base = self.ref_at_pos[pos]
+                    f_human.write("REF\t")
+                else:
+                    base = self.alt_at_pos[pos][i-1]
+                    f_human.write("ALT" + str(i-1) + '\t')
+                #if i>0: pdb.set_trace()
+                f_human.write(str(self.count_of_vars_by_pos[pos][base]) + '\n')
+
