@@ -14,11 +14,7 @@ from phasing.io import VariantPhaser
 
 MIN_COVERAGE = 10     # minimum number of FL reads for a gene to do SNP calling and phasing
 ERR_SUB = 0.005
-MAX_DIFF_ALLOWED = 3  # maximum difference in bases allowed for two haplotype strings
-MIN_PERC_ALLOWED = .10  # minimum percent of total count for an allele
 PVAL_CUTOFF = 0.1
-MIN_AF_AT_ENDS = 0.10 # minimum minor allele frequency for SNPs at ends, which tend to have unreliable alignments
-
 
 def parse_user_input():
     from argparse import ArgumentParser
