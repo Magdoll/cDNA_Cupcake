@@ -64,8 +64,10 @@ def main(args, parser):
 
     snpsfound = False
     # (0) generate pileups
-    f_human = open(args.output + '.human_readable.txt', 'w')
-    f_human.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+    f_human1 = open(args.output + '.human_readable_by_pos.txt', 'w')
+    f_human1.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+    f_human2 = open(args.output + '.human_readable_by_hap.txt', 'w')
+    f_human2.write("haplotype\thapIdx\tcontig\tcount\n")
 
     for mpileupFile, contig, start, end in elitePileups(args.bamfile, args.genes, args.assembly, args.output):
         # (1) read the mpileup and vall variants
@@ -94,9 +96,10 @@ def main(args, parser):
         pp.phase_variant(args.bamfile, [contig, start, end], args.output, partial_ok=True)
         print(pp.haplotypes)
         pp.haplotypes.get_haplotype_vcf_assignment()
-        pp.haplotypes.write_haplotype_to_humanreadable(contig, f_human)
+        pp.haplotypes.write_haplotype_to_humanreadable(contig, f_human1, f_human2, pp.seq_hap_info)
         os.remove(mpileupFile)
-    f_human.close()
+    f_human1.close()
+    f_human2.close()
 
     if not snpsfound:
         os.system("touch {out}.NO_SNPS_FOUND".format(out=args.output))

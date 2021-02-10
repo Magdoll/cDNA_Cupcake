@@ -1,7 +1,7 @@
 __author__ = 'etseng@pacb.com'
 
 import pdb
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Counter
 from csv import DictReader
 import vcf
 import pysam
@@ -697,33 +697,40 @@ class MagHaplotypes(object):
                     self.alt_at_pos[pos].append(_base)
 
 
-    def write_haplotype_to_humanreadable(self, contig, f_human):
+    def write_haplotype_to_humanreadable(self, contig, f_human1, f_human2, seq_hap_info):
         """
         The following functions must first be called first:
         -- self.get_haplotype_vcf_assignment
-        f_human : human readable tab file handle
+        f_human1 : human readable tab file handle, one SNP per line
+        f_human2: human readable tab file handle, one allele per line
         """
         if self.haplotype_vcf_index is None or self.alt_at_pos is None:
             raise Exception("Must call self.get_haplotype_vcf_assignment() first!")
 
         self.sanity_check()
 
-        # f_human.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+        hap_count = Counter()
+        for ccs_id, hap_index in seq_hap_info.items():
+            hap_count[hap_index] += 1
+        # f_human1.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+        # f_human2.write("haplotype\thapIdx\tcontig\tcount\n")
         for hap_index,hap_str in enumerate(self.haplotypes):
+            f_human2.write(f'{hap_str}\t{hap_index}\t{contig}\t')
+            f_human2.write(str(hap_count[hap_index]) + '\n')
             for pos_index,pos in enumerate(self.hap_var_positions):
                 i = self.haplotype_vcf_index[hap_index][pos]
                 if i == '.': # means this haplotype does not include this position, skip!
                     continue
                 assert type(i) is int
-                f_human.write(f'{hap_str}\t{hap_index}\t{contig}\t')
-                f_human.write(str(pos+1)+'\t')
-                f_human.write(str(pos_index+1)+'\t')
+                f_human1.write(f'{hap_str}\t{hap_index}\t{contig}\t')
+                f_human1.write(str(pos+1)+'\t')
+                f_human1.write(str(pos_index+1)+'\t')
                 if i == 0:
                     base = self.ref_at_pos[pos]
-                    f_human.write("REF\t")
+                    f_human1.write("REF\t")
                 else:
                     base = self.alt_at_pos[pos][i-1]
-                    f_human.write("ALT" + str(i-1) + '\t')
+                    f_human1.write("ALT" + str(i-1) + '\t')
                 #if i>0: pdb.set_trace()
-                f_human.write(str(self.count_of_vars_by_pos[pos][base]) + '\n')
+                f_human1.write(str(self.count_of_vars_by_pos[pos][base]) + '\n')
 
