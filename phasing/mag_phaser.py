@@ -41,12 +41,19 @@ def parse_user_input():
                         help="P value cutoff for variant calls",
                         default=PVAL_CUTOFF, type=float
                         )
-    
+    parser.add_argument("--bhFDR", default=None,
+                        type=float,
+                        help="FDR to be used for the Benjamini–Hochberg correction. Default: None (not used).")
+
 
     return parser.parse_args(), parser
 
 def main(args, parser):
     args = parser.parse_args()
+
+    if args.bhFDR is not None:
+        print("--bhFDR {0} is given! Will be using Benjamini–Hochberg correction insteaad. --pval_cutoff is ignored.".format(args.bhFDR))
+
 
     # remove potential past run output
     past_files = [args.output+'.NO_SNPS_FOUND',
@@ -73,7 +80,9 @@ def main(args, parser):
         # (1) read the mpileup and vall variants
         reader = sam.MPileUpReader(mpileupFile)
         recs = [r for r in reader]
-        vc = VC.MagMPileUPVariant(recs, min_cov=MIN_COVERAGE, err_sub=ERR_SUB, expected_strand='+-', pval_cutoff=args.pval_cutoff)
+        vc = VC.MagMPileUPVariant(recs, min_cov=MIN_COVERAGE, err_sub=ERR_SUB, expected_strand='+-',
+                                  pval_cutoff=args.pval_cutoff,
+                                  bhFDR=args.bhFDR)
         vc.call_variant()
         print(vc.variant)
 

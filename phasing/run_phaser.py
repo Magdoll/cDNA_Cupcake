@@ -34,11 +34,15 @@ parser.add_argument("-o", "--output_prefix", required=True)
 parser.add_argument("--strand", choices=['+', '-'], required=True)
 parser.add_argument("--partial_ok", default=False, action="store_true")
 parser.add_argument("-p", "--pval_cutoff", default=PVAL_CUTOFF, type=float)
+parser.add_argument("--bhFDR", default=None, type=float, help="FDR to be used for the Benjamini–Hochberg correction. Default: None (not used).")
 parser.add_argument("-n", "--ploidy", type=int, default=2)
 #parser.add_argument("-e", "--err_sub", default=ERR_SUB, type=float, help="Estimated substitution error rate (default: 0.005)")
 
 
 args = parser.parse_args()
+
+if args.bhFDR is not None:
+    print("--bhFDR {0} is given! Will be using Benjamini–Hochberg correction insteaad. --pval_cutoff is ignored.".format(args.bhFDR))
 
 # remove potential past run output
 past_files = [args.output_prefix+'.NO_SNPS_FOUND',
@@ -56,7 +60,9 @@ for file in past_files:
 # (1) read the mpileup and vall variants
 reader = sp.MPileUpReader(args.mpileup_filename)
 recs = [r for r in reader]
-vc = VC.MPileUPVariant(recs, min_cov=MIN_COVERAGE, err_sub=ERR_SUB, expected_strand=args.strand, pval_cutoff=args.pval_cutoff)
+vc = VC.MPileUPVariant(recs, min_cov=MIN_COVERAGE, err_sub=ERR_SUB, expected_strand=args.strand,
+                       pval_cutoff=args.pval_cutoff,
+                       bhFDR=args.bhFDR)
 vc.call_variant()
 print(vc.variant)
 

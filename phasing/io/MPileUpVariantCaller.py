@@ -8,10 +8,12 @@ https://github.com/PacificBiosciences/minorseq/blob/develop/src/AminoAcidCaller.
 """
 import os, sys
 import scipy.stats as stats
-from collections import Counter
+from collections import Counter, namedtuple
+
+BHtuple = namedtuple('BHtuple', ['pval', 'record'])
 
 class MPileUPVariant(object):
-    def __init__(self, record_list, min_cov, err_sub, expected_strand, pval_cutoff=0.01):
+    def __init__(self, record_list, min_cov, err_sub, expected_strand, pval_cutoff=0.01, bhFDR=None):
         """
         :param record_list: list of SAMMPileUpRecord
         :param min_cov: minimum coverage to call variant
@@ -23,7 +25,9 @@ class MPileUPVariant(object):
         self.err_sub = err_sub
 
         self.pval_cutoff = pval_cutoff
+        self.bhFDR       = bhFDR   # is None, this is not used; other wise do Benjamini–Hochberg
         self.expected_strand = expected_strand
+
 
         self.prep_records()
         self.positions_to_call = self.get_positions_to_call()
@@ -137,24 +141,53 @@ class MPileUPVariant(object):
 
         Only positions with more than the ref base is stored.
         """
-        for pos in self.positions_to_call:
-            r = self.record_by_pos[pos]
-            alt_variant = []
-            for base, count in r.clean_counts.most_common()[1:]:
-                assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
-                exp = r.clean_cov * self.err_sub
-                odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
-                pval *= self.number_of_tests
-                if pval < self.pval_cutoff: # store variant if below cutoff
-                    alt_variant.append((base, count))
-            if len(alt_variant) > 0: # only record this variant if there's at least two haps
-                self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
-                self.ref_base[pos] = r.ref
+        if self.bhFDR is None: # use Bonferroni correction
+            for pos in self.positions_to_call:
+                r = self.record_by_pos[pos]
+                alt_variant = []
+                for base, count in r.clean_counts.most_common()[1:]:
+                    assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
+                    exp = r.clean_cov * self.err_sub
+                    odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
+                    pval *= self.number_of_tests
+                    if pval < self.pval_cutoff: # store variant if below cutoff
+                        alt_variant.append((base, count))
+                if len(alt_variant) > 0: # only record this variant if there's at least two haps
+                    self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
+                    self.ref_base[pos] = r.ref
+        else: # use Benjamini–Hochberg procedure
+            # see: https://www.statisticshowto.com/benjamini-hochberg-procedure/
+            pval_dict = {} # (pos, base) -> BHtuple(pval, record)
+            for pos in self.positions_to_call:
+                r = self.record_by_pos[pos]
+                for base, count in r.clean_counts.most_common()[1:]:
+                    assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
+                    exp = r.clean_cov * self.err_sub
+                    odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
+                    pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
+            # now we have all the pvals, rank them
+            keys_pos_base = list(pval_dict.keys())
+            keys_pos_base.sort(key=lambda x: pval_dict[x].pval)
+            # find the largest p value that is smaller than the critical value.
+            largest_good_rank1 = 0
+            for rank0,(pos, base) in enumerate(keys_pos_base):
+                pval = pval_dict[(pos, base)].pval
+                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR
+                if pval < bh_val:
+                    largest_good_rank1 = rank0+1
+                    print(f"pos:{pos} base:{base} pval:{pval} bh:{bh_val}")
+            for (pos,base) in keys_pos_base[:largest_good_rank1]:
+                r = pval_dict[(pos,base)].record
+                if pos not in self.variant:
+                    self.ref_base[pos] = r.ref
+                    self.variant[pos] = [r.clean_counts.most_common()[0]]
+                self.variant[pos] += [(base, r.clean_counts[base])]
+
 
 class MagMPileUPVariant(MPileUPVariant):
-    def __init__(self, record_list, min_cov, err_sub, expected_strand, pval_cutoff=0.01):
+    def __init__(self, record_list, min_cov, err_sub, expected_strand, pval_cutoff=0.01, bhFDR=None):
         self.ref_name = {} # position --> ref contig
-        super().__init__(record_list, min_cov, err_sub, expected_strand, pval_cutoff)
+        super().__init__(record_list, min_cov, err_sub, expected_strand, pval_cutoff, bhFDR)
 
     def call_variant(self):
         """
@@ -175,23 +208,50 @@ class MagMPileUPVariant(MPileUPVariant):
 
         Only positions with more than the ref base is stored.
         """
-        for pos in self.positions_to_call:
-            r = self.record_by_pos[pos]
-            alt_variant = []
-            for base, count in r.clean_counts.most_common()[1:]:
-                assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
-                exp = r.clean_cov * self.err_sub
-                odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
-                pval *= self.number_of_tests
-                #print("LOG: at pos {0} p-val {1}".format(pos, pval))
-                if pval < self.pval_cutoff: # store variant if below cutoff
-                    alt_variant.append((base, count))
-            if len(alt_variant) > 0: # only record this variant if there's at least two haps
-                self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
-                self.ref_name[pos] = r.chr
-                self.ref_base[pos] = r.ref
+        if self.bhFDR is None: # use Bonferroni correction
+            for pos in self.positions_to_call:
+                r = self.record_by_pos[pos]
+                alt_variant = []
+                for base, count in r.clean_counts.most_common()[1:]:
+                    assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
+                    exp = r.clean_cov * self.err_sub
+                    odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
+                    pval *= self.number_of_tests
+                    if pval < self.pval_cutoff: # store variant if below cutoff
+                        alt_variant.append((base, count))
+                if len(alt_variant) > 0: # only record this variant if there's at least two haps
+                    self.variant[pos] = [r.clean_counts.most_common()[0]] + alt_variant
+                    self.ref_base[pos] = r.ref
+                    self.ref_name[pos] = r.chr
 
-
+        else: # use Benjamini–Hochberg procedure
+            # see: https://www.statisticshowto.com/benjamini-hochberg-procedure/
+            pval_dict = {} # (pos, base) -> BHtuple(pval, record)
+            for pos in self.positions_to_call:
+                r = self.record_by_pos[pos]
+                for base, count in r.clean_counts.most_common()[1:]:
+                    assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
+                    exp = r.clean_cov * self.err_sub
+                    odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
+                    pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
+            # now we have all the pvals, rank them
+            keys_pos_base = list(pval_dict.keys())
+            keys_pos_base.sort(key=lambda x: pval_dict[x].pval)
+            # find the largest p value that is smaller than the critical value.
+            largest_good_rank1 = 0
+            for rank0,(pos, base) in enumerate(keys_pos_base):
+                pval = pval_dict[(pos, base)].pval
+                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR
+                if pval < bh_val:
+                    largest_good_rank1 = rank0+1
+                    print(f"pos:{pos} base:{base} pval:{pval} bh:{bh_val}")
+            for (pos,base) in keys_pos_base[:largest_good_rank1]:
+                r = pval_dict[(pos,base)].record
+                if pos not in self.variant:
+                    self.ref_base[pos] = r.ref
+                    self.ref_name[pos] = r.chr
+                    self.variant[pos] = [r.clean_counts.most_common()[0]]
+                self.variant[pos] += [(base, r.clean_counts[base])]
 
 
 

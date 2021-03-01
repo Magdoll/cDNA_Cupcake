@@ -5,7 +5,7 @@ from Cython.Build import cythonize
 
 
 __author__ = "etseng@pacb.com"
-version = "20.0.2b"
+version = "21.0.0b"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
