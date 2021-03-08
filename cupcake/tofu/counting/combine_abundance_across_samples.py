@@ -75,10 +75,12 @@ def write_reclist_to_gff_n_info(rec_list, final_prefix, ref_name, addon_name, us
                 _indices.sort(key=lambda i: (rec_list[i].rec.start, rec_list[i].rec.end, len(rec_list[i].rec.ref_exons)))
                 pb_i += 1
                 for pb_j, recs_index in enumerate(_indices):
+                    pbgene = "PB.{0}".format(pb_i)
                     pbid = "PB.{0}.{1}".format(pb_i, pb_j + 1)
                     match_rec = rec_list[recs_index]
                     new_group_info[pbid] = match_rec.members
                     match_rec.rec.seqid = pbid
+                    match_rec.rec.geneid = pbgene
                     GFF.write_collapseGFF_format(f_gff, match_rec.rec)
                     writer_info.writerow({'superPBID': pbid, ref_name: match_rec.ref_id, addon_name: match_rec.addon_id})
                     f_group.write("{0}\t{1}\n".format(pbid, ",".join(match_rec.members)))

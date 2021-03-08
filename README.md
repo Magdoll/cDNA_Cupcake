@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 02.28.2021
+Last Updated: 03.08.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 21.0.0b
+Current version: 21.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2021.03.08 updated to v21.0.0. Added `mag_phaser.py` for metagenomics phasing. 
 
 2021.01.18 updated to v19.0.0. IsoPhase release (for redwood Iso-Seq) and updated `fusion_collate_info.py`
 

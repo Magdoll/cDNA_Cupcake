@@ -550,7 +550,7 @@ def write_collapseGFF_format(f, r):
     if r.cds_exons is not None:
         for exon in r.cds_exons:
             f.write("{chr}\tPacBio\tCDS\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
-    
+
 
 class collapseGFFReader(gmapGFFReader):
     def read(self):
