@@ -10,7 +10,7 @@ def main(input_prefix):
         sys.exit(-1)
 
     f1 = open(input_prefix + '.simple_stats.txt', 'w')
-    f1.write("pbid\tlocus\tlength\tnum_exon\n")
+    f1.write("pbid\tlocus\tlength\tgenomic_length\tnum_exon\n")
     f2 = open(input_prefix + '.exon_stats.txt', 'w')
     f2.write("pbid\texon_index\texon_size\tintron_size\n")
     for r in collapseGFFReader(input_gff):
@@ -25,6 +25,7 @@ def main(input_prefix):
             else: f2.write(str(e.start-r.ref_exons[i-1].end) + '\n')
 
         f1.write(str(sum_len)+'\t')
+        f1.write(str(r.end-r.start)+'\t')
         f1.write(str(len(r.ref_exons))+'\n')
 
     f1.close()

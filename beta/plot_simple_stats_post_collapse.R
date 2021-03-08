@@ -17,6 +17,10 @@ x <- x.1
 ggplot(x, aes(length)) + geom_histogram(binwidth=200, fill='lightblue', color='black') + xlab("Transcript Length (bp)") + ylab("Number of Unique Transcripts") + labs(title="Mapped Unique Transcript Lengths")  + theme_tufte() + xlim(c(0,10000))
 ggsave(paste(PREFIX,".Rplot.histogram.png",sep=''), width=6, height=4.5)
 
+# plot genomic length histogram
+ggplot(x, aes(genomic_length/1000)) + geom_histogram(binwidth=100, fill='lightgreen', color='black') + xlab("Transcript Genomic Length (kb)") + ylab("Number of Unique Transcripts") + labs(title="Mapped Unique Transcript Genomic Lengths")  + theme_tufte()
+ggsave(paste(PREFIX,".Rplot.genomic_len_histogram.png",sep=''), width=6, height=4.5)
+
 # plot number of exons
 x$exon_cat <- "1"
 x[x$num_exon>=2,"exon_cat"] <- "2-5"
