@@ -5,6 +5,7 @@ from collections import defaultdict
 from csv import DictReader, DictWriter
 from Bio import SeqIO
 from cupcake.io.GFF import collapseGFFReader
+from cupcake.io.GFF import GTF
 
 fusion_pbid = re.compile('PBfusion.(\d+).(\d+)')
 """
@@ -46,7 +47,7 @@ def get_breakpoint_n_seq(r1, r2, genome_dict=None, flanking_size=50):
             right_seq = 'NA'
     return left_breakpoint, left_seq, right_breakpoint, right_seq
 
-def collate_info(fusion_prefix, class_filename, genepred_filename,
+def collate_info(fusion_prefix, class_filename, gtf_filename,
                  total_fl_count=None,
                  config_filename=None,
                  genome_dict=None,
@@ -62,11 +63,14 @@ def collate_info(fusion_prefix, class_filename, genepred_filename,
             k, v = line.strip().split('=')
             global_info[k] = v
 
-    gene_to_id = {} # gene name --> ensembl ID
-    for line in open(genepred_filename):
-        raw = line.strip().split()
-        gene_to_id[raw[11]] = raw[0]
-
+    # in order to get gene name to ensembl gene ID (ENSG), we need the original GTF that was fed to SQANTI3
+    gene_to_id = defaultdict(lambda: set()) # gene name --> ensembl ID
+    print(f"Reading {gtf_filename} to extract gene name to ENSG ID mapping...")
+    gtf_info = GTF(gtf_filename)
+    for v in gtf_info.transcript_info.values():
+        gene_to_id[v['gname']].add(v['gid'])
+    for k in gene_to_id:
+        gene_to_id[k] = "_".join(gene_to_id[k])
 
     d = defaultdict(lambda: {}) # PBfusion.X --> isoform index -> sqanti3 record
     orf_dict = {}
@@ -205,7 +209,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("fusion_prefix", help="Prefix for fusion files (ex: my.fusion)")
     parser.add_argument("class_filename", help="SQANTI3 classification filename")
-    parser.add_argument("genepred_filename", help="GenePred filename used by SQANTI3 classification")
+    parser.add_argument("gtf_filename", help="GTF annotation used as input to SQANTI3 classification")
     parser.add_argument("--cds_gff", help="CDS GFF filename (optional)")
     parser.add_argument("--total_fl_count", type=int, default=None, help="(optional) Total FL count used to normalize fusion counts")
     parser.add_argument("--config", help="(optional) Additional information to include in the output")
@@ -222,7 +226,7 @@ if __name__ == "__main__":
     else:
         genome_dict = None
 
-    collate_info(args.fusion_prefix, args.class_filename, args.genepred_filename,
+    collate_info(args.fusion_prefix, args.class_filename, args.gtf_filename,
                  total_fl_count=args.total_fl_count,
                  config_filename=args.config,
                  genome_dict=genome_dict,
