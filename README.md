@@ -1,6 +1,6 @@
 # cDNA_Cupcake
 
-![](https://github.com/Magdoll/images_public/blob/master/CoSA_figures/CoSA_workflow_boinfx.png?raw=true)
+![](https://github.com/Magdoll/images_public/blob/master/banners/Ad_HiFi-Sequencing-Webinar_journey.jpg?raw=true)
 
 Last Updated: 03.09.2021
 
