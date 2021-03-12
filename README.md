@@ -1,6 +1,6 @@
 # cDNA_Cupcake
 
-![](https://github.com/Magdoll/images_public/blob/master/banners/Ad_HiFi-Sequencing-Webinar_journey.jpg?raw=true)
+<a href="https://www.pacb.com/hifi-webinar">![](https://github.com/Magdoll/images_public/blob/master/banners/test.png?raw=true)</a>
 
 Last Updated: 03.09.2021
 
