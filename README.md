@@ -1,6 +1,6 @@
 # cDNA_Cupcake
 
-![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
+![](https://github.com/Magdoll/images_public/blob/master/banners/Ad_HiFi-Sequencing-Webinar_journey.jpg)
 
 Last Updated: 03.09.2021
 
