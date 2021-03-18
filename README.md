@@ -1,8 +1,8 @@
 # cDNA_Cupcake
 
-<a href="https://programs.pacificbiosciences.com/l/1652/2021-03-12/42p2d7">![](https://github.com/Magdoll/images_public/blob/master/banners/test.png?raw=true)</a>
+<a href="https://programs.pacificbiosciences.com/l/1652/2021-03-17/42pbgh">![](https://github.com/Zuhayr-PacBio/images_public/blob/main/PacBio%20BFx%20March%202021%201a.png?raw=true)</a>
 
-Last Updated: 03.09.2021
+Last Updated: 03.18.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
