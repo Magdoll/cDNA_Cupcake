@@ -5,7 +5,7 @@ from Cython.Build import cythonize
 
 
 __author__ = "etseng@pacb.com"
-version = "22.0.0"
+version = "23.0.0"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -63,6 +63,7 @@ setup(
                'cupcake2/tofu2/picking_up_ice2.py',
                'phasing/create_fake_genome.py',
                'phasing/run_phaser.py',
-			   'phasing/mag_phaser.py'
+			   'phasing/mag_phaser.py',
+               'phasing/utils/paint_bam_post_phaser.py'
                ],
     )

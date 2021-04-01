@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 03.09.2021
+Last Updated: 03.12.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 22.0.0
+Current version: 23.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2021.03.12 updated to v23.0.0. using pval to reduce non-SNP-potential positions in IsoPhase.  
 
 2021.03.09 updated to v22.0.0. `fusion_collate_info.py` fixed to use proper GTF for gene name to ENSG ID mapping.
 

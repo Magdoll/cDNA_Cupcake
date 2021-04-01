@@ -3,7 +3,7 @@ Should always be faithful duplicate of sequence/BioReaders.py
 Duplicated here for tofu installation. This one is called via cupcake.io.BioReaders.
 """
 
-import re, sys
+import re, sys, pdb
 from collections import namedtuple
 
 Interval = namedtuple('Interval', ['start', 'end'])
@@ -38,7 +38,7 @@ class SimpleSAMReader:
   
 class SimpleSAMRecord:
     cigar_rex = re.compile('(\d+)([MIDSHN])')
-    SAMflag = namedtuple('SAMflag', ['is_paired', 'strand', 'PE_read_num'])
+    SAMflag = namedtuple('SAMflag', ['is_paired', 'strand', 'PE_read_num', 'is_secondary', 'is_supplementary'])
     def __init__(self, record_line):
         """
         Simple bare bones version: only has
@@ -148,7 +148,7 @@ class SAMReader:
     
 
 class SAMRecord:
-    SAMflag = namedtuple('SAMflag', ['is_paired', 'strand', 'PE_read_num'])
+    SAMflag = namedtuple('SAMflag', ['is_paired', 'strand', 'PE_read_num', 'is_secondary', 'is_supplementary'])
     def __init__(self, record_line=None, ref_len_dict=None, query_len_dict=None):
         """
         Designed to handle BowTie SAM output for unaligned reads (PE read not yet supported)
@@ -169,6 +169,7 @@ class SAMRecord:
 
         self.sLen = None
         self.qLen = None
+        self.cigar_qLen = None # qLen based on parsing CIGAR string
         # qStart, qEnd might get changed in parse_cigar
         self.qStart = 0
         self.qEnd = None # length of SEQ
@@ -287,8 +288,10 @@ class SAMRecord:
         self.num_del = 0
         self.num_ins = 0
         self.num_mat_or_sub = 0
+        self.cigar_qLen = 0
         for (num, type) in re.findall('(\d+)(\S)', cigar):
             num = int(num)
+            self.cigar_qLen += num
             if type == 'H' or type == 'S':
                 if first_thing:
                     self.qStart += num
@@ -335,14 +338,18 @@ class SAMRecord:
         """
         PE_read_num = 0
         strand = '+'
+        is_supp = False
+        is_secondary = False
         if flag >= 2048: # supplementary alignment
             flag -= 2048
+            is_supp = True
         if flag >= 1024: #PCR or optical duplicate, should never see this...
             flag -= 1024
         if flag >= 512: #not passing QC, should never see this
             flag -= 512
         if flag >= 256: #secondary alignment, OK to see this if option given in BowTie
             flag -= 256
+            is_secondary = True
         if flag >= 128:
             PE_read_num = 2
             flag -= 128
@@ -362,7 +369,7 @@ class SAMRecord:
             flag -= 2
         assert flag == 0 or flag == 1
         is_paired = flag == 1
-        return SAMRecord.SAMflag(is_paired, strand, PE_read_num)
+        return SAMRecord.SAMflag(is_paired, strand, PE_read_num, is_secondary, is_supp)
             
 
             

@@ -164,15 +164,18 @@ class MPileUPVariant(object):
                     assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
                     exp = r.clean_cov * self.err_sub
                     odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
-                    pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
+                    if pval <= self.pval_cutoff:      # With this filtration, the sequencing errors position will not be stored in pval_dict.
+                        pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
+
             # now we have all the pvals, rank them
             keys_pos_base = list(pval_dict.keys())
             keys_pos_base.sort(key=lambda x: pval_dict[x].pval)
+            self.number_of_tests = len(keys_pos_base)
             # find the largest p value that is smaller than the critical value.
             largest_good_rank1 = 0
             for rank0,(pos, base) in enumerate(keys_pos_base):
                 pval = pval_dict[(pos, base)].pval
-                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR
+                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR # Only significant positions will be used to adjust bh_val
                 if pval < bh_val:
                     largest_good_rank1 = rank0+1
                     print(f"pos:{pos} base:{base} pval:{pval} bh:{bh_val}")
@@ -233,15 +236,17 @@ class MagMPileUPVariant(MPileUPVariant):
                     assert not base.startswith('+') and not base.startswith('-') # clean counts should NOT have indels
                     exp = r.clean_cov * self.err_sub
                     odds, pval = stats.fisher_exact([[count, r.clean_cov-count], [exp, r.clean_cov-exp]], alternative='greater')
-                    pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
+                    if pval <= self.pval_cutoff:      # With this filtration, the sequencing errors position will not be stored in pval_dict.
+                        pval_dict[(pos, base)] = BHtuple(pval=pval, record=r)
             # now we have all the pvals, rank them
             keys_pos_base = list(pval_dict.keys())
             keys_pos_base.sort(key=lambda x: pval_dict[x].pval)
+            self.number_of_tests = len(keys_pos_base)
             # find the largest p value that is smaller than the critical value.
             largest_good_rank1 = 0
             for rank0,(pos, base) in enumerate(keys_pos_base):
                 pval = pval_dict[(pos, base)].pval
-                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR
+                bh_val = ((rank0+1)/self.number_of_tests) * self.bhFDR # Only significant positions will be used to adjust bh_val
                 if pval < bh_val:
                     largest_good_rank1 = rank0+1
                     print(f"pos:{pos} base:{base} pval:{pval} bh:{bh_val}")

@@ -697,23 +697,29 @@ class MagHaplotypes(object):
                     self.alt_at_pos[pos].append(_base)
 
 
-    def write_haplotype_to_humanreadable(self, contig, f_human1, f_human2, seq_hap_info):
+    def write_haplotype_to_humanreadable(self, contig, f_human1, f_human2, f_human3, seq_hap_info):
         """
         The following functions must first be called first:
         -- self.get_haplotype_vcf_assignment
         f_human1 : human readable tab file handle, one SNP per line
         f_human2: human readable tab file handle, one allele per line
+        f_human3: human readable tab file handle, CCS read to haplotype assignment, one read per line
         """
         if self.haplotype_vcf_index is None or self.alt_at_pos is None:
             raise Exception("Must call self.get_haplotype_vcf_assignment() first!")
 
         self.sanity_check()
 
+        # f_human1.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
+        # f_human2.write("haplotype\thapIdx\tcontig\tcount\n")
+        # f_human3.write("read_id\thaplotype\thapIdx\n")
+
         hap_count = Counter()
         for ccs_id, hap_index in seq_hap_info.items():
             hap_count[hap_index] += 1
-        # f_human1.write("haplotype\thapIdx\tcontig\tpos\tvarIdx\tbase\tcount\n")
-        # f_human2.write("haplotype\thapIdx\tcontig\tcount\n")
+            hap_str = self.haplotypes[hap_index]
+            f_human3.write(f'{ccs_id}\t{hap_str}\t{hap_index}\n')
+
         for hap_index,hap_str in enumerate(self.haplotypes):
             f_human2.write(f'{hap_str}\t{hap_index}\t{contig}\t')
             f_human2.write(str(hap_count[hap_index]) + '\n')
