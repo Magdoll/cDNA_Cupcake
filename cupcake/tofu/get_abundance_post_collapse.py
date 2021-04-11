@@ -147,7 +147,8 @@ def output_read_count_IsoSeq_csv(cid_info, csv_filename, output_filename, output
                     if m is not None:
                         cid = m.group(1) # make sure cid is transcript/0, transcript/1, without any prefix before 'transcript'
                     else:
-                        raise Exception("cluster_id {0} is not a valid cluster ID!".format(cid))
+                        pass # just use the cid!
+                        #raise Exception("cluster_id {0} is not a valid cluster ID!".format(cid))
 
         x = r['read_id']
         if cid in cid_info:
