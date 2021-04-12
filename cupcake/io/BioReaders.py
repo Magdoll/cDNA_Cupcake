@@ -422,7 +422,7 @@ class GMAPSAMRecord(SAMRecord):
                 _s = x[5:]
                 if _s!='?':
                     self._flag_strand = self.flag.strand # serve as backup for debugging
-                    self.flag = SAMRecord.SAMflag(self.flag.is_paired, _s, self.flag.PE_read_num)
+                    self.flag = SAMRecord.SAMflag(self.flag.is_paired, _s, self.flag.PE_read_num, is_secondary=False, is_supp=False)
 
         if ref_len_dict is not None:
             self.sCoverage = (self.sEnd - self.sStart) * 1. / ref_len_dict[self.sID]
