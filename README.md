@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 04.12.2021
+Last Updated: 04.13.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 24.2.0
+Current version: 24.3.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2021.04.13 updated to v24.3.0 typo fixed in cupcake.io.BioReaders.py
 
 2021.04.10 updated to v24.2.0 `get_abundance_post_collapse.py` now accepts all forms of cluster ID
 
