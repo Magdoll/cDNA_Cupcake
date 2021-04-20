@@ -161,8 +161,12 @@ def main(args):
         print("Input file {0} does not exist. Abort.".format(args.input), file=sys.stderr)
         sys.exit(-1)
 
-    if not os.path.exists(args.sam):
+    if args.sam is not None and not os.path.exists(args.sam):
         print("SAM file {0} does not exist. Abort.".format(args.sam), file=sys.stderr)
+        sys.exit(-1)
+
+    if args.bam is not None and not os.path.exists(args.bam):
+        print("BAM file {0} does not exist. Abort.".format(args.bam), file=sys.stderr)
         sys.exit(-1)
 
     # check for duplicate IDs
@@ -181,7 +185,10 @@ def main(args):
     f_txt = open(args.prefix + '.collapsed.group.txt', 'w')
 
     b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
-    iter = b.iter_gmap_sam(args.sam, ignored_fout)
+    if args.bam is not None:
+        iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM')
+    else:
+        iter = b.iter_gmap_sam(args.sam, ignored_fout, type='SAM')
     for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
         for v in recs.values():
             for v2 in v:
@@ -229,7 +236,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--input", help="Input FA/FQ filename")
     parser.add_argument("--fq", default=False, action="store_true", help="Input is a fastq file (default is fasta)")
-    parser.add_argument("-s", "--sam", required=True, help="Sorted GMAP SAM filename")
+    parser.add_argument("-s", "--sam", required=False, default=None, help="Sorted SAM filename, use either this or --bam")
+    parser.add_argument("-b", "--bam", required=False, default=None, help="Sorted BAM filename, use either this or --sam")
     parser.add_argument("-o", "--prefix", required=True, help="Output filename prefix")
     parser.add_argument("-c", "--min-coverage", dest="min_aln_coverage", type=float, default=.99, help="Minimum alignment coverage (default: 0.99)")
     parser.add_argument("-i", "--min-identity", dest="min_aln_identity", type=float, default=.95, help="Minimum alignment identity (default: 0.95)")
@@ -241,6 +249,13 @@ if __name__ == "__main__":
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
 
     args = parser.parse_args()
+
+    if args.sam and args.bam:
+        print("Must provide only a SAM via --sam or only a BAM via --bam but not both! Abort!")
+        sys.exit(-1)
+    if args.sam is None and args.bam is None:
+        print("Must provide an input aligned SAM via --sam or aligned BAM via --bam. Abort!")
+        sys.exit(-1)
 
     main(args)
 

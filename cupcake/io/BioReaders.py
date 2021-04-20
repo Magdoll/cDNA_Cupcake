@@ -5,6 +5,7 @@ Duplicated here for tofu installation. This one is called via cupcake.io.BioRead
 
 import re, sys, pdb
 from collections import namedtuple
+import pysam
 
 Interval = namedtuple('Interval', ['start', 'end'])
                                  
@@ -209,6 +210,9 @@ class SAMRecord:
                self.sLen == other.sLen and self.qStart == other.qStart and\
                self.cigar == other.cigar and self.flag == other.flag and self.identity == other.identity
 
+    @property
+    def ref_exons(self):
+        return self.segments
 
     def process(self, record_line, ref_len_dict, query_len_dict):
         """
@@ -440,3 +444,57 @@ class GMAPSAMRecord(SAMRecord):
             except KeyError: # HACK for blasr's extended qID
                 raise Exception("Unable to find qID {0} in the input fasta/fastq!".format(self.qID))
             self.qCoverage = (self.qEnd - self.qStart) * 1. / self.qLen
+
+
+class SplicedBAMReader:
+    """
+    The SplicedBAMReader imitates the behavior of GMAPSAMReader,
+    basically accepted an aligned BAM file instead of aligned SAM file
+    The returned records will have the same format as GMAPSAMRecord
+    """
+
+    def __init__(self, filename, ref_len_dict=None, query_len_dict=None):
+        self.filename = filename
+        self.reader = pysam.AlignmentFile(open(filename), 'rb', check_sq=False)
+        self.ref_len_dict = ref_len_dict
+        self.query_len_dict = query_len_dict
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            r = next(self.reader)
+            samrec = SAMRecord(None) # we initiate the record and fill it in manually
+
+            samrec.qID = r.qname
+            samrec.qStart = r.qstart
+            samrec.qEnd = r.qend
+            if self.query_len_dict is not None:
+                samrec.qLen = self.query_len_dict[samrec.qID]
+            else:
+                samrec.qLen = r.qlen
+            samrec.sID = r.reference_name
+            samrec.sStart = r.reference_start
+            samrec.sEnd = r.reference_end
+            if self.ref_len_dict is not None:
+                samrec.sLen = self.ref_len_dict[samrec.sID]
+            else:
+                samrec.sLen = r.reference_length
+            samrec.cigar = r.cigarstring
+            # calling parse_cigar also sets num_ins, num_del, num_mat_or_sub, cigar_qlen
+            samrec.segments = samrec.parse_cigar(r.cigarstring, r.reference_start)
+            samrec.flag = SAMRecord.parse_sam_flag(r.flag)
+            samrec.record_line = r.tostring()
+
+            tag_d = dict(r.tags)
+            if 'NM' in tag_d:
+                samrec.num_nonmatches = tag_d['NM']
+                samrec.identity = 1 - (samrec.num_nonmatches / samrec.qLen)
+
+            samrec.qCoverage = (r.qend-r.qstart)/samrec.qLen
+            samrec.sCoverage = (r.reference_end-r.reference_start)/samrec.sLen
+            return samrec
+        except StopIteration:
+            raise StopIteration
+
