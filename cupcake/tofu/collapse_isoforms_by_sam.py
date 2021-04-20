@@ -22,15 +22,19 @@ from collections import defaultdict
 
 from bx.intervals import IntervalTree
 from Bio import SeqIO
+from Bio.SeqIO import SeqRecord
+from Bio.Seq import Seq
 
 from cupcake.tofu.utils import check_ids_unique
 from cupcake.tofu.branch import branch_simple2
 from cupcake.tofu import compare_junctions
 from cupcake.io import GFF
 
+import pysam
 
 
-def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_fq=False, pick_least_err_instead=False, bad_gff_filename=None):
+
+def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_fq=False, pick_least_err_instead=False, bad_gff_filename=None, fafq_dict=None):
     """
     For each group, select the representative record
 
@@ -39,7 +43,10 @@ def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_f
           If pick_least_err_instead is True, pick the one w/ least number of expected base errors
           Else, pick the longest one
     """
-    fd = SeqIO.to_dict(SeqIO.parse(open(fa_fq_filename), 'fastq' if is_fq else 'fasta'))
+    if fafq_dict is None:
+        fd = SeqIO.to_dict(SeqIO.parse(open(fa_fq_filename), 'fastq' if is_fq else 'fasta'))
+    else:
+        fd = fafq_dict
     fout = open(output_filename, 'w')
 
     coords = {}
@@ -222,10 +229,26 @@ def main(args):
         outfile = args.prefix+".collapsed.rep.fa"
 
     if args.input is not None:
-        if args.allow_extra_5exon: # 5merge, pick longest
-            pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=False, bad_gff_filename=f_bad.name)
-        else:
-            pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=True, bad_gff_filename=f_bad.name)
+        is_fq = args.fq
+        fafq_dict = None
+    else:
+        is_fq = False
+        fafq_dict = {}
+        for r in pysam.AlignmentFile(open(args.bam), 'rb', check_sq=False):
+            fafq_dict[r.qname] = SeqRecord(Seq(r.query), id=r.qname)
+
+    if args.allow_extra_5exon: # 5merge, pick longest
+        pick_rep(args.input, f_good.name, f_txt.name, outfile,
+                 is_fq=is_fq,
+                 pick_least_err_instead=False,
+                 bad_gff_filename=f_bad.name,
+                 fafq_dict=fafq_dict)
+    else:
+        pick_rep(args.input, f_good.name, f_txt.name, outfile,
+                 is_fq=is_fq,
+                 pick_least_err_instead=True,
+                 bad_gff_filename=f_bad.name,
+                 fafq_dict=fafq_dict)
 
     if args.gen_mol_count:
         outfile = args.prefix + '.collapsed.abundance.txt'
