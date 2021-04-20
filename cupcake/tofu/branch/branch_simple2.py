@@ -37,7 +37,9 @@ class BranchSimple:
         self.max_3_diff = max_3_diff
 
         self.transfrag_filename = transfrag_filename
-        self.transfrag_len_dict = dict((r.id.split()[0], len(r.seq)) for r in SeqIO.parse(open(transfrag_filename), 'fastq' if is_fq else 'fasta'))
+        self.transfrag_len_dict = None
+        if self.transfrag_filename is not None:
+            self.transfrag_len_dict = dict((r.id.split()[0], len(r.seq)) for r in SeqIO.parse(open(transfrag_filename), 'fastq' if is_fq else 'fasta'))
 
         self.cov_threshold = cov_threshold # only output GTF records if >= this many GMAP records support it (this must be if I'm running non-clustered fasta on GMAP)
 

@@ -157,9 +157,15 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
 def main(args):
 
     ### sanity check that input file and input SAM exists
-    if not os.path.exists(args.input):
-        print("Input file {0} does not exist. Abort.".format(args.input), file=sys.stderr)
-        sys.exit(-1)
+    if args.input is None:
+        if args.bam is None:
+            print("ERROR! --bam must be provided if input fasta is not given. Abort!")
+            sys.exit(-1)
+        print("WARNING: input fasta not given. Will use query sequence in the BAM file.")
+    else:
+        if not os.path.exists(args.input):
+            print("Input file {0} does not exist. Abort.".format(args.input), file=sys.stderr)
+            sys.exit(-1)
 
     if args.sam is not None and not os.path.exists(args.sam):
         print("SAM file {0} does not exist. Abort.".format(args.sam), file=sys.stderr)
@@ -170,7 +176,8 @@ def main(args):
         sys.exit(-1)
 
     # check for duplicate IDs
-    check_ids_unique(args.input, is_fq=args.fq)
+    if args.input is not None:
+        check_ids_unique(args.input, is_fq=args.fq)
 
     ignored_fout = open(args.prefix + '.ignored_ids.txt', 'w')
 
@@ -213,10 +220,12 @@ def main(args):
         outfile = args.prefix+".collapsed.rep.fq"
     else:
         outfile = args.prefix+".collapsed.rep.fa"
-    if args.allow_extra_5exon: # 5merge, pick longest
-        pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=False, bad_gff_filename=f_bad.name)
-    else:
-        pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=True, bad_gff_filename=f_bad.name)
+
+    if args.input is not None:
+        if args.allow_extra_5exon: # 5merge, pick longest
+            pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=False, bad_gff_filename=f_bad.name)
+        else:
+            pick_rep(args.input, f_good.name, f_txt.name, outfile, is_fq=args.fq, pick_least_err_instead=True, bad_gff_filename=f_bad.name)
 
     if args.gen_mol_count:
         outfile = args.prefix + '.collapsed.abundance.txt'
