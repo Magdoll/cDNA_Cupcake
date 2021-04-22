@@ -463,6 +463,9 @@ class SplicedBAMReader:
         return self
 
     def __next__(self):
+        return self.grab_next_record()
+
+    def grab_next_record(self):
         try:
             r = next(self.reader)
             samrec = SAMRecord(None) # we initiate the record and fill it in manually
@@ -474,7 +477,7 @@ class SplicedBAMReader:
                 samrec.qLen = self.query_len_dict[samrec.qID]
             else:
                 samrec.qLen = r.qlen
-            samrec.sID = r.reference_name
+            samrec.sID = '*' if r.is_unmapped else r.reference_name
             samrec.sStart = r.reference_start
             samrec.sEnd = r.reference_end
             if self.ref_len_dict is not None:
@@ -482,10 +485,13 @@ class SplicedBAMReader:
             else:
                 samrec.sLen = r.reference_length
             samrec.cigar = r.cigarstring
+            samrec.record_line = r.tostring()
+            if samrec.sID == '*': # unmapped, nothing to parse
+                return samrec
+
             # calling parse_cigar also sets num_ins, num_del, num_mat_or_sub, cigar_qlen
             samrec.segments = samrec.parse_cigar(r.cigarstring, r.reference_start)
             samrec.flag = SAMRecord.parse_sam_flag(r.flag)
-            samrec.record_line = r.tostring()
 
             tag_d = dict(r.tags)
             if 'NM' in tag_d:
@@ -497,4 +503,37 @@ class SplicedBAMReader:
             return samrec
         except StopIteration:
             raise StopIteration
+
+
+class SplicedBAMReaderRegioned(SplicedBAMReader):
+    """
+    Extension of SpliceBAMReader, except that an upfront [start_index, end_index) is defined,
+    so that it'll return the records within that region
+
+    The returned records will have the same format as GMAPSAMRecord
+    """
+    def __init__(self, filename, start_index, end_index, ref_len_dict=None, query_len_dict=None):
+        self.filename = filename
+        self.reader = pysam.AlignmentFile(open(filename), 'rb', check_sq=False)
+        self.ref_len_dict = ref_len_dict
+        self.query_len_dict = query_len_dict
+        self.start_index = start_index
+        self.end_index = end_index
+        self.cur_index = start_index
+
+        if self.start_index is None or self.end_index is None or self.start_index >= self.end_index:
+            raise Exception(f"SplicedBAMReaderRegioned must be given proper integer [start_index, end_index)! Instead got {start_index}, {end_index}")
+
+        for i in range(self.start_index):
+            r = next(self.reader)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.cur_index += 1
+        if self.cur_index > self.end_index:
+            raise StopIteration
+        return self.grab_next_record()
+
 

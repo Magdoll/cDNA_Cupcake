@@ -49,7 +49,7 @@ class BranchSimple:
         self.cuff_index = 1
 
 
-    def iter_gmap_sam(self, aligned_sam_bam_filename, ignored_fout, type='SAM'):
+    def iter_gmap_sam(self, aligned_sam_bam_filename, ignored_fout, type='SAM', bam_start_index=None, bam_end_index=None):
         """
         Iterate over a SORTED GMAP SAM file.
         Return a collection of records that overlap by at least 1 base.
@@ -79,8 +79,11 @@ class BranchSimple:
 
         if type == 'SAM':
             aligned_reader = BioReaders.GMAPSAMReader(aligned_sam_bam_filename, has_header=True, query_len_dict=self.transfrag_len_dict)
-        else: # BAM
-            aligned_reader = BioReaders.SplicedBAMReader(aligned_sam_bam_filename, query_len_dict=self.transfrag_len_dict)
+        else:
+            if bam_start_index is None:
+                aligned_reader = BioReaders.SplicedBAMReader(aligned_sam_bam_filename, query_len_dict=self.transfrag_len_dict)
+            else:
+                aligned_reader = BioReaders.SplicedBAMReaderRegioned(aligned_sam_bam_filename, bam_start_index, bam_end_index, query_len_dict=self.transfrag_len_dict)
         quality_alignments = self.get_quality_alignments(aligned_reader, ignored_fout)
 
         # find first acceptably mapped read

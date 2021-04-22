@@ -341,7 +341,18 @@ class gmapRecord:
             m = pbid_rex.match(seqid)
             if m is not None:
                 self.geneid = m.group(1)
-            
+
+    def __eq__(self, other):
+        return self.chr==other.chr and \
+               self.coverage == other.coverage and \
+               self.identity == other.identity and \
+               self.strand == other.strand and \
+               self.seqid == other.seqid and \
+               self.ref_exons == other.ref_exons and \
+               self.seq_exons == other.seq_exons and \
+               self.cds_exons  == other.cds_exons and \
+               self.scores == other.scores and \
+               self.geneid == other.geneid
 
     def __str__(self):
         return """

@@ -19,6 +19,8 @@ Suggested scripts to follow up with:
 
 import os, sys
 from collections import defaultdict
+import threading
+from multiprocessing import Process
 
 from bx.intervals import IntervalTree
 from Bio import SeqIO
@@ -160,6 +162,110 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
 
     return fuzzy_match
 
+def multiprocess_predefine_regions(aligned_bam_filename, n_chunks):
+    """
+    Read through an aligned sorted BAM file and split it into regions
+    grouping them properly by overlaps (in this version we are strand-insensitive)
+    :return: list of [start_index, end_index) of non-overolapping regions,
+             CHUNKED list of [start_index, end_index) based on <n> chunks given
+    """
+    reader = pysam.AlignmentFile(open(aligned_bam_filename), 'rb', check_sq=False)
+    prev = None
+    for prev in reader:
+        if not prev.is_unmapped:
+            break
+    if prev is None:
+        print(f"BAM file {aligned_bam_filename} does not contain any mapped records. ABORT!", file=sys.stderr)
+        sys.exit(-1)
+    max_end = prev.reference_end
+    prev_index = 0
+    cur_index = 0
+    region_list = [] # list of regions defined by [start_index, end_index)
+    for r in reader:
+        cur_index += 1
+        if r.is_unmapped: continue
+        if r.reference_name == prev.reference_name and r.reference_start < prev.reference_start:
+            print(f"BAM file {aligned_bam_filename }is NOT sorted. ABORT!", file=sys.stderr)
+            sys.exit(-1)
+        if r.reference_name != prev.reference_name or r.reference_start > max_end:
+            # we've found a new non-overlapping region
+            region_list.append((prev_index, cur_index))
+            prev = r
+            prev_index = cur_index
+            max_end = prev.reference_end
+        else:
+            max_end = max(max_end, r.reference_end)
+    if cur_index > prev_index:
+        region_list.append((prev_index, cur_index))
+
+    # split the regions by cpu given
+    chunk_size = len(region_list) // n_chunks
+    chunked_region_index_list = []
+    for i in range(n_chunks-1):
+        start_index = region_list[chunk_size * i][0]  # the (0-based) start index of the first region
+        end_index = region_list[chunk_size * (i + 1)][0]  # the (1-based) end index of the last region
+        chunked_region_index_list.append((start_index, end_index))
+    chunked_region_index_list.append((region_list[chunk_size*(n_chunks-1)][0],
+                                      region_list[-1][1]))
+
+    return region_list, chunked_region_index_list
+
+def multiprocess_helper(start_index, end_index, args, cov_threshold, f_good, f_bad, f_txt, ignored_fout):
+    b = branch_simple2.BranchSimple(args.input,
+                                    cov_threshold=cov_threshold,
+                                    min_aln_coverage=args.min_aln_coverage,
+                                    min_aln_identity=args.min_aln_identity,
+                                    is_fq=args.fq,
+                                    max_5_diff=args.max_5_diff,
+                                    max_3_diff=args.max_3_diff)
+
+    iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM', bam_start_index=start_index, bam_end_index=end_index)
+    for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
+        for v in recs.values():
+            for v2 in v:
+                if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
+
+
+import re
+from cupcake.io.GFF import collapseGFFReader, write_collapseGFF_format
+pbid_rex = re.compile('PB.(\d+).(\d+)')
+
+def multiprocess_combine_result(in_gff_list, f_gff, in_group_list, f_group):
+    # first GFF we just directly output it, no offset needed
+    reader_gff = collapseGFFReader(in_gff_list[0])
+    reader_group = open(in_group_list[0]) if in_group_list is not None else None
+    for r in reader_gff:
+        write_collapseGFF_format(f_gff, r)
+        if reader_group is not None:
+            last_pbid, members = reader_group.readline().strip().split()
+            assert last_pbid == r.seqid
+            f_group.write(f"{last_pbid}\t{members}\n")
+
+
+    pbid_offset = int(pbid_rex.match(last_pbid).group(1))
+
+    if in_group_list is None: in_group_list = [None]*len(in_gff_list)
+
+    for (in_gff, in_group) in zip(in_gff_list[1:], in_group_list[1:]):
+        print("Combining {0} into {1} with offset PB.{2}...".format(in_gff, f_gff.name, pbid_offset))
+        reader_gff = collapseGFFReader(in_gff)
+        reader_group = open(in_group, 'r')
+        for r in reader_gff:
+            m = pbid_rex.match(r.seqid)
+            gene_index, isoform_index = int(m.group(1)), m.group(2)
+            last_pbid = gene_index + pbid_offset
+            new_geneid = "PB.{0}".format(last_pbid)
+            new_pbid = "PB.{0}.{1}".format(last_pbid, isoform_index)
+            if reader_group is not None:
+                pbid, members = reader_group.readline().strip().split()
+                assert pbid == r.seqid
+                f_group.write(f"{new_pbid}\t{members}\n")
+            # write the GFF record, updating the PBID
+            r.seqid = new_pbid
+            r.geneid = new_geneid
+            write_collapseGFF_format(f_gff, r)
+        pbid_offset = last_pbid
+
 
 def main(args):
 
@@ -198,22 +304,60 @@ def main(args):
         cov_threshold = 1
     f_txt = open(args.prefix + '.collapsed.group.txt', 'w')
 
-    b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage, min_aln_identity=args.min_aln_identity, is_fq=args.fq, max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
-    if args.bam is not None:
-        iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM')
+    if args.cpus == 1:
+        b = branch_simple2.BranchSimple(args.input, cov_threshold=cov_threshold, min_aln_coverage=args.min_aln_coverage,
+                                        min_aln_identity=args.min_aln_identity, is_fq=args.fq,
+                                        max_5_diff=args.max_5_diff, max_3_diff=args.max_3_diff)
+        if args.bam is not None:
+            iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM')
+        else:
+            iter = b.iter_gmap_sam(args.sam, ignored_fout, type='SAM')
+        for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
+            for v in recs.values():
+                for v2 in v:
+                    if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
     else:
-        iter = b.iter_gmap_sam(args.sam, ignored_fout, type='SAM')
-    for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
-        for v in recs.values():
-            for v2 in v:
-                if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
+        # need to first predefine the regions
+        region_list_ignore, chunk_regions_list = multiprocess_predefine_regions(args.bam, args.cpus)
+        assert len(chunk_regions_list) == args.cpus
+
+        if args.flnc_coverage > 0:
+            f_good_pool = [open(args.prefix + '.collapsed.good.gff' + str(i), 'w') for i in range(args.cpus)]
+            f_bad_pool = [open(args.prefix + '.collapsed.bad.gff' + str(i), 'w') for i in range(args.cpus)]
+        else:
+            f_good_pool = [open(args.prefix + '.collapsed.gff' + str(i), 'w') for i in range(args.cpus)]
+            f_bad_pool = f_good_pool
+        f_txt_pool = [open(args.prefix + '.collapsed.group.txt' + str(i), 'w') for i in range(args.cpus)]
+        f_ignore_pool = [open(args.prefix + '.ignords_ids.txt' + str(i), 'w') for i in range(args.cpus)]
+
+        pool = []
+        for i in range(args.cpus):
+            p = threading.Thread(target=multiprocess_helper,
+                                 args=(chunk_regions_list[i][0], chunk_regions_list[i][1], args, cov_threshold,
+                                       f_good_pool[i], f_bad_pool[i], f_txt_pool[i], f_ignore_pool[i], ))
+            p.start()
+            pool.append(p)
+        for p in pool:
+            p.join()
+
+
+        # for .ignore_ids.txt we can just concatenate
+        # for all other files we have to consolidate the PBIDs
+        for f in f_good_pool: f.close()
+        for f in f_bad_pool: f.close()
+        for f in f_txt_pool: f.close()
+        for f in f_ignore_pool:
+            f.close()
+            with open(f.name, 'r') as h:
+                ignored_fout.write(h.read())
+        multiprocess_combine_result([f.name for f in f_good_pool], f_good, [f.name for f in f_txt_pool], f_txt)
+        if args.flnc_coverage > 0:
+            multiprocess_combine_result([f.name for f in f_bad_pool], f_bad, None, None)
+
 
     ignored_fout.close()
     f_good.close()
-    try:
-        f_bad.close()
-    except:
-        pass
+    f_bad.close()
     f_txt.close()
 
     if args.max_fuzzy_junction > 0: # need to further collapse those that have fuzzy junctions!
@@ -279,6 +423,7 @@ if __name__ == "__main__":
     parser.add_argument("--flnc_coverage", dest="flnc_coverage", type=int, default=-1, help="Minimum # of FLNC reads, only use this for aligned FLNC reads, otherwise results undefined!")
     parser.add_argument("--gen_mol_count", action="store_true", default=False, help="Generate a .abundance.txt file based on the number of input sequences collapsed. Use only if input is FLNC or UMI-dedup output (default: off)")
     parser.add_argument("--dun-merge-5-shorter", action="store_false", dest="allow_extra_5exon", default=True, help="Don't collapse shorter 5' transcripts (default: turned off)")
+    parser.add_argument("--cpus", default=1, type=int, help="Number of CPUs for parallelization (default: 1)")
 
     args = parser.parse_args()
 
