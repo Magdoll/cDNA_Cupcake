@@ -18,10 +18,10 @@ def filter_bam_by_coverage(input_bam, output_bam, min_cov=0.9, filter_secondary=
         if cov < min_cov:
             print("FILTER: {0} because coverage {1} too low.".format(r.qname, cov))
             continue
-        if not filter_secondary and r.is_secondary:
+        if filter_secondary and r.is_secondary:
             print("FILTER: {0} because is secondary.".format(r.qname))
             continue
-        if not filter_supp and r.is_supplementary:
+        if filter_supp and r.is_supplementary:
             print("FILTER: {0} because is supplementary.".format(r.qname))
             continue
         writer.write(r)

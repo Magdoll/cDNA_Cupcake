@@ -316,10 +316,13 @@ class BranchSimple:
                 f_out = f_good
             self.isoform_index += 1
             segments = [node_d[x] for x in m.nonzero()[1]]
+            #if self.cuff_index==321 and self.isoform_index>=45: pdb.set_trace()
             f_group.write("{p}.{i}.{j}\t{ids}\n".format(ids=ids, i=self.cuff_index, j=self.isoform_index, p=gene_prefix))
+            # DEBUG
+            #print("DEBUG: I just wrote to {x}--{p}.{i}.{j}\t{ids}".format(x=f_group.name,ids=ids, i=self.cuff_index, j=self.isoform_index, p=gene_prefix))
             f_out.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{p}.{i}\"; transcript_id \"{p}.{i}.{j}\";\n".format(\
                 chr=self.chrom, s=segments[0].start+1, e=segments[-1].end, i=self.cuff_index, p=gene_prefix, j=self.isoform_index, strand=self.strand))
-
+            #print("DEBUG: I just wrote to {x} gff {p}.{i}.{j}".format(x=f_out.name, i=self.cuff_index, p=gene_prefix, j=self.isoform_index))
             i = 0
             j = 0
             for j in range(1, len(segments)):
@@ -331,6 +334,8 @@ class BranchSimple:
                     chr=self.chrom, s=segments[i].start+1, e=segments[j].end, p=gene_prefix, i=self.cuff_index, j=self.isoform_index, strand=self.strand))
 
         self.cuff_index += 1
+        f_group.flush()
+        f_out.flush()
 
         return result, result_merged
 

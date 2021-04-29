@@ -196,7 +196,7 @@ def multiprocess_predefine_regions(aligned_bam_filename, n_chunks):
         else:
             max_end = max(max_end, r.reference_end)
     if cur_index > prev_index:
-        region_list.append((prev_index, cur_index))
+        region_list.append((prev_index, cur_index+1))
 
     # split the regions by cpu given
     chunk_size = len(region_list) // n_chunks
@@ -224,6 +224,12 @@ def multiprocess_helper(start_index, end_index, args, cov_threshold, f_good, f_b
         for v in recs.values():
             for v2 in v:
                 if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
+
+    # for multiprocessing, we close the files here!
+    f_good.close()
+    if f_bad!=f_good: f_bad.close()
+    f_txt.close()
+    ignored_fout.close()
 
 
 import re
@@ -332,22 +338,17 @@ def main(args):
 
         pool = []
         for i in range(args.cpus):
-            p = threading.Thread(target=multiprocess_helper,
+            p = Process(target=multiprocess_helper,
                                  args=(chunk_regions_list[i][0], chunk_regions_list[i][1], args, cov_threshold,
                                        f_good_pool[i], f_bad_pool[i], f_txt_pool[i], f_ignore_pool[i], ))
             p.start()
             pool.append(p)
+            # NOTE: f_good_pool[i] and f_bad_pool[i] and f_txt_pool[i] actually will get file CLOSED
         for p in pool:
             p.join()
 
-
         # for .ignore_ids.txt we can just concatenate
-        # for all other files we have to consolidate the PBIDs
-        for f in f_good_pool: f.close()
-        for f in f_bad_pool: f.close()
-        for f in f_txt_pool: f.close()
         for f in f_ignore_pool:
-            f.close()
             with open(f.name, 'r') as h:
                 ignored_fout.write(h.read())
         multiprocess_combine_result([f.name for f in f_good_pool], f_good, [f.name for f in f_txt_pool], f_txt)

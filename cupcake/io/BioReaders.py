@@ -494,8 +494,17 @@ class SplicedBAMReader:
             samrec.flag = SAMRecord.parse_sam_flag(r.flag)
 
             tag_d = dict(r.tags)
-            if 'NM' in tag_d:
+            if 'NM' in tag_d:   # this is used by regular minimap2
                 samrec.num_nonmatches = tag_d['NM']
+                samrec.identity = 1 - (samrec.num_nonmatches / samrec.qLen)
+            else: # parse the cigar tuple to get the number of mismatches/insertions/deletions
+                # https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.cigartuples
+                # NOTE: we rely on this being run with mismatches represented by X
+                samrec.num_nonmatches = 0
+                for cigartype,cigarcount in r.cigartuples:
+                    # 1:I, 2:D, 8:X
+                    if cigartype in [1, 2, 8]:
+                        samrec.num_nonmatches += cigarcount
                 samrec.identity = 1 - (samrec.num_nonmatches / samrec.qLen)
 
             samrec.qCoverage = (r.qend-r.qstart)/samrec.qLen
