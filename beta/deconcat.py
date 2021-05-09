@@ -6,9 +6,10 @@ from Bio.Seq import Seq
 import parasail
 import pysam
 from multiprocessing import Process
+import pdb
 
 SCOREMAT = parasail.matrix_create("ACGT", 2, -5)
-MIN_SCORE = 80
+MIN_SCORE = 60
 MIN_LEN = 50
 
 # for Jason's 10X USER 5' lib method
@@ -44,7 +45,7 @@ def deconcat_worker(input_bam, offset_start, offset_end, output_prefix, info):
         it = deconcat_all(r.query, start_flag, start_pos=0)
         i = 1
         for (s, e, flag, cur_seq) in it:
-            if e-s < MIN_SCORE:
+            if e-s < MIN_LEN:
                 continue
             rec = {'zmw':zmw, 'split':i, 'length':e-s, 'flag':flag}
             writer.writerow(rec)
@@ -92,6 +93,7 @@ def deconcat(sequence, prev):
         elif o2.score >= MIN_SCORE:
             return o2.get_traceback().comp.find('|'), o2.end_query, o2.score, 'R3'
         else:
+            pdb.set_trace()
             return None
     elif prev == 'F5':
         o1 = parasail.sg_qx_trace(sequence, SEQ_F3_R3, 3, 1, SCOREMAT)
@@ -101,6 +103,7 @@ def deconcat(sequence, prev):
         elif o2.score >= MIN_SCORE:
             return o2.get_traceback().comp.find('|'), o2.end_query, o2.score, 'F5'
         else:
+            pdb.set_trace()
             return None
     else:
         raise ValueError("Expected previous primer to be F5 or R3. Saw {0} instead. Abort!".format(prev))
@@ -115,27 +118,28 @@ def main(input_prefix, output_prefix, cpus):
             info[zmw] = 'F5' if r.description.split('bc:')[-1] == '0' else 'R3'
     print("Finished reading lima clips file.", file=sys.stdout)
 
-
     num_records = len(info)
-    chunk_size = (num_records // cpus) + (num_records % cpus)
-
-    offset_start = 0
     input_bam = input_prefix + '.bam'
-    pools = []
     onames = []
-    while offset_start <= num_records:
-        oname = output_prefix+'.'+str(offset_start)
-        p = Process(target=deconcat_worker, args=(input_bam, offset_start, offset_start+chunk_size, oname, info,))
-        p.start()
-        print("Launching deconcat worker for records {0}-{1}...".format(offset_start, offset_start+chunk_size))
-        offset_start += chunk_size
-        pools.append(p)
-        onames.append(oname)
+    if cpus == 1:
+        oname = output_prefix
+        deconcat_worker(input_bam, 0, num_records, oname, info)
+    else:
+        chunk_size = (num_records // cpus) + (num_records % cpus)
+        offset_start = 0
+        pools = []
+        while offset_start <= num_records:
+            oname = output_prefix+'.'+str(offset_start)
+            p = Process(target=deconcat_worker, args=(input_bam, offset_start, offset_start+chunk_size, oname, info,))
+            p.start()
+            print("Launching deconcat worker for records {0}-{1}...".format(offset_start, offset_start+chunk_size))
+            offset_start += chunk_size
+            pools.append(p)
+            onames.append(oname)
+        for p in pools:
+            p.join()
+        print("All deconcat workers done. Collecting results.")
 
-    for p in pools:
-        p.join()
-
-    print("All deconcat workers done. Collecting results.")
     f_csv = open(output_prefix + '.csv', 'w')
     writer = DictWriter(f_csv, CSV_FIELDS, delimiter=',')
     writer.writeheader()

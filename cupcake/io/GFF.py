@@ -538,10 +538,10 @@ class pasaGFFReader(gmapGFFReader):
         for blob in raw[8].split('; '):
             if blob.startswith('transcript_id'): # ex: transcript_id "asmbl_7"
                 tid = blob[15:-1] 
-            #elif blob.startswith('gene_id'): # ex: gene_id "S2"
-            #    gid = blob[9:-1]   
+            elif blob.startswith('gene_id'): # ex: gene_id "S2"
+                gid = blob[9:-1]
     
-        rec = gmapRecord(chr=chr, coverage=None, identity=None, strand=strand, seqid=tid)
+        rec = gmapRecord(chr=chr, coverage=None, identity=None, strand=strand, seqid=tid, geneid=gid)
         
         while True:
             #pdb.set_trace()
@@ -555,12 +555,12 @@ class pasaGFFReader(gmapGFFReader):
                 rec.add_exon(start1-1, end1, -2, -1, None)
 
 def write_collapseGFF_format(f, r):
-    f.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=r.start+1, e=r.end, strand=r.strand,gid=r.geneid, tid=r.seqid))
+    f.write("{chr}\tPacBio\ttranscript\t{s}\t{e}\t.\t{strand}\t.\ttranscript_id \"{tid}\"; gene_id \"{gid}\";\n".format(chr=r.chr, s=r.start+1, e=r.end, strand=r.strand,gid=r.geneid, tid=r.seqid))
     for exon in r.ref_exons:
-        f.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
+        f.write("{chr}\tPacBio\texon\t{s}\t{e}\t.\t{strand}\t.\ttranscript_id \"{tid}\"; gene_id \"{gid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
     if r.cds_exons is not None:
         for exon in r.cds_exons:
-            f.write("{chr}\tPacBio\tCDS\t{s}\t{e}\t.\t{strand}\t.\tgene_id \"{gid}\"; transcript_id \"{tid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
+            f.write("{chr}\tPacBio\tCDS\t{s}\t{e}\t.\t{strand}\t.\ttranscript_id \"{tid}\"; gene_id \"{gid}\";\n".format(chr=r.chr, s=exon.start+1, e=exon.end, strand=r.strand, gid=r.geneid, tid=r.seqid))
 
 
 class collapseGFFReader(gmapGFFReader):

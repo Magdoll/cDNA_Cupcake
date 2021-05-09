@@ -52,20 +52,15 @@ def pick_rep(fa_fq_filename, gff_filename, group_filename, output_filename, is_f
     fout = open(output_filename, 'w')
 
     coords = {}
-    for line in open(gff_filename):
-        # ex: chr1    PacBio  transcript      27567   29336   .       -       .       gene_id "PB.1"; transcript_id "PB.1.1";
-        raw = line.strip().split('\t')
-        if raw[2] == 'transcript':
-            tid = raw[-1].split('; ')[1].split()[1][1:-2]
-            coords[tid] = "{0}:{1}-{2}({3})".format(raw[0], raw[3], raw[4], raw[6])
+    for r in collapseGFFReader(gff_filename):
+        tid = r.seqid
+        coords[tid] = "{0}:{1}-{2}({3})".format(r.chr, r.start, r.end, r.strand)
 
     if bad_gff_filename is not None:
-        for line in open(bad_gff_filename):
-            raw = line.strip().split('\t')
-            if raw[2] == 'transcript':
-                tid = raw[-1].split('; ')[1].split()[1][1:-2]
-                coords[tid] = "{0}:{1}-{2}({3})".format(raw[0], raw[3], raw[4], raw[6])
-
+        for r in collapseGFFReader(bad_gff_filename):
+            tid = r.seqid
+            coords[tid] = "{0}:{1}-{2}({3})".format(r.chr, r.start, r.end, r.strand)
+            
     for line in open(group_filename):
         pb_id, members = line.strip().split('\t')
         print("Picking representative sequence for {0}".format(pb_id), file=sys.stdout)
@@ -354,6 +349,17 @@ def main(args):
         multiprocess_combine_result([f.name for f in f_good_pool], f_good, [f.name for f in f_txt_pool], f_txt)
         if args.flnc_coverage > 0:
             multiprocess_combine_result([f.name for f in f_bad_pool], f_bad, None, None)
+
+        # now we can delete the chunked results
+        for f in f_good_pool:
+            os.remove(f.name)
+        if f_good_pool!=f_bad_pool:
+            for f in f_bad_pool:
+                os.remove(f.name)
+        for f in f_ignore_pool:
+            os.remove(f.name)
+        for f in f_txt_pool:
+            os.remove(f.name)
 
 
     ignored_fout.close()

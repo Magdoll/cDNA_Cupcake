@@ -14,15 +14,18 @@ def main(input_prefix):
     f2 = open(input_prefix + '.exon_stats.txt', 'w')
     f2.write("pbid\texon_index\texon_size\tintron_size\n")
     for r in collapseGFFReader(input_gff):
+        if len(r.ref_exons)==0: continue
         f1.write(r.seqid+'\t')
-        f1.write(r.seqid.split('.')[1]+'\t')
+        if r.seqid.startswith('PB.'): f1.write(r.seqid.split('.')[1]+'\t')
+        else: f1.write(r.geneid+'\t')
         sum_len = 0
         for i,e in enumerate(r.ref_exons):
             exon_len = e.end - e.start
             sum_len += exon_len
             f2.write("{0}\t{1}\t{2}\t".format(r.seqid, i+1, exon_len))
             if i == 0: f2.write("NA\n")
-            else: f2.write(str(e.start-r.ref_exons[i-1].end) + '\n')
+            else: 
+                if len(r.ref_exons)>0: f2.write(str(e.start-r.ref_exons[i-1].end) + '\n')
 
         f1.write(str(sum_len)+'\t')
         f1.write(str(r.end-r.start)+'\t')
