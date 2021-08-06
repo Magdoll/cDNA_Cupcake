@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 05.01.2021
+Last Updated: 08.06.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 25.2.0
+Current version: 26.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2021.08.06 updated to v26.0.0. `demux_isoseq_with_genome.py` now accepts PBfusion ID format and outputs warning for missing read info instead of failing.
 
 2021.05.01 updated to v25.2.0. `collapse_isoforms_by_sam.py` now accepts bam input and also multiple CPU use.
 

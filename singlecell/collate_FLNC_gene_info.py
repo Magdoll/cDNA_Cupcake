@@ -13,6 +13,7 @@ Output a collated infor file that is:
 """
 
 import os, sys
+import gzip
 from Bio.Seq import Seq
 from csv import DictReader, DictWriter
 
@@ -27,14 +28,15 @@ def read_group_info(group_filename):
             d[m] = pbid
     return d
 
-def collate_gene_info(group_filename, csv_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None, no_extra_base=False, is_clustered=False):
+def collate_gene_info(group_filename, csv_gz_filename, class_filename, output_filename, ontarget_filename=None, dedup_ORF_prefix=None, no_extra_base=False, is_clustered=False):
     """
     <id>, <pbid>, <length>, <transcript>, <gene>, <category>, <ontarget Y|N|NA>, <ORFgroup NA|NoORF|groupID>, <UMI>, <BC>
     """
     FIELDS = ['id', 'pbid', 'length', 'transcript', 'gene', 'category', 'ontarget', 'ORFgroup', 'UMI', 'UMIrev', 'BC', 'BCrev']
 
     group_info = read_group_info(group_filename)
-    umi_bc_info = dict((r['id'], r) for r in DictReader(open(csv_filename), delimiter='\t'))
+    with gzip.open(csv_gz_filename, 'rt') as f:
+        umi_bc_info = dict((r['id'], r) for r in DictReader(f, delimiter='\t'))
     sqanti_info = dict((r['isoform'], r) for r in DictReader(open(class_filename), delimiter='\t'))
     if ontarget_filename is not None:
         ontarget_info = dict((r['read_id'], r) for r in DictReader(open(ontarget_filename), delimiter='\t'))
@@ -99,7 +101,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("group_filename", help="Collapse .group.txt")
-    parser.add_argument("csv_filename", help="Trimmed UMI/BC CSV info")
+    parser.add_argument("csv_gz_filename", help="Trimmed UMI/BC CSV info, compressed with gzip")
     parser.add_argument("class_filename", help="SQANTI classification.txt")
     parser.add_argument("output_filename", help="Output filename")
     parser.add_argument("-i", "--ontarget_filename", help="(Optional) on target information text")
@@ -117,7 +119,7 @@ if __name__ == "__main__":
         print("Group file {0} not found. Abort!".format(args.group_filename), file=sys.stderr)
         sys.exit(-1)
 
-    if not os.path.exists(args.csv_filename):
+    if not os.path.exists(args.csv_gz_filename):
         print("CSV file {0} not found. Abort!".format(args.csv_filename), file=sys.stderr)
         sys.exit(-1)
 
@@ -137,4 +139,4 @@ if __name__ == "__main__":
             print("Dedup {0}.faa not found. Abort!".format(args.dedup_ORF_prefix), file=sys.stderr)
             sys.exit(-1)
 
-    collate_gene_info(args.group_filename, args.csv_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base, args.is_clustered)
+    collate_gene_info(args.group_filename, args.csv_gz_filename, args.class_filename, args.output_filename, args.ontarget_filename, args.dedup_ORF_prefix, args.no_extra_base, args.is_clustered)

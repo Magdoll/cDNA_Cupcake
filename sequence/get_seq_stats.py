@@ -3,6 +3,7 @@
 __version__ = '1.0'
 
 import os, sys
+import gzip
 import numpy as np
 from Bio import SeqIO
 
@@ -12,15 +13,23 @@ def type_fa_or_fq(file):
     else: return 'fastq'
 
 def get_seq_stats(file, binwidth):
-    print("file type is:", type_fa_or_fq(file))
+    if file.endswith('.gz'):
+        is_gzip = True
+        filetype = type_fa_or_fq(file[:-3])
+        reader = SeqIO.parse(gzip.open(file, 'rt'), filetype)
+    else:
+        is_gzip = False
+        filetype = type_fa_or_fq(file)
+        reader = SeqIO.parse(open(file), filetype)
+
+    print("file type is:", filetype)
 
     f = open(file + '.seqlengths.txt', 'w')
     lens = []
-    for r in SeqIO.parse(open(file), type_fa_or_fq(file)):
+    for r in reader:
         f.write(r.id + '\t' + str(len(r.seq)) + '\n')
         lens.append(len(r.seq))
     f.close()
-
 
     print("{0} sequences".format(len(lens)))
     print("min:", min(lens))
@@ -45,7 +54,7 @@ def get_seq_stats(file, binwidth):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser("Summarize sequence lengths in fasta/fastq")
-    parser.add_argument("filename", help="Input fasta/fastq filename")
+    parser.add_argument("filename", help="Input fasta/fastq filename, can be .gz")
     parser.add_argument("-b", "--binwidth", default=1000, type=int, help="Bin width, in bp (default: 1000 bp)")
     args = parser.parse_args()
 

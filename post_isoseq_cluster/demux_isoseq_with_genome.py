@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __author__ = 'etseng@pacb.com'
-
+import pdb
 """
 Demultiplex IsoSeq (SMRT Link 8.0) job output (with genome mapping)
 """
@@ -10,7 +10,7 @@ from csv import DictReader, DictWriter
 from collections import defaultdict, Counter
 from Bio import SeqIO
 
-mapped_id_rex = re.compile('(PB.\d+.\d+)')
+mapped_id_rex = re.compile('(PB\S*.\d+[.\d]*)')
 
 def type_fafq(fafq):
     x = fafq.upper()
@@ -100,10 +100,14 @@ def main(job_dir=None, mapped_fafq=None, read_stat=None, classify_csv=None, outp
         if m is None:
             raise Exception("Expected ID format PB.X.Y but found {0}!".format(r.id))
         pbid = m.group(1)
-        f.write(pbid)
-        for p in primer_names:
-            f.write(",{0}".format(info[pbid][p]))
-        f.write("\n")
+        if pbid not in info:
+            print("WARNING: Could not find {0} in {1}. No demux output for this sequence!".format(pbid, read_stat))
+        else:
+            #pdb.set_trace()
+            f.write(pbid)
+            for p in primer_names:
+                f.write(",{0}".format(info[pbid][p]))
+            f.write("\n")
     f.close()
     print("Count file written to {0}.".format(f.name), file=sys.stderr)
 
