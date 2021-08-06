@@ -10,7 +10,7 @@ from csv import DictReader, DictWriter
 from collections import defaultdict, Counter
 from Bio import SeqIO
 
-mapped_id_rex = re.compile('(PB\S*.\d+[.\d]*)')
+mapped_id_rex = re.compile('(PB\S*.\d+[.\d+]?)')
 
 def type_fafq(fafq):
     x = fafq.upper()

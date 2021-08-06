@@ -1,5 +1,5 @@
 __author__ = "etseng@pacb.com"
-
+import pdb
 """
 For Iso-Phase, selecting loci that has sufficient FL coverage to phase.
 
@@ -19,7 +19,7 @@ from cupcake.io.SeqReaders import LazyFastqReader
 from cupcake.io.GFF import collapseGFFReader
 
 rex_flnc = re.compile('(m\S+_\d+_\d+\/\d+)\/ccs') # Sequel/Iso-Seq 3 format
-rex_pbid = re.compile('(PB\S*.\d+[.\d]*)')  # this will handle both PB.X.Y and PBfusion.X
+rex_pbid = re.compile('(PB[fusion]?.\d+)[.\d+]?')  # this will handle both PB.X.Y and PBfusion.X
 
 
 extra_bp_around_junctions = 50 # get this much around junctions to be safe AND to not screw up GMAP who doesn't like microintrons....
@@ -103,6 +103,7 @@ def read_GFF(gff_filename, logf):
             tmp[locus].append(r)
 
 
+    #pdb.set_trace()
     # now figure out the exonic regions for each gene PB.X
     for locus, records in tmp.items():
         c = ClusterTree(0, 0)
@@ -161,6 +162,7 @@ def select_loci_to_phase(args, genome_dict):
 
     # find all gene loci that has at least X FLNC coverage
     cand_loci = [k for k in tally_by_loci if len(tally_by_loci[k]) >= args.coverage]
+    #pdb.set_trace()
     print("Total {0} loci read. {1} has >= {2} coverage.".format(\
         len(tally_by_loci), len(cand_loci), args.coverage), file=sys.stderr)
     for locus in cand_loci:
