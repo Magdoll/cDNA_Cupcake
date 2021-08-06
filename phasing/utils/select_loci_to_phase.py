@@ -19,9 +19,7 @@ from cupcake.io.SeqReaders import LazyFastqReader
 from cupcake.io.GFF import collapseGFFReader
 
 rex_flnc = re.compile('(m\S+_\d+_\d+\/\d+)\/ccs') # Sequel/Iso-Seq 3 format
-rex_flnc2 = re.compile('(m\d+_\d+_\d+_\w+_s1_p0\/\d+)\/ccs') # ex: m160920_210440_42165_c101101052550000001823258304261787_s1_p0/83826/ccs
-rex_flnc3 = re.compile('(m\d+_\d+_\d+_\w+_s1_p0\/\d+)\/\d+_\d+_CCS') # ex: m160918_184656_42165_c101101052550000001823258304261782_s1_p0/121477/5106_57_CCS
-rex_pbid = re.compile('(PB.\d+).\d+')
+rex_pbid = re.compile('(PB\S*.\d+[.\d]*)')  # this will handle both PB.X.Y and PBfusion.X
 
 
 extra_bp_around_junctions = 50 # get this much around junctions to be safe AND to not screw up GMAP who doesn't like microintrons....
@@ -37,13 +35,11 @@ def read_flnc_fastq(flnc_filename):
 
     for k in list(flnc_fastq_d.keys()):
         m = rex_flnc.match(k)
-        if m is None:
-            m = rex_flnc2.match(k)
-            if m is None:
-                m = rex_flnc3.match(k)
-                if m is None: raise Exception("Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(k))
-        zmw = m.group(1)
-        flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
+        if m is not None:
+            zmw = m.group(1)
+            flnc_fastq_d.d[zmw] = flnc_fastq_d.d[k]
+        else:
+            zmw = k
         rich_zmws.add(zmw)
 
     return flnc_fastq_d, rich_zmws
@@ -70,12 +66,10 @@ def read_read_stat(stat_filename, rich_zmws):
                raise Exception("Expected PBID format PB.X.Y but saw {0}".format(r['pbid']))
            locus = m.group(1) # ex: PB.1
            m = rex_flnc.match(r['id'])
-           if m is None:
-               m = rex_flnc2.match(r['id'])
-               if m is None:
-                   m = rex_flnc3.match(r['id'])
-                   if m is None: raise Exception("Expected FLNC id format is <movie>/<zmw>/ccs! Instead saw: {0}".format(r['id']))
-           zmw = m.group(1)
+           if m is not None:
+               zmw = m.group(1)
+           else:
+               zmw = r['id']
            if zmw in rich_zmws:
                tally_by_loci[locus].append((r['pbid'], zmw))
            else:
