@@ -21,6 +21,8 @@ for d in dirs:
         rec['num_snp'] = 0
         rec['num_hap_nopartial'] = 0
         rec['num_hap_withpartial'] = 0
+    elif not os.path.exists(os.path.join(d, 'phased.partial.vcf')):
+        print("WARNING: cannot find {0}/phased.partial.vcf. IGNORE".format(d))
     else:
         rec['num_snp'] = len([x for x in vcf.VCFReader(open(os.path.join(d, 'phased.partial.vcf')))])
         if os.path.exists(os.path.join(d, 'phased.nopartial.NO_HAPS_FOUND')):

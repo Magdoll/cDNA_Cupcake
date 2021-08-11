@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 08.06.2021
+Last Updated: 08.11.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 26.2.0
+Current version: 27.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -65,8 +65,9 @@ A brief list of currently listed scripts are:
 
 ## Version Changes
 
-2021.08.06 updated to v26.2.0. added `phasing/utils/tag_bam_post_phasing.py` for tagging BAMs post IsoPhase. Also, `demux_isoseq_with_genome.py` now accepts PBfusion ID format and outputs warning for missing read info instead of failing. (do not use v26.0.0 or v26.1.0; bug in the ID matching)
+2021.08.11 updated to v27.0.0. adding single cell grouping to phasing support.
 
+2021.08.06 updated to v26.2.0. added `phasing/utils/tag_bam_post_phasing.py` for tagging BAMs post IsoPhase. Also, `demux_isoseq_with_genome.py` now accepts PBfusion ID format and outputs warning for missing read info instead of failing. (do not use v26.0.0 or v26.1.0; bug in the ID matching)
 
 2021.05.01 updated to v25.2.0. `collapse_isoforms_by_sam.py` now accepts bam input and also multiple CPU use.
 
