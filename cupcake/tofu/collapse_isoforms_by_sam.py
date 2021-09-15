@@ -108,7 +108,7 @@ def collapse_fuzzy_junctions(gff_filename, group_filename, allow_extra_5exon, in
                     r1.ref_exons[-n2].start <= r2.ref_exons[0].start < r1.ref_exons[-n2].end
             else:
                 return abs(r1.ref_exons[0].end - r2.ref_exons[0].end) <= internal_fuzzy_max_dist and \
-                    r1.ref_exons[n2-1].start <= r2.ref_exons[-1].end < r1.ref_exons[n2].end
+                    r1.ref_exons[n2-1].start <= r2.ref_exons[-1].end < r1.ref_exons[n2-1].end
         return False
 
     d = {}

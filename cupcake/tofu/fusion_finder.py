@@ -12,7 +12,6 @@ from Bio.SeqIO import SeqRecord
 from Bio.Seq import Seq
 
 from bx.intervals.cluster import ClusterTree
-
 from cupcake.io import BioReaders
 from cupcake.tofu.utils import check_ids_unique
 from cupcake.io.SeqReaders import LazyFastaReader, LazyFastqReader
@@ -144,18 +143,22 @@ def is_fusion_compatible(r1, r2, max_fusion_point_dist, max_exon_end_dist, allow
                         "single-exon transcript to be exact!")
         else: # multi-exon case, must be OK
             return True
-    elif type == 'super' or type == 'subset':
+    if type == 'subset':
+            r1, r2 = r2, r1 #  rotate so r1 is always the longer one
+    if type == 'super' or type == 'subset':
+        n2 = len(r2.segments)
         if allow_extra_5_exons:
             # check that the 3' junction is identical
             # also check that the 3' end is relatively close
+            # AND the 5' start of r2 is sandwiched between the matching r1 exon coordinates
             if in_5_portion and plus_is_5end:
                 if abs(r1.segments[-1].start - r2.segments[-1].start) > max_exon_end_dist: return False
                 if abs(r1.segments[-1].end - r2.segments[-1].end) > max_fusion_point_dist: return False
-                return True
+                return r1.segments[-n2].start <= r2.segments[0].start < r1.segments[-n2].end
             elif in_5_portion and (not plus_is_5end):
                 if abs(r1.segments[0].end - r2.segments[0].end) > max_exon_end_dist: return False
                 if abs(r1.segments[0].start - r2.segments[0].start) > max_fusion_point_dist: return False
-                return True
+                return r1.segments[n2-1].start <= r2.segments[-1].end < r1.segments[n2-1].end
             else:
                 return False
         else: # not OK because number of exons must be the same
@@ -397,5 +400,4 @@ if __name__ == "__main__":
                 min_dist_between_loci=args.min_dist_between_loci,
                 min_identity=args.min_identity,
                 is_flnc=args.is_flnc)
-
 
