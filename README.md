@@ -2,11 +2,11 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 08.11.2021
+Last Updated: 09.15.2021
 
 **cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
 
-Current version: 27.0.0
+Current version: 28.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +64,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2021.09.15 updated to v28.0.0. Fixed over-merging of isoforms in `collapse_isoforms_by_sam.py` and `fusion_finder.py` based on [PR171](https://github.com/Magdoll/cDNA_Cupcake/pull/171)
 
 2021.08.11 updated to v27.0.0. adding single cell grouping to phasing support.
 
