@@ -5,20 +5,25 @@ A temporary CSV file for isoseq3 (v3.4+) dedup output
 INPUT: dedup.fasta
 OUTPUT: dedup.info.csv
 
-2021 12 07 changes
-    allow for input/output file names
+2022 01 18 changes
+    - allow for input/output file names while maintaining backward compat
+    - allow for switched bc and umi positions in read header
 """
 import os, re
-import sys
+import argparse
 from Bio import SeqIO
 from Bio.Seq import Seq
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--input', '-i', default='dedup.fasta', help='Input dedup fasta file (default dedup.fasta)')
+parser.add_argument('--output', '-o', default='dedup.info.csv', help='Output dedup csv (default dedup.info.csv)')
 
 rex = re.compile('(\S+) full_length_coverage=(\d+);length=(\d+);XM=(\S+);XC=(\S+)')
 rex_switched = re.compile('(\S+) full_length_coverage=(\d+);length=(\d+);XC=(\S+);XM=(\S+)')
 rex_umi_only = re.compile('(\S+) full_length_coverage=(\d+);length=(\d+);XM=(\S+)')
 
-reader = SeqIO.parse(open(sys.argv[1]),'fasta')
-f = open(sys.argv[2], 'w')
+reader = SeqIO.parse(open(args.input),'fasta')
+f = open(args.output, 'w')
 f.write("id\tUMI\tUMIrev\tBC\tBCrev\tlength\tcount\n")
 for r in reader:
     m = rex.match(r.description)
