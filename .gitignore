@@ -1,6 +1,7 @@
 *.o
 *.pyc
 *.so
+*.swp
 
 build/*
 cupcake/tofu/branch/*

@@ -214,7 +214,12 @@ def multiprocess_helper(start_index, end_index, args, cov_threshold, f_good, f_b
                                     max_5_diff=args.max_5_diff,
                                     max_3_diff=args.max_3_diff)
 
-    iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM', bam_start_index=start_index, bam_end_index=end_index)
+    if args.bam is not None:
+        iter = b.iter_gmap_sam(args.bam, ignored_fout, type='BAM', bam_start_index=start_index, bam_end_index=end_index)
+    else:
+        # if type is set to SAM, it'll use the gmap sam reader, which messes up the identity and breaks
+        # doing this might break things in the future
+        iter = b.iter_gmap_sam(args.sam, ignored_fout, type='BAM', bam_start_index=start_index, bam_end_index=end_index)
     for recs in iter: # recs is {'+': list of list of records, '-': list of list of records}
         for v in recs.values():
             for v2 in v:
@@ -319,7 +324,10 @@ def main(args):
                     if len(v2) > 0: b.process_records(v2, args.allow_extra_5exon, False, f_good, f_bad, f_txt)
     else:
         # need to first predefine the regions
-        region_list_ignore, chunk_regions_list = multiprocess_predefine_regions(args.bam, args.cpus)
+        if args.bam is not None:
+            region_list_ignore, chunk_regions_list = multiprocess_predefine_regions(args.bam, args.cpus)
+        else:
+            region_list_ignore, chunk_regions_list = multiprocess_predefine_regions(args.sam, args.cpus)
         assert len(chunk_regions_list) == args.cpus
 
         if args.flnc_coverage > 0:
@@ -334,8 +342,8 @@ def main(args):
         pool = []
         for i in range(args.cpus):
             p = Process(target=multiprocess_helper,
-                                 args=(chunk_regions_list[i][0], chunk_regions_list[i][1], args, cov_threshold,
-                                       f_good_pool[i], f_bad_pool[i], f_txt_pool[i], f_ignore_pool[i], ))
+                        args=(chunk_regions_list[i][0], chunk_regions_list[i][1], args, cov_threshold,
+                        f_good_pool[i], f_bad_pool[i], f_txt_pool[i], f_ignore_pool[i], ))
             p.start()
             pool.append(p)
             # NOTE: f_good_pool[i] and f_bad_pool[i] and f_txt_pool[i] actually will get file CLOSED
