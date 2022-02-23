@@ -147,7 +147,6 @@ def read_csv(csv, gene_dict, args):
     count_dict = {} # cell_bc: {gene_id: 1, pb_id: 1}
     index = 1
     gene_idx = 1
-    total_counts = 0
     for line in csv_fh:
         if zipped:
             line = line.decode()
@@ -186,7 +185,12 @@ def read_csv(csv, gene_dict, args):
         else:
             count_dict[cell_bc][gene_name] += 1
 
-        total_counts += 1
+    entries = 0
+    for cell, counts in count_dict.items():
+        for gene, count in counts.items():
+            if gene not in gene_dict:
+                continue
+            entries += 1
 
     if not os.path.isdir(out_path):
         print(f"Couldn't find {out_path}, making it now", file=sys.stderr)
@@ -222,7 +226,7 @@ def read_csv(csv, gene_dict, args):
     print(f'Writing matrix to {mtx_file}', file=sys.stderr)
     mtx_fh = open(mtx_file, 'w+')
     print('%%MatrixMarket matrix coordinate real general\n%', file=mtx_fh)
-    print(f'{num_genes} {num_cells} {total_counts}', file=mtx_fh)
+    print(f'{num_genes} {num_cells} {entries}', file=mtx_fh)
     for cell, counts in count_dict.items():
         for gene, count in counts.items():
             if gene not in gene_dict:
