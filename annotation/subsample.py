@@ -3,6 +3,7 @@ import os, sys, random
 import math
 from csv import DictReader
 from collections import defaultdict
+from multiprocessing import Pool
 
 def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=None):
     total = 0
@@ -22,21 +23,24 @@ def get_counts(count_filename, min_fl_count=2, key='id', min_len=None, max_len=N
     
     return total, counts
 
-def subsample(total, counts, iter=100, min_fl_count=2, step=10**4):
+def sampleBySize(s, iteration, counts):
+    tmp = []
+    for i in range(iteration):
+        tally = defaultdict(lambda: 0)
+        for k in random.sample(counts, s):
+            tally[k] += 1
+        tmp.append(len(tally)) 
+    _mean = sum(tmp)*1./len(tmp)
+    _std = math.sqrt(sum((x-_mean)**2 for x in tmp)*1./len(tmp))
+    return((s, min(tmp), max(tmp), _mean, _std))
+
+def subsample_parallel(total, counts, iteration=100, min_fl_count=2, step=10**4, ncore=1):
     sizes = list(range(0, total+1, step))
-    print("min fl count:", min_fl_count)
+    print("#min fl count:", min_fl_count)
     print("size", "min", "max", "mean", "sd")
-    for s in sizes:
-        tmp = []
-        for i in range(iter):
-            tally = defaultdict(lambda: 0)
-            for k in random.sample(counts, s):
-                tally[k] += 1
-            tmp.append(len(tally)) #tmp.append(len(filter(lambda k: tally[k]>=min_fl_count, tally)))
-        #tmp = [len(set(random.sample(counts, s))) for i in xrange(iter)]
-        _mean = sum(tmp)*1./len(tmp)
-        _std = math.sqrt(sum((x-_mean)**2 for x in tmp)*1./len(tmp))
-        print(s, min(tmp), max(tmp), _mean, _std)
+    
+    with Pool(ncore) as p:
+        return p.starmap(sampleBySize, [(s, iteration, counts) for s in sizes])
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -47,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument("--range", default=None, help="Length range (ex: (1000,2000), default None)")
     parser.add_argument("--min_fl_count", default=1, type=int, help="Minimum FL count (default: 1)")
     parser.add_argument("--step", default=10000, type=int, help="Step size (default: 10000)")
+    parser.add_argument("--ncores", default=1, type=int, help="Number of threads to use for parallelization")
     args = parser.parse_args()
 
     min_len, max_len = None, None
@@ -55,6 +60,6 @@ if __name__ == "__main__":
         assert 0 <= min_len < max_len
 
     total, counts = get_counts(args.count_filename, args.min_fl_count, args.by, min_len, max_len)
-    subsample(total, counts, args.iterations, args.min_fl_count, args.step)
+    subsample_parallel(total, counts, args.iterations, args.min_fl_count, args.step, args.ncores)
 
 
