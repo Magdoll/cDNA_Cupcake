@@ -60,6 +60,8 @@ if __name__ == "__main__":
         assert 0 <= min_len < max_len
 
     total, counts = get_counts(args.count_filename, args.min_fl_count, args.by, min_len, max_len)
-    subsample_parallel(total, counts, args.iterations, args.min_fl_count, args.step, args.ncores)
+    results = subsample_parallel(total, counts, args.iterations, args.min_fl_count, args.step, args.ncores)
+    for row in results:
+        print(' '.join(str(i) for i in row))
 
 
