@@ -40,7 +40,7 @@ CSV_FIELDS = ['zmw','split','length','flag']
 
 
 
-def deconcat_worker(input_bam, offset_start, offset_end, output_prefix, info):
+def deconcat_worker(input_bam, offset_start, offset_end, output_prefix, info, verbose=False):
     reader = pysam.AlignmentFile(input_bam, 'rb', check_sq=False)
     f1 = open(output_prefix + '.csv', 'w')
     writer = DictWriter(f1, CSV_FIELDS, delimiter=',')
@@ -58,7 +58,7 @@ def deconcat_worker(input_bam, offset_start, offset_end, output_prefix, info):
         start_flag = info[zmw]
         debug_flag = False
         #if r.qname.startswith('m64182_210416_060945/132915'): debug_flag = True
-        it = deconcat_all(r.query, start_flag, start_pos=0, debug=debug_flag)
+        it = deconcat_all(r.query, start_flag, start_pos=0, debug=debug_flag, verbose=verbose)
         i = 1
         for (s, e, flag, cur_seq) in it:
             if e-s < MIN_LEN:
@@ -84,13 +84,13 @@ def deconcat_worker(input_bam, offset_start, offset_end, output_prefix, info):
 
 
 
-def deconcat_all(sequence, start_flag, start_pos, debug=False):
+def deconcat_all(sequence, start_flag, start_pos, debug=False, verbose=False):
     cur_flag = start_flag
     cur_seq = sequence
     cur_offset = start_pos
 
     while len(cur_seq) > MIN_PRE_LEN:
-        out = deconcat(cur_seq, cur_flag, debug)
+        out = deconcat(cur_seq, cur_flag, debug, verbose)
         if out is None:
             if debug:
                 pdb.set_trace()
@@ -101,13 +101,13 @@ def deconcat_all(sequence, start_flag, start_pos, debug=False):
             if debug: pdb.set_trace()
             # we need to see if there's an earlier match, with possibly just slightly worse score
             if s > MIN_PRE_LEN:
-                alt_out = deconcat(cur_seq[:s], cur_flag, debug=debug)
+                alt_out = deconcat(cur_seq[:s], cur_flag, debug=debug, verbose=verbose)
             else:
                 alt_out = None
             while alt_out is not None:
                 alt_s, alt_e, alt_score, alt_flag = alt_out
                 if alt_s > MIN_PRE_LEN:
-                    earlier_alt_out = deconcat(cur_seq[:alt_s], cur_flag, debug=debug)
+                    earlier_alt_out = deconcat(cur_seq[:alt_s], cur_flag, debug=debug, verbose=verbose)
                 else:
                     earlier_alt_out = None
                 if earlier_alt_out is None: # we've reached as early as hit as we can, abort
@@ -129,14 +129,20 @@ def deconcat_all(sequence, start_flag, start_pos, debug=False):
             cur_offset += e
 
 
-def deconcat(sequence, prev, debug=False):
+def deconcat(sequence, prev, debug=False, verbose=False):
     if prev == 'R3':
         o1 = parasail.sg_qx_trace(sequence, SEQ_R5_F5, 3, 1, SCOREMAT)
         o2 = parasail.sg_qx_trace(sequence, SEQ_R5_R3, 3, 1, SCOREMAT)
         if o1.score >= MIN_SCORE and o1.score > o2.score:
-            return o1.get_traceback().comp.find('|'), o1.end_query+1, o1.score, 'F5'
+            s1, e1 = o1.get_traceback().comp.find('|'), o1.end_query+1
+            if verbose:
+                print("DEBUG: F5", sequence[s1:e1])
+            return s1, e1, o1.score, 'F5'
         elif o2.score >= MIN_SCORE:
-            return o2.get_traceback().comp.find('|'), o2.end_query+1, o2.score, 'R3'
+            s2, e2 = o2.get_traceback().comp.find('|'), o2.end_query+1
+            if verbose:
+                print("DEBUG: R3", sequence[s2:e2])
+            return s2, e2, o2.score, 'R3'
         else:
             if debug:
                 pdb.set_trace()
@@ -145,9 +151,15 @@ def deconcat(sequence, prev, debug=False):
         o1 = parasail.sg_qx_trace(sequence, SEQ_F3_R3, 3, 1, SCOREMAT)
         o2 = parasail.sg_qx_trace(sequence, SEQ_F3_F5, 3, 1, SCOREMAT)
         if o1.score >= MIN_SCORE and o1.score > o2.score:
-            return o1.get_traceback().comp.find('|'), o1.end_query+1, o1.score, 'R3'
+            s1, e1 = o1.get_traceback().comp.find('|'), o1.end_query + 1
+            if verbose:
+                print("DEBUG: R3", sequence[s1:e1])
+            return s1, e1, o1.score, 'R3'
         elif o2.score >= MIN_SCORE:
-            return o2.get_traceback().comp.find('|'), o2.end_query+1, o2.score, 'F5'
+            s2, e2 = o2.get_traceback().comp.find('|'), o2.end_query+1
+            if verbose:
+                print("DEBUG: F5", sequence[s2:e2])
+            return s2, e2, o2.score, 'F5'
         else:
             if debug:
                 pdb.set_trace()
@@ -156,7 +168,7 @@ def deconcat(sequence, prev, debug=False):
         raise ValueError("Expected previous primer to be F5 or R3. Saw {0} instead. Abort!".format(prev))
 
 
-def main(input_prefix, output_prefix, cpus):
+def main(input_prefix, output_prefix, cpus, verbose=False):
     info = {}
     for r in SeqIO.parse(open(input_prefix + '.lima.clips'), 'fasta'):
         zmw = r.id[:r.id.rfind('/')]
@@ -170,14 +182,14 @@ def main(input_prefix, output_prefix, cpus):
     onames = []
     if cpus == 1:
         oname = output_prefix
-        deconcat_worker(input_bam, 0, num_records, oname, info)
+        deconcat_worker(input_bam, 0, num_records, oname, info, verbose)
     else:
         chunk_size = (num_records // cpus) + (num_records % cpus)
         offset_start = 0
         pools = []
         while offset_start < num_records:
             oname = output_prefix+'.'+str(offset_start)
-            p = Process(target=deconcat_worker, args=(input_bam, offset_start, offset_start+chunk_size, oname, info,))
+            p = Process(target=deconcat_worker, args=(input_bam, offset_start, offset_start+chunk_size, oname, info, verbose))
             p.start()
             print("Launching deconcat worker for records {0}-{1}...".format(offset_start, offset_start+chunk_size))
             offset_start += chunk_size
@@ -220,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument("output_prefix")
     parser.add_argument("-n", "--cpus", type=int, default=10, help="Number of CPUs")
     parser.add_argument("-m", "--method", choices=['Jason-10X-5', 'Jason-10X-3'])
+    parser.add_argument("--verbose", default=False, action="store_true")
 
     args = parser.parse_args()
 
@@ -236,4 +249,4 @@ if __name__ == "__main__":
         SEQ_F3_F5='AGATCGGAAGAGCGTCGTGTAGAGCGCTAAGCAGTGGTATCAACGCAGAGTACATGGG'
         SEQ_METHOD = args.method
 
-    main(args.input_prefix, args.output_prefix, args.cpus)
+    main(args.input_prefix, args.output_prefix, args.cpus, args.verbose)

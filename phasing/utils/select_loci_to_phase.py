@@ -54,16 +54,15 @@ def read_read_stat(stat_filename, rich_zmws):
     :return: tally_by_loci -- dict  of {locus -- list of (isoform, zmw)}
              poor_zmws_not_in_rich --- list of ZMWs that were in .read_stat but missing in FLNC FASTQ. ONly happens if used diff CCS to get FASTQ.
     """
-    required_fields = ['pbid', 'id', 'is_fl', 'stat']
+    required_fields = ['pbid', 'id']
     tally_by_loci = defaultdict(lambda: []) # PB.1 --> [(PB.1.1, zmw1), (PB.1.1, zmw2), (PB.1.2, zmw3)...]
     poor_zmws_not_in_rich = set()
     reader = DictReader(open(stat_filename),delimiter='\t')
     if any(x not in reader.fieldnames for x in required_fields):
-        raise Exception("Expected fields `pbid`, `is_fl`, and `stat` in {0} but only saw: {1}".format(\
+        raise Exception("Expected fields `pbid`, `id` in {0} but only saw: {1}".format(\
             stat_filename, reader.fieldnames))
 
     for r in reader:
-       if r['is_fl']=='Y' and r['stat']=='unique':
            m = rex_pbid.match(r['pbid'])
            if m is None:
                raise Exception("Expected PBID format PB.X.Y but saw {0}".format(r['pbid']))
