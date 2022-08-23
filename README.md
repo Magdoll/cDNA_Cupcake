@@ -2,11 +2,14 @@
 
 ![logo](https://github.com/Magdoll/images_public/blob/master/logos/Cupcake_logo.png)
 
-Last Updated: 09.15.2021
+Last Updated: 08.23.2022
 
-**cDNA_Cupcake** is a miscellaneous collection of Python and R scripts used for analyzing sequencing data. Most of the scripts only require [Biopython](http://biopython.org/wiki/Download). For scripts that require additional libraries, it will be specified in documentation.
+**MAJOR UPDATE (08/23/2022)!!!** With many of the core Cupcake functions now moving into official [isoseq](https://isoseq.how) software, including support for bulk and single-cell Iso-Seq data, I've removed a good chunk of outdated scripts and will no longer be addressing bugs for which there is already a `isoseq` equivalent (ex: `isoseq3 collapse` is now the preferred tool over `collapse_isoforms_by_sam.py`). Use the remaining code at your own risk and please work to transition to official [isoseq](https://isoseq.how) software. I'm gradually updating the wiki through end of 2022 to show the equivalent scripts in the official v Cupcake version. Starting 2023 I will begin to remove the redundant Cupcake scripts altogether (though of course you can still access them via older tagged versions in this repo).
 
-Current version: 28.0.0
+I foresee that I will continue to support standalone scripts such as those in [sequence/](https://github.com/Magdoll/cDNA_Cupcake/tree/master/sequence) subdir, most of which require no installation and have no existing alternatives.
+
+
+Current version: 29.0.0
 
 ## Python Requirements
 * Python >= 3.7
@@ -64,6 +67,8 @@ A brief list of currently listed scripts are:
 
 
 ## Version Changes
+
+2022.08.23 updated to v29.0.0. Deprecation of modules that are no longer in use or replaced by official [isoseq](https://isoseq.how) software.
 
 2021.09.15 updated to v28.0.0. Fixed over-merging of isoforms in `collapse_isoforms_by_sam.py` and `fusion_finder.py` based on [PR171](https://github.com/Magdoll/cDNA_Cupcake/pull/171)
 
