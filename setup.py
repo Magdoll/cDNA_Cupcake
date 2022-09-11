@@ -5,7 +5,7 @@ from Cython.Build import cythonize
 
 
 __author__ = "etseng@pacb.com"
-version = "28.0.0"
+version = "29.0.0"
 
 ext_modules = [
                 Extension("cupcake.tofu.branch.intersection_unique",
@@ -27,7 +27,6 @@ setup(
     zip_safe=False,
     packages = ['cupcake', 'cupcake.io', 'cupcake.ice',
                 'cupcake.tofu', 'cupcake.tofu.branch', 'cupcake.tofu.counting',
-                'cupcake2', 'cupcake2.io', 'cupcake2.ice2', 'cupcake2.tofu2',
                 'phasing', 'phasing.io'],
     setup_requires=[
         'numpy',
@@ -53,14 +52,6 @@ setup(
                'cupcake/tofu/counting/summarize_sample_GFF_junctions.py',
                'cupcake/tofu/counting/scrub_sample_GFF_junctions.py',
                'cupcake/tofu/simple_stats_post_collapse.py',
-               'cupcake2/tofu2/ice_pbdagcon2.py',
-               'cupcake2/tofu2/run_preCluster.py',
-               'cupcake2/tofu2/run_IceInit2.py',
-               'cupcake2/tofu2/run_IceIterative2.py',
-               'cupcake2/tofu2/run_IcePartial2.py',
-               'cupcake2/tofu2/run_IceArrow2.py',
-               'cupcake2/io/SeqSplitter.py',
-               'cupcake2/tofu2/picking_up_ice2.py',
                'phasing/create_fake_genome.py',
                'phasing/run_phaser.py',
 			   'phasing/mag_phaser.py',
