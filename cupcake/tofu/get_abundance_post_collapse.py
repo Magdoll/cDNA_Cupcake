@@ -3,14 +3,10 @@ __author__ = 'etseng@pacb.com'
 
 """
 After running collapse, combine with the cluster FL/nFL assignment to get abundance information.
-
 cluster_report.csv format in IsoSeq3:
-
 cluster_id,read_id,read_type
 transcript/0,m54056_171130_193019/8388911/ccs,FL
-
 where .group.txt is:
-
 PB.1.1     transcript/0,transcript1
 PB.1.2     transcript/2
 """
@@ -32,7 +28,7 @@ def read_group_filename(group_filename):
     for line in open(group_filename):
         pbid, members = line.strip().split('\t')
         for cid in members.split(','):
-            cid_info[cid] = pbid
+            cid_info['transcript/' + cid.split('transcript/')[-1]] = pbid
 
     return cid_info
 
@@ -149,7 +145,6 @@ def make_abundance_file(read_count_filename, output_filename, given_total=None, 
 
 def get_abundance_post_collapse(collapse_prefix, cluster_report_csv, output_prefix, restricted_movies=None):
     """
-
     :param collapse_prefix: collapse prefix filename (must have .group.txt present)
     :param prefix_dict:
     :param output_prefix:
