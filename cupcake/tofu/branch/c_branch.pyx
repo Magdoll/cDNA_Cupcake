@@ -27,7 +27,7 @@ def exon_finding(np.ndarray[DTYPE_t, ndim=1] baseC, np.ndarray[DTYPE_t, ndim=1] 
                 tag = False
             elif baseC[i] > 0 and (altC_pos[i] > threshSplit or altC_neg[i+1] < -threshSplit): # alt. junction found!
                 # end the current exon at i and start a new one at i + 1
-                print "alt. junction found at", i
+                print("alt. junction found at {}".format(i))
                 exon_tree.insert_interval(Interval(e_start+offset, i+1+offset, index))
                 index += 1
                 e_start = i + 1

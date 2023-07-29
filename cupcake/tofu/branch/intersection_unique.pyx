@@ -167,9 +167,9 @@ cdef class IntervalNodeUnique:
     cpdef IntervalNodeUnique delete_node(IntervalNodeUnique self, int start, int end):
         cdef IntervalNodeUnique croot = self
         cdef int decision_endpoint = start
-        print "traversing self: {0}={1}".format(self.start, self.end)
+        print("traversing self: {0}={1}".format(self.start, self.end))
         if croot.start == start and croot.end == end:
-            print "found! {0}={1}".format(start, end)
+            print("found! {0}={1}".format(start, end))
             if self.cleft is not EmptyNode:
                 if self.cright is not EmptyNode:                        
                     if self.cleft.priority < self.cright.priority:
@@ -178,10 +178,10 @@ cdef class IntervalNodeUnique:
                             croot = self.cright
                             croot.cleft = self.cleft
                             croot.set_ends()
-                            print "replacing current node with R node {0}-{1}".format(croot.start, croot.end)
+                            print("replacing current node with R node {0}-{1}".format(croot.start, croot.end))
                         else:
                             pred = self.cright.uproot_smallest_successor(self)                          
-                            print "replacing current node info with #1 {0}-{1}".format(pred.start, pred.end)
+                            print("replacing current node info with #1 {0}-{1}".format(pred.start, pred.end))
                             self.start = pred.start
                             self.end = pred.end
                             self.interval = pred.interval  
@@ -196,22 +196,22 @@ cdef class IntervalNodeUnique:
                             #parent_of_pred.cright = pred.cleft
                             #parent_of_pred.set_ends()
                             pred = self.cleft.uproot_smallest_predecessor(self)
-                            print "replacing current node info with #2 {0}-{1}".format(pred.start, pred.end)
+                            print("replacing current node info with #2 {0}-{1}".format(pred.start, pred.end))
                             #print "parent is {0}-{1}".format(parent_of_pred.start, parent_of_pred.end)
                             self.start = pred.start
                             self.end = pred.end
                             self.interval = pred.interval                                                       
                 else: # left is not empty, right is
-                    print "right is empty left is not"
+                    print("right is empty left is not")
                     croot = self.cleft 
                     croot.set_ends()                  
             else: # left is empty
                 if self.cright is not EmptyNode: # left is empty, right is not
-                    print "left is empty right is not"
+                    print("left is empty right is not")
                     croot = self.cright
                     croot.set_ends()  
                 else: # the whole tree is empty! just return an empty IntervalTreeUnique?
-                    print "subtree is empty"
+                    print("subtree is empty")
                     return EmptyNode
         else:
             #if node.start == self.start:
@@ -502,11 +502,11 @@ cdef class IntervalTreeUnique:
             self.root = None
             
     def print_balance(self):
-        print "FOR DEBUGGING ONLY"
+        print("FOR DEBUGGING ONLY")
         if self.root is not None:
-            print "Root node: {0}-{1}".format(self.root.start, self.root.end)
-            print "left height: {0}".format(self.root.cleft.get_height(0))
-            print "right height: {0}".format(self.root.cright.get_height(0))
+            print("Root node: {0}-{1}".format(self.root.start, self.root.end))
+            print("left height: {0}".format(self.root.cleft.get_height(0)))
+            print("right height: {0}".format(self.root.cright.get_height(0)))
 
 
     def find( self, start, end ):
