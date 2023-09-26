@@ -30,7 +30,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from cupcake.io.BioReaders import  GMAPSAMReader
 
-def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
+def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None, allow_non_primary=True):
     """
     :param r: GMAPSAMRecord record
 	:param qid_seen: list of qIDs processed so far -- if redundant, we have to put a unique suffix
@@ -40,6 +40,10 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
         print("Skipping {0} because unmapped.".format(r.qID), file=sys.stderr)
         return None
     t_len = sum(e.end-e.start for e in r.segments)
+ 
+    if not allow_non_primary and r.flag.is_supplementary:
+        return None
+
     seq = Seq('A'*t_len)  # DO NOT CARE since sequence is not written in GFF3
     rec = SeqRecord(seq, r.sID)
     strand = 1 if r.flag.strand == '+' else -1
@@ -48,11 +52,10 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
     mismatches = r.num_nonmatches
     matches = r.num_mat_or_sub - r.num_nonmatches
 
-    if qid_index_dict is not None:
-        if r.qID in qid_index_dict: 
-            qid_index_dict[r.qID] += 1
-            r.qID += '_dup' + str(qid_index_dict[r.qID])
-        else: qid_index_dict[r.qID] += 1
+ 
+    if qid_index_dict is not None and allow_non_primary and r.flag.is_supplementary:
+        qid_index_dict[r.qID] += 1
+        r.qID += '_dup' + str(qid_index_dict[r.qID])
 
     gene_qualifiers = {"source": source, "ID": r.qID, "Name": r.qID} # for gene record
 #    mRNA_qualifiers = {"source": source, "ID": r.qID+'.mRNA', "Name": r.qID+'.mRNA', "Parent": r.qID,
@@ -73,11 +76,13 @@ def convert_sam_rec_to_gff3_rec(r, source, qid_index_dict=None):
     rec.features = [top_feature]
     return rec
 
-def convert_sam_to_gff3(sam_filename, output_gff3, source, q_dict=None):
+def convert_sam_to_gff3(sam_filename, output_gff3, source, q_dict=None, allow_non_primary=True):
     qid_index_dict = Counter()
     with open(output_gff3, 'w') as f:
-        recs = [convert_sam_rec_to_gff3_rec(r0, source,qid_index_dict) for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict)]
-        BCBio_GFF.write([x for x in recs if x is not None], f)
+        for r0 in GMAPSAMReader(sam_filename, True, query_len_dict=q_dict):
+            rec = convert_sam_rec_to_gff3_rec(r0, source, qid_index_dict, allow_non_primary)
+            if rec is not None:
+                BCBio_GFF.write([rec], f)
 
 def main():
     from argparse import ArgumentParser
